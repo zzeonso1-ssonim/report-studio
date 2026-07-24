@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { transformLabels } from "@/lib/transforms";
 import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
   CartesianGrid,
   Legend,
   Line,
@@ -68,6 +72,23 @@ const YEAR_PRESETS = [1, 3, 5, 10] as const;
 const MAX_SERIES = 4;
 const SERIES_VARS = ["--series-1", "--series-2", "--series-3", "--series-4"];
 
+const CHART_TYPES = [
+  { value: "line", label: "꺾은선" },
+  { value: "bar", label: "막대" },
+  { value: "area", label: "영역" },
+] as const;
+type ChartType = (typeof CHART_TYPES)[number]["value"];
+
+/**
+ * 변환이 적용된 시리즈의 표시 단위 — 변환 라벨(단일 소스)의 괄호 표기에서 파생.
+ * 예: "전년동기대비 (%)" → "%", "재기준화 (시작=100)" → "시작=100", "원계열" → null(원단위 사용).
+ */
+function transformUnit(tf: string): string | null {
+  const label = (transformLabels as Record<string, string>)[tf];
+  const m = label?.match(/\(([^)]+)\)\s*$/);
+  return m ? m[1] : null;
+}
+
 /**
  * 차트 컨테이너 내부의 recharts SVG를 PNG Blob으로 변환한다.
  * SVG의 색이 CSS 변수(var(--series-1) 등)로 지정돼 있어 그대로 직렬화하면
@@ -76,7 +97,11 @@ const SERIES_VARS = ["--series-1", "--series-2", "--series-3", "--series-4"];
  * 버튼 핸들러와 검증이 동일하게 이 함수를 거친다.
  */
 async function chartContainerToPngBlob(container: HTMLElement): Promise<Blob> {
-  const svg = container.querySelector("svg");
+  // 범례가 있으면 legend-wrapper의 14px 아이콘 svg가 DOM상 메인 차트 svg보다
+  // 먼저 오므로, 반드시 .recharts-wrapper 직계 자식인 차트 표면 svg를 잡는다.
+  const svg =
+    container.querySelector<SVGSVGElement>(".recharts-wrapper > svg") ??
+    container.querySelector("svg");
   if (!svg) throw new Error("차트 SVG를 찾을 수 없습니다");
 
   const rect = svg.getBoundingClientRect();
@@ -90,6 +115,9 @@ async function chartContainerToPngBlob(container: HTMLElement): Promise<Blob> {
     const dst = dstEls[i];
     dst.setAttribute("stroke", cs.stroke);
     dst.setAttribute("fill", cs.fill);
+    // 영역 차트의 반투명 채움 등 opacity 계열도 resolve된 값으로 보존한다.
+    if (cs.fillOpacity !== "1") dst.setAttribute("fill-opacity", cs.fillOpacity);
+    if (cs.strokeOpacity !== "1") dst.setAttribute("stroke-opacity", cs.strokeOpacity);
     if (srcEls[i].tagName === "text" || srcEls[i].tagName === "tspan") {
       dst.setAttribute("font-family", cs.fontFamily);
       dst.setAttribute("font-size", cs.fontSize);
@@ -160,6 +188,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [showTable, setShowTable] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [chartType, setChartType] = useState<ChartType>("line");
   const chartRef = useRef<HTMLDivElement>(null);
 
   // 자연어 조회
@@ -381,6 +410,20 @@ export default function Home() {
   const loadedIds = Object.keys(series);
   const units = new Set(loadedIds.map((id) => series[id].indicator.unit));
   const mixedUnits = transform === "raw" && units.size > 1;
+
+  /** "단위: %" 표기 — 로드된 시리즈의 unit에서 파생, 변환 적용 시 변환 단위 우선 */
+  const unitLabel = useMemo(() => {
+    const seen = new Set<string>();
+    const list: string[] = [];
+    for (const s of Object.values(series)) {
+      const u = transformUnit(s.transform) ?? (s.indicator.unit ?? "").trim();
+      if (u && !seen.has(u)) {
+        seen.add(u);
+        list.push(u);
+      }
+    }
+    return list.length > 0 ? `단위: ${list.join(" · ")}` : null;
+  }, [series]);
   const nameOf = (id: string) =>
     meta.find((m) => m.id === id)?.name ??
     adhoc.find((a) => a.id === id)?.name ??
@@ -411,13 +454,31 @@ export default function Home() {
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-8">
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold" style={{ color: "var(--primary)" }}>
-          경제데이터 통합조회
-        </h1>
-        <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
-          한국·미국 공공 경제데이터 통합 조회 — 원천기관 우선
-        </p>
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold" style={{ color: "var(--primary)" }}>
+            경제데이터 통합조회
+          </h1>
+          <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
+            한국·미국 공공 경제데이터 통합 조회 — 원천기관 우선
+          </p>
+        </div>
+        <nav className="flex gap-2 text-sm">
+          <a
+            href="/calendar"
+            className="rounded-lg border px-3 py-1.5"
+            style={{ borderColor: "var(--border)", color: "var(--primary)" }}
+          >
+            발표 캘린더
+          </a>
+          <a
+            href="/disclosures"
+            className="rounded-lg border px-3 py-1.5"
+            style={{ borderColor: "var(--border)", color: "var(--primary)" }}
+          >
+            공시 검색
+          </a>
+        </nav>
       </header>
 
       {/* 자연어 조회 */}
@@ -731,58 +792,157 @@ export default function Home() {
               재기준화를 권장해요.
             </p>
           )}
+          {/* 차트 옵션 — 유형 토글 + 단위 표기 */}
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <div
+              role="group"
+              aria-label="차트 유형"
+              className="flex overflow-hidden rounded-lg border text-xs"
+              style={{ borderColor: "var(--border)" }}
+            >
+              {CHART_TYPES.map((t) => (
+                <button
+                  key={t.value}
+                  onClick={() => setChartType(t.value)}
+                  aria-pressed={chartType === t.value}
+                  className="px-3 py-1.5 font-semibold"
+                  style={{
+                    background:
+                      chartType === t.value ? "var(--primary-soft)" : "transparent",
+                    color:
+                      chartType === t.value ? "var(--primary)" : "var(--muted)",
+                  }}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            {unitLabel && (
+              <span className="text-xs" style={{ color: "var(--muted)" }}>
+                {unitLabel}
+              </span>
+            )}
+          </div>
           <div className="h-96" ref={chartRef}>
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 8, right: 16, bottom: 4, left: 4 }}>
-                <CartesianGrid stroke="var(--grid)" strokeWidth={1} vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fill: "var(--axis)", fontSize: 11 }}
-                  tickLine={false}
-                  axisLine={{ stroke: "var(--grid)" }}
-                  minTickGap={48}
-                />
-                <YAxis
-                  tick={{ fill: "var(--axis)", fontSize: 11 }}
-                  tickLine={false}
-                  axisLine={false}
-                  width={64}
-                  domain={["auto", "auto"]}
-                />
-                <Tooltip
-                  contentStyle={{
-                    background: "var(--surface)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 8,
-                    color: "var(--foreground)",
-                    fontSize: 12,
-                  }}
-                  formatter={(v, key) => [
-                    typeof v === "number" ? v.toLocaleString() : "—",
-                    nameOf(String(key)),
-                  ]}
-                />
-                {loadedIds.length > 1 && (
-                  <Legend
-                    formatter={(id) => (
-                      <span style={{ color: "var(--foreground)", fontSize: 12 }}>
-                        {nameOf(String(id))}
-                      </span>
-                    )}
-                  />
-                )}
-                {loadedIds.map((id, i) => (
-                  <Line
-                    key={id}
-                    type="monotone"
-                    dataKey={id}
-                    stroke={`var(${SERIES_VARS[i]})`}
-                    strokeWidth={2}
-                    dot={false}
-                    connectNulls
-                  />
-                ))}
-              </LineChart>
+              {(() => {
+                const margin = { top: 8, right: 16, bottom: 4, left: 4 };
+                // 축·그리드·툴팁·범례 — 세 차트 유형이 공유
+                const common = [
+                  <CartesianGrid
+                    key="grid"
+                    stroke="var(--grid)"
+                    strokeWidth={1}
+                    vertical={false}
+                  />,
+                  <XAxis
+                    key="x"
+                    dataKey="date"
+                    tick={{ fill: "var(--axis)", fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={{ stroke: "var(--grid)" }}
+                    minTickGap={48}
+                  />,
+                  <YAxis
+                    key="y"
+                    tick={{ fill: "var(--axis)", fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={64}
+                    domain={["auto", "auto"]}
+                  />,
+                  <Tooltip
+                    key="tooltip"
+                    cursor={
+                      chartType === "bar"
+                        ? { fill: "var(--primary-soft)", fillOpacity: 0.6 }
+                        : { stroke: "var(--axis)", strokeOpacity: 0.4 }
+                    }
+                    contentStyle={{
+                      background: "var(--surface)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 8,
+                      color: "var(--foreground)",
+                      fontSize: 12,
+                    }}
+                    formatter={(v, key) => [
+                      typeof v === "number" ? v.toLocaleString() : "—",
+                      nameOf(String(key)),
+                    ]}
+                  />,
+                  ...(loadedIds.length > 1
+                    ? [
+                        <Legend
+                          key="legend"
+                          formatter={(id) => (
+                            <span
+                              style={{ color: "var(--foreground)", fontSize: 12 }}
+                            >
+                              {nameOf(String(id))}
+                            </span>
+                          )}
+                        />,
+                      ]
+                    : []),
+                ];
+                if (chartType === "bar") {
+                  return (
+                    <BarChart
+                      data={chartData}
+                      margin={margin}
+                      barGap={2}
+                      barCategoryGap="25%"
+                    >
+                      {common}
+                      {loadedIds.map((id, i) => (
+                        <Bar
+                          key={id}
+                          dataKey={id}
+                          fill={`var(${SERIES_VARS[i]})`}
+                          maxBarSize={20}
+                          radius={[2, 2, 0, 0]}
+                        />
+                      ))}
+                    </BarChart>
+                  );
+                }
+                if (chartType === "area") {
+                  return (
+                    <AreaChart data={chartData} margin={margin}>
+                      {common}
+                      {loadedIds.map((id, i) => (
+                        <Area
+                          key={id}
+                          type="monotone"
+                          dataKey={id}
+                          stroke={`var(${SERIES_VARS[i]})`}
+                          strokeWidth={2}
+                          fill={`var(${SERIES_VARS[i]})`}
+                          fillOpacity={0.15}
+                          dot={false}
+                          connectNulls
+                        />
+                      ))}
+                    </AreaChart>
+                  );
+                }
+                return (
+                  <LineChart data={chartData} margin={margin}>
+                    {common}
+                    {loadedIds.map((id, i) => (
+                      <Line
+                        key={id}
+                        type="monotone"
+                        dataKey={id}
+                        stroke={`var(${SERIES_VARS[i]})`}
+                        strokeWidth={2}
+                        dot={false}
+                        connectNulls
+                      />
+                    ))}
+                  </LineChart>
+                );
+              })()}
             </ResponsiveContainer>
           </div>
 
