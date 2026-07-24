@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { transformLabels } from "@/lib/transforms";
 import {
   CartesianGrid,
@@ -41,6 +41,71 @@ const YEAR_PRESETS = [1, 3, 5, 10] as const;
 const MAX_SERIES = 4;
 const SERIES_VARS = ["--series-1", "--series-2", "--series-3", "--series-4"];
 
+/**
+ * 차트 컨테이너 내부의 recharts SVG를 PNG Blob으로 변환한다.
+ * SVG의 색이 CSS 변수(var(--series-1) 등)로 지정돼 있어 그대로 직렬화하면
+ * 색이 사라지므로, 원본 요소를 순회하며 getComputedStyle로 resolve된
+ * stroke/fill(텍스트는 font까지)을 복제본에 인라인으로 박은 뒤 직렬화한다.
+ * 버튼 핸들러와 검증이 동일하게 이 함수를 거친다.
+ */
+async function chartContainerToPngBlob(container: HTMLElement): Promise<Blob> {
+  const svg = container.querySelector("svg");
+  if (!svg) throw new Error("차트 SVG를 찾을 수 없습니다");
+
+  const rect = svg.getBoundingClientRect();
+  const clone = svg.cloneNode(true) as SVGSVGElement;
+
+  // cloneNode는 문서 순서를 보존하므로 index로 원본↔복제본을 짝지을 수 있다.
+  const srcEls: SVGElement[] = [svg, ...svg.querySelectorAll<SVGElement>("*")];
+  const dstEls: SVGElement[] = [clone, ...clone.querySelectorAll<SVGElement>("*")];
+  for (let i = 0; i < srcEls.length; i++) {
+    const cs = getComputedStyle(srcEls[i]);
+    const dst = dstEls[i];
+    dst.setAttribute("stroke", cs.stroke);
+    dst.setAttribute("fill", cs.fill);
+    if (srcEls[i].tagName === "text" || srcEls[i].tagName === "tspan") {
+      dst.setAttribute("font-family", cs.fontFamily);
+      dst.setAttribute("font-size", cs.fontSize);
+    }
+    // 독립 문서에서 의미 없는 class를 제거해 속성값이 확실히 적용되게 한다.
+    dst.removeAttribute("class");
+  }
+
+  clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  clone.setAttribute("width", String(rect.width));
+  clone.setAttribute("height", String(rect.height));
+
+  const xml = new XMLSerializer().serializeToString(clone);
+  const img = new Image();
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = () => reject(new Error("SVG 이미지 로드 실패"));
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(xml);
+  });
+
+  // 배경은 투명 대신 현재 테마의 --surface 계산값으로 채운다 (다크모드 대응).
+  const surface =
+    getComputedStyle(container).getPropertyValue("--surface").trim() ||
+    "#ffffff";
+
+  const scale = 2; // 2배 해상도
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(rect.width * scale);
+  canvas.height = Math.round(rect.height * scale);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("canvas 2d context를 얻을 수 없습니다");
+  ctx.fillStyle = surface;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.scale(scale, scale);
+  ctx.drawImage(img, 0, 0, rect.width, rect.height);
+
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/png")
+  );
+  if (!blob) throw new Error("PNG 변환에 실패했습니다");
+  return blob;
+}
+
 export default function Home() {
   const [meta, setMeta] = useState<IndicatorMeta[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
@@ -50,6 +115,8 @@ export default function Home() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [showTable, setShowTable] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const chartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch("/api/indicators")
@@ -113,6 +180,28 @@ export default function Home() {
   const units = new Set(loadedIds.map((id) => series[id].indicator.unit));
   const mixedUnits = transform === "raw" && units.size > 1;
   const nameOf = (id: string) => meta.find((m) => m.id === id)?.name ?? id;
+
+  const downloadPng = useCallback(async () => {
+    const container = chartRef.current;
+    if (!container) return;
+    setExporting(true);
+    try {
+      const blob = await chartContainerToPngBlob(container);
+      // 파일명은 현재 상태에서 파생: 실제 로드된 지표 id들 + 응답의 변환값 + 오늘(로컬).
+      const ids = Object.keys(series).join("-");
+      const tf = Object.values(series)[0]?.transform ?? transform;
+      const d = new Date();
+      const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `cockpit_${ids}_${tf}_${date}.png`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } finally {
+      setExporting(false);
+    }
+  }, [series, transform]);
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-8">
@@ -237,7 +326,7 @@ export default function Home() {
               재기준화를 권장해요.
             </p>
           )}
-          <div className="h-96">
+          <div className="h-96" ref={chartRef}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 8, right: 16, bottom: 4, left: 4 }}>
                 <CartesianGrid stroke="var(--grid)" strokeWidth={1} vertical={false} />
@@ -292,14 +381,24 @@ export default function Home() {
             </ResponsiveContainer>
           </div>
 
-          {/* 테이블 뷰 (접근성) */}
-          <button
-            onClick={() => setShowTable((s) => !s)}
-            className="mt-3 text-xs underline"
-            style={{ color: "var(--primary)" }}
-          >
-            {showTable ? "테이블 접기" : "테이블로 보기"}
-          </button>
+          {/* 테이블 뷰 (접근성) · PNG 다운로드 */}
+          <div className="mt-3 flex items-center gap-4">
+            <button
+              onClick={() => setShowTable((s) => !s)}
+              className="text-xs underline"
+              style={{ color: "var(--primary)" }}
+            >
+              {showTable ? "테이블 접기" : "테이블로 보기"}
+            </button>
+            <button
+              onClick={downloadPng}
+              disabled={exporting}
+              className="text-xs underline disabled:opacity-40"
+              style={{ color: "var(--primary)" }}
+            >
+              {exporting ? "변환 중…" : "PNG 다운로드"}
+            </button>
+          </div>
           {showTable && (
             <div className="mt-2 max-h-72 overflow-auto rounded-lg border" style={{ borderColor: "var(--border)" }}>
               <table className="w-full text-xs" style={{ fontVariantNumeric: "tabular-nums" }}>
