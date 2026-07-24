@@ -11,7 +11,10 @@ export const kosis: SourceAdapter = {
   requiresKey: true,
 
   async fetchSeries(params, range) {
-    const key = requireKey("kosis", "KOSIS_API_KEY");
+    // KOSIS 인증키는 base64 형태 — 복사 과정에서 끝의 '=' 패딩이 유실되면
+    // err 11(유효하지 않은 인증KEY)이 나므로 길이가 4의 배수가 되도록 보정한다.
+    const rawKey = requireKey("kosis", "KOSIS_API_KEY");
+    const key = rawKey + "=".repeat((4 - (rawKey.length % 4)) % 4);
     const { orgId, tblId, itmId, objL1, objL2 = "", prdSe = "M" } = params;
     const start = toKosisPeriod(range.start, prdSe);
     const end = toKosisPeriod(range.end, prdSe);

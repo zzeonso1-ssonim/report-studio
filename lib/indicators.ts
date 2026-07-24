@@ -53,11 +53,24 @@ export const indicators: IndicatorDef[] = [
     cycle: "M",
     origin: "통계청",
     source: "kosis",
-    // TODO: KOSIS 포털에서 tblId·itmId·objL1 실코드 검증 필요
+    // KOSIS 통계자료 API 실검증 완료: DT_1J22003 소비자물가지수(2020=100),
+    // itmId T=총지수, objL1 T10=전국 (2025-01 실측 115.71)
     params: { orgId: "101", tblId: "DT_1J22003", itmId: "T", objL1: "T10", prdSe: "M" },
-    verified: false,
+    verified: true,
   },
-  // TODO kr_gdp: ECOS 국민계정(분기 실질 GDP) statCode 검증 후 추가
+  {
+    id: "kr_gdp",
+    name: "한국 실질 GDP (계절조정, 분기)",
+    country: "KR",
+    unit: "십억원",
+    cycle: "Q",
+    origin: "한국은행",
+    source: "ecos",
+    // ECOS StatisticTableList/ItemList 실검증 완료: 200Y104 경제활동별 GDP 및 GNI(계절조정, 실질, 분기),
+    // itemCode1 1400=국내총생산(시장가격, GDP) (2026Q2 실측 600,405.7 십억원)
+    params: { statCode: "200Y104", cycle: "Q", itemCode1: "1400" },
+    verified: true,
+  },
 
   // ── 미국 ──────────────────────────────────────────────
   {
