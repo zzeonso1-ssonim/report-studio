@@ -4,7 +4,8 @@ import { kosis } from "./kosis";
 import { fred } from "./fred";
 import { bls } from "./bls";
 import { dart } from "./dart";
-import { krx, rone, fisis, bea } from "./stubs";
+import { fisis } from "./fisis";
+import { krx, rone, bea } from "./stubs";
 
 export const sources: Record<SourceId, SourceAdapter> = {
   ecos,
