@@ -42,7 +42,8 @@ export async function fetchFisisSeries(
   range: { start: string; end: string },
   store: FisisStore
 ): Promise<SeriesPoint[]> {
-  const key = requireKey("fisis", "FISIS_API_KEY");
+  // .env.local에 키 앞뒤 공백이 섞여 있던 실사례가 있어 방어적으로 trim
+  const key = requireKey("fisis", "FISIS_API_KEY").trim();
   const { financeCd, listNo, accountCd, term = "M" } = params;
   if (!financeCd || !listNo || !accountCd) {
     throw new SourceError("fisis", "params에 financeCd, listNo, accountCd가 모두 필요합니다");
@@ -123,15 +124,29 @@ async function callFisisMonth(
   url.searchParams.set("endBaseMm", month);
   url.searchParams.set("lang", FISIS_LANG);
 
-  // 자체 증분 적재를 쓰므로 Next fetch 캐시는 사용하지 않음
-  const res = await fetch(url, { cache: "no-store" });
+  // 자체 증분 적재를 쓰므로 Next fetch 캐시는 사용하지 않음.
+  // FISIS는 User-Agent 없는 요청을 연결 단계에서 끊음(실측: curl UA 미지정 시 empty reply).
+  // Node fetch 기본 UA("node")로도 통과하지만 명시해 둔다.
+  const res = await fetch(url, {
+    cache: "no-store",
+    headers: { "User-Agent": "econ-cockpit/0.1 (+node-fetch)" },
+  });
   if (!res.ok) throw new SourceError("fisis", `HTTP ${res.status} (${month})`);
-  const json: unknown = await res.json();
+  // FISIS는 일부 오류를 HTTP 200 + HTML 페이지로 반환함(실측 2026-07-24,
+  // statisticsSearch 오류 시) → JSON 파싱 실패를 SourceError로 변환
+  let json: unknown;
+  try {
+    json = await res.json();
+  } catch {
+    throw new SourceError("fisis", `JSON이 아닌 응답(HTML 오류 페이지 추정) (${month})`);
+  }
 
-  // ── 응답 파싱 — 실키 검증 전 ──────────────────────────────
-  // 문서상 { result: { err_cd, err_msg, list: [{ base_month, a, ... }] } }로
-  // 알려져 있으나 실제 필드명이 다를 수 있어 방어적으로 처리한다.
-  // 실키 확보 후: err_cd/err_msg 표기, list 위치, base_month·값 필드명(a) 확인 필요.
+  // ── 응답 파싱 — 오류 경로만 실검증(2026-07-24), 데이터 경로는 키 활성화 대기 ──
+  // 실측 확인: 래퍼는 result, 오류 필드는 err_cd(3자리 문자열)·err_msg·total_count.
+  //   예: { result: { err_cd: "010", err_msg: "미등록 인증키", total_count: "0" } }
+  // 미검증(키 미활성으로 정상 응답을 못 받음): 정상코드 "000" 표기, 데이터 배열
+  //   위치(list), 행 필드 base_month·값 필드 a. 키 활성화 후 확인할 것 —
+  //   그때까지 아래 폴백(pick* 다중 키)은 유지한다.
   const result = pickObject(json, ["result"]) ?? (isObject(json) ? json : undefined);
   if (!result) throw new SourceError("fisis", `응답 형식을 해석할 수 없습니다 (${month})`);
 
