@@ -11,12 +11,12 @@
   --muted: #6b8a83;
   --border: rgba(23, 59, 53, 0.12);
 
-  /* 차트 토큰 — 그린·블루·그레이 톤 (validate_palette.js 통과, surface #ffffff)
-     blue / green / slate(블루그레이) / teal(그린그레이) */
-  --series-1: #3275b4;
-  --series-2: #50a064;
-  --series-3: #344f8f;
-  --series-4: #12a195;
+  /* 차트 토큰 — 그린·블루·오렌지·그레이 (validate_palette.js 통과, surface #ffffff)
+     오렌지-그린 인접은 적록색약 구분 불가(ΔE 3.2)라 순서로 분리, 그레이는 채도 하한(C≥0.10) 충족 슬레이트 */
+  --series-1: #008300;
+  --series-2: #2a78d6;
+  --series-3: #eb6834;
+  --series-4: #6270b0;
   --grid: #e1e0d9;
   --axis: #898781;
 }
@@ -38,11 +38,11 @@
     --muted: #8aa39d;
     --border: rgba(232, 240, 238, 0.14);
 
-    /* 차트 토큰 — 그린·블루·그레이 톤 다크 스텝 (validate_palette.js 통과, surface #1a1f1e) */
-    --series-1: #4f8ac6;
-    --series-2: #5da56e;
-    --series-3: #486aab;
-    --series-4: #28a6a0;
+    /* 차트 토큰 — 그린·블루·오렌지·그레이 다크 스텝 (validate_palette.js 통과, surface #1a1f1e) */
+    --series-1: #008300;
+    --series-2: #3987e5;
+    --series-3: #d95926;
+    --series-4: #7b86cf;
     --grid: #2c2c2a;
     --axis: #898781;
   }
