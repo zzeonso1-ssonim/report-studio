@@ -133,6 +133,23 @@ async function chartContainerToPngBlob(container: HTMLElement): Promise<Blob> {
   return blob;
 }
 
+/** /api/chat 응답의 plan.series 항목 */
+interface PlanSeriesItem {
+  indicatorId?: string;
+  source?: string;
+  params?: Record<string, string>;
+  cycle?: string;
+  name?: string;
+  unit?: string;
+}
+
+interface ChatPlan {
+  series: PlanSeriesItem[];
+  transform: string;
+  startDate: string;
+  endDate: string;
+}
+
 export default function Home() {
   const [meta, setMeta] = useState<IndicatorMeta[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
@@ -144,6 +161,14 @@ export default function Home() {
   const [showTable, setShowTable] = useState(false);
   const [exporting, setExporting] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
+
+  // 자연어 조회
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatMessage, setChatMessage] = useState<string | null>(null); // 모델 되묻기
+  const [chatError, setChatError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null); // 계획 안내문 (차트 위)
+  const [manualOpen, setManualOpen] = useState(false); // 수동 선택 패널
 
   // 전체 통계 검색
   const [query, setQuery] = useState("");
@@ -215,57 +240,130 @@ export default function Home() {
     setAdhoc((prev) => prev.filter((a) => a.id !== id));
   }, []);
 
+  /** 실제 조회 실행 — 수동 조회와 자연어 계획이 동일 경로를 쓴다 */
+  const runLoad = useCallback(
+    async (
+      ids: string[],
+      adhocItems: AdhocItem[],
+      tf: string,
+      start: string,
+      end: string
+    ) => {
+      if (ids.length + adhocItems.length === 0) return;
+      setLoading(true);
+      const qs = `start=${start}&end=${end}&transform=${tf}`;
+
+      const results: Record<string, SeriesResponse> = {};
+      const errs: Record<string, string> = {};
+      await Promise.all([
+        ...ids.map(async (id) => {
+          try {
+            const res = await fetch(`/api/series/${id}?${qs}`);
+            const json = await res.json();
+            if (!res.ok) errs[id] = json.error ?? `HTTP ${res.status}`;
+            else results[id] = json;
+          } catch (e) {
+            errs[id] = String(e);
+          }
+        }),
+        ...adhocItems.map(async (a) => {
+          try {
+            const res = await fetch("/api/series/adhoc", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                id: a.id,
+                source: a.source,
+                params: a.params,
+                cycle: a.cycle,
+                name: a.name,
+                unit: a.unit,
+                start,
+                end,
+                transform: tf,
+              }),
+            });
+            const json = await res.json();
+            if (!res.ok) errs[a.id] = json.error ?? `HTTP ${res.status}`;
+            else results[a.id] = json;
+          } catch (e) {
+            errs[a.id] = String(e);
+          }
+        }),
+      ]);
+      setSeries(results);
+      setErrors(errs);
+      setLoading(false);
+    },
+    []
+  );
+
+  /** 수동 선택 패널의 조회 버튼 — 연 프리셋에서 기간을 계산 */
   const load = useCallback(async () => {
-    if (selected.length + adhoc.length === 0) return;
-    setLoading(true);
     const startDate = new Date();
     startDate.setFullYear(startDate.getFullYear() - years);
     const start = startDate.toISOString().slice(0, 10);
     const end = new Date().toISOString().slice(0, 10);
-    const qs = `start=${start}&end=${end}&transform=${transform}`;
+    setNote(null);
+    await runLoad(selected, adhoc, transform, start, end);
+  }, [selected, adhoc, transform, years, runLoad]);
 
-    const results: Record<string, SeriesResponse> = {};
-    const errs: Record<string, string> = {};
-    await Promise.all([
-      ...selected.map(async (id) => {
-        try {
-          const res = await fetch(`/api/series/${id}?${qs}`);
-          const json = await res.json();
-          if (!res.ok) errs[id] = json.error ?? `HTTP ${res.status}`;
-          else results[id] = json;
-        } catch (e) {
-          errs[id] = String(e);
+  /** 자연어 질의 → /api/chat 계획 → 기존 조회 경로 실행 */
+  const runChat = useCallback(async () => {
+    const q = chatInput.trim();
+    if (q.length < 2 || chatLoading) return;
+    setChatLoading(true);
+    setChatMessage(null);
+    setChatError(null);
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: q }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setChatError(json.error ?? `HTTP ${res.status}`);
+        return;
+      }
+      if (json.message) {
+        setChatMessage(json.message);
+        return;
+      }
+      const plan: ChatPlan | undefined = json.plan;
+      if (!plan || !Array.isArray(plan.series)) {
+        setChatError("계획 응답 형식이 올바르지 않습니다");
+        return;
+      }
+      const regIds: string[] = [];
+      const adhocItems: AdhocItem[] = [];
+      for (const s of plan.series) {
+        if (s.indicatorId) {
+          regIds.push(s.indicatorId);
+        } else if (s.source && s.params) {
+          const r: SearchResult = {
+            source: s.source,
+            name: s.name ?? "임의 시계열",
+            params: s.params,
+            cycle: s.cycle ?? "M",
+            unit: s.unit,
+            origin: "AI 검색",
+          };
+          adhocItems.push({ ...r, id: adhocId(r) });
         }
-      }),
-      ...adhoc.map(async (a) => {
-        try {
-          const res = await fetch("/api/series/adhoc", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              id: a.id,
-              source: a.source,
-              params: a.params,
-              cycle: a.cycle,
-              name: a.name,
-              unit: a.unit,
-              start,
-              end,
-              transform,
-            }),
-          });
-          const json = await res.json();
-          if (!res.ok) errs[a.id] = json.error ?? `HTTP ${res.status}`;
-          else results[a.id] = json;
-        } catch (e) {
-          errs[a.id] = String(e);
-        }
-      }),
-    ]);
-    setSeries(results);
-    setErrors(errs);
-    setLoading(false);
-  }, [selected, adhoc, transform, years]);
+      }
+      // 수동 패널 상태를 계획과 동기화 — 이후 수동 재조회도 이어서 가능
+      setSelected(regIds);
+      setAdhoc(adhocItems);
+      setTransform(plan.transform);
+      setNote(typeof json.note === "string" ? json.note : null);
+      await runLoad(regIds, adhocItems, plan.transform, plan.startDate, plan.endDate);
+    } catch (e) {
+      setChatError(String(e));
+    } finally {
+      setChatLoading(false);
+    }
+  }, [chatInput, chatLoading, runLoad]);
 
   const chartData = useMemo(() => {
     const byDate = new Map<string, Record<string, string | number | null>>();
@@ -322,14 +420,80 @@ export default function Home() {
         </p>
       </header>
 
-      {/* 지표 선택 */}
+      {/* 자연어 조회 */}
       <section
-        className="rounded-xl border p-4"
+        className="rounded-xl border p-5"
         style={{ background: "var(--surface)", borderColor: "var(--border)" }}
       >
-        <h2 className="mb-3 text-sm font-semibold">
-          지표 선택 (최대 {MAX_SERIES}개 · 현재 {totalSelected}개)
-        </h2>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            onKeyDown={(e) => {
+              // 한글 IME 조합 중 Enter는 조합 확정이므로 제출하지 않는다
+              if (e.key === "Enter" && !e.nativeEvent.isComposing) runChat();
+            }}
+            disabled={chatLoading}
+            placeholder="예: 한국이랑 미국 CPI 전년동기대비 5년치 비교해줘"
+            aria-label="자연어로 데이터 조회"
+            className="flex-1 rounded-xl border px-4 py-3 text-base outline-none focus:ring-2 disabled:opacity-60"
+            style={{
+              borderColor: "var(--primary)",
+              background: "var(--surface)",
+              color: "var(--foreground)",
+            }}
+          />
+          <button
+            onClick={runChat}
+            disabled={chatInput.trim().length < 2 || chatLoading}
+            className="rounded-xl px-5 py-3 text-base font-semibold text-white disabled:opacity-40"
+            style={{ background: "var(--primary)" }}
+          >
+            {chatLoading ? "분석 중…" : "조회"}
+          </button>
+        </div>
+        <p className="mt-2 text-xs" style={{ color: "var(--muted)" }}>
+          질문하듯 입력하면 지표·변환·기간을 알아서 골라 조회해요 — 예: “국고채
+          10년이랑 미국채 10년 금리 1년치”, “전국 아파트 매매가격지수 3년”
+        </p>
+        {chatMessage && (
+          <div
+            className="mt-3 max-w-xl rounded-xl rounded-tl-sm border px-4 py-3 text-sm"
+            style={{
+              background: "var(--primary-soft)",
+              borderColor: "var(--border)",
+              color: "var(--foreground)",
+            }}
+          >
+            {chatMessage}
+          </div>
+        )}
+        {chatError && (
+          <p className="mt-3 text-sm" style={{ color: "var(--muted)" }}>
+            ⚠ {chatError}
+          </p>
+        )}
+      </section>
+
+      {/* 수동 선택 (접이식) */}
+      <section
+        className="mt-4 rounded-xl border"
+        style={{ background: "var(--surface)", borderColor: "var(--border)" }}
+      >
+        <button
+          onClick={() => setManualOpen((o) => !o)}
+          aria-expanded={manualOpen}
+          className="flex w-full items-center justify-between px-4 py-3 text-sm font-semibold"
+        >
+          <span>
+            수동 선택 — 지표 체크·통계 검색 (최대 {MAX_SERIES}개 · 현재{" "}
+            {totalSelected}개)
+          </span>
+          <span style={{ color: "var(--muted)" }}>{manualOpen ? "▲ 접기" : "▼ 펼치기"}</span>
+        </button>
+        {manualOpen && (
+        <div className="px-4 pb-4">
         <h3 className="mb-2 text-xs font-semibold" style={{ color: "var(--muted)" }}>
           주요 지표
         </h3>
@@ -532,6 +696,8 @@ export default function Home() {
             {loading ? "불러오는 중…" : "조회"}
           </button>
         </div>
+        </div>
+        )}
       </section>
 
       {/* 오류 */}
@@ -554,6 +720,11 @@ export default function Home() {
           className="mt-4 rounded-xl border p-4"
           style={{ background: "var(--surface)", borderColor: "var(--border)" }}
         >
+          {note && (
+            <p className="mb-2 text-xs" style={{ color: "var(--primary)" }}>
+              {note}
+            </p>
+          )}
           {mixedUnits && (
             <p className="mb-2 text-xs" style={{ color: "var(--muted)" }}>
               단위가 다른 지표를 원계열로 겹쳤어요 — 비교하려면 전년동기대비(%)나
