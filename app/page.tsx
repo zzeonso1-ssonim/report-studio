@@ -32,6 +32,33 @@ interface SeriesResponse {
   error?: string;
 }
 
+/** /api/search 결과 한 건 — params는 어댑터에 그대로 전달 가능한 형태 */
+interface SearchResult {
+  source: string;
+  name: string;
+  params: Record<string, string>;
+  cycle: string;
+  unit?: string;
+  origin: string;
+}
+
+/** 검색에서 추가된 임의 시계열 (등록 지표와 구분) */
+interface AdhocItem extends SearchResult {
+  id: string;
+}
+
+const SOURCE_LABELS: Record<string, string> = {
+  ecos: "ECOS",
+  kosis: "KOSIS",
+  fred: "FRED",
+};
+
+/** 검색 결과 → 선택 목록/차트 dataKey로 쓸 안정적 id */
+function adhocId(r: SearchResult): string {
+  const sig = Object.values(r.params).join("_").replace(/[^a-zA-Z0-9]/g, "");
+  return `adhoc_${r.source}_${sig}`;
+}
+
 const TRANSFORMS = Object.entries(transformLabels).map(([value, label]) => ({
   value,
   label,
@@ -118,6 +145,14 @@ export default function Home() {
   const [exporting, setExporting] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
 
+  // 전체 통계 검색
+  const [query, setQuery] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchErrors, setSearchErrors] = useState<string[]>([]);
+  const [searchDone, setSearchDone] = useState(false);
+  const [adhoc, setAdhoc] = useState<AdhocItem[]>([]);
+
   useEffect(() => {
     fetch("/api/indicators")
       .then((r) => r.json())
@@ -125,29 +160,74 @@ export default function Home() {
       .catch(() => setMeta([]));
   }, []);
 
-  const toggle = useCallback((id: string) => {
-    setSelected((prev) =>
-      prev.includes(id)
-        ? prev.filter((x) => x !== id)
-        : prev.length >= MAX_SERIES
-          ? prev
-          : [...prev, id]
-    );
+  const totalSelected = selected.length + adhoc.length;
+
+  const toggle = useCallback(
+    (id: string) => {
+      setSelected((prev) =>
+        prev.includes(id)
+          ? prev.filter((x) => x !== id)
+          : totalSelected >= MAX_SERIES
+            ? prev
+            : [...prev, id]
+      );
+    },
+    [totalSelected]
+  );
+
+  const runSearch = useCallback(async () => {
+    const q = query.trim();
+    if (q.length < 2 || searching) return;
+    setSearching(true);
+    setSearchDone(false);
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+      const json = await res.json();
+      if (!res.ok) {
+        setSearchResults([]);
+        setSearchErrors([json.error ?? `HTTP ${res.status}`]);
+      } else {
+        setSearchResults(json.results ?? []);
+        setSearchErrors(json.errors ?? []);
+      }
+    } catch (e) {
+      setSearchResults([]);
+      setSearchErrors([String(e)]);
+    } finally {
+      setSearching(false);
+      setSearchDone(true);
+    }
+  }, [query, searching]);
+
+  const addAdhoc = useCallback(
+    (r: SearchResult) => {
+      const id = adhocId(r);
+      setAdhoc((prev) => {
+        if (prev.some((a) => a.id === id)) return prev;
+        if (selected.length + prev.length >= MAX_SERIES) return prev;
+        return [...prev, { ...r, id }];
+      });
+    },
+    [selected.length]
+  );
+
+  const removeAdhoc = useCallback((id: string) => {
+    setAdhoc((prev) => prev.filter((a) => a.id !== id));
   }, []);
 
   const load = useCallback(async () => {
-    if (selected.length === 0) return;
+    if (selected.length + adhoc.length === 0) return;
     setLoading(true);
-    const start = new Date();
-    start.setFullYear(start.getFullYear() - years);
-    const qs = `start=${start.toISOString().slice(0, 10)}&end=${new Date()
-      .toISOString()
-      .slice(0, 10)}&transform=${transform}`;
+    const startDate = new Date();
+    startDate.setFullYear(startDate.getFullYear() - years);
+    const start = startDate.toISOString().slice(0, 10);
+    const end = new Date().toISOString().slice(0, 10);
+    const qs = `start=${start}&end=${end}&transform=${transform}`;
 
     const results: Record<string, SeriesResponse> = {};
     const errs: Record<string, string> = {};
-    await Promise.all(
-      selected.map(async (id) => {
+    await Promise.all([
+      ...selected.map(async (id) => {
         try {
           const res = await fetch(`/api/series/${id}?${qs}`);
           const json = await res.json();
@@ -156,12 +236,36 @@ export default function Home() {
         } catch (e) {
           errs[id] = String(e);
         }
-      })
-    );
+      }),
+      ...adhoc.map(async (a) => {
+        try {
+          const res = await fetch("/api/series/adhoc", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: a.id,
+              source: a.source,
+              params: a.params,
+              cycle: a.cycle,
+              name: a.name,
+              unit: a.unit,
+              start,
+              end,
+              transform,
+            }),
+          });
+          const json = await res.json();
+          if (!res.ok) errs[a.id] = json.error ?? `HTTP ${res.status}`;
+          else results[a.id] = json;
+        } catch (e) {
+          errs[a.id] = String(e);
+        }
+      }),
+    ]);
     setSeries(results);
     setErrors(errs);
     setLoading(false);
-  }, [selected, transform, years]);
+  }, [selected, adhoc, transform, years]);
 
   const chartData = useMemo(() => {
     const byDate = new Map<string, Record<string, string | number | null>>();
@@ -179,7 +283,11 @@ export default function Home() {
   const loadedIds = Object.keys(series);
   const units = new Set(loadedIds.map((id) => series[id].indicator.unit));
   const mixedUnits = transform === "raw" && units.size > 1;
-  const nameOf = (id: string) => meta.find((m) => m.id === id)?.name ?? id;
+  const nameOf = (id: string) =>
+    meta.find((m) => m.id === id)?.name ??
+    adhoc.find((a) => a.id === id)?.name ??
+    series[id]?.indicator.name ??
+    id;
 
   const downloadPng = useCallback(async () => {
     const container = chartRef.current;
@@ -219,7 +327,12 @@ export default function Home() {
         className="rounded-xl border p-4"
         style={{ background: "var(--surface)", borderColor: "var(--border)" }}
       >
-        <h2 className="mb-3 text-sm font-semibold">지표 선택 (최대 {MAX_SERIES}개)</h2>
+        <h2 className="mb-3 text-sm font-semibold">
+          지표 선택 (최대 {MAX_SERIES}개 · 현재 {totalSelected}개)
+        </h2>
+        <h3 className="mb-2 text-xs font-semibold" style={{ color: "var(--muted)" }}>
+          주요 지표
+        </h3>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {meta.map((m) => (
             <label
@@ -259,6 +372,127 @@ export default function Home() {
           )}
         </div>
 
+        {/* 전체 통계 검색 */}
+        <h3 className="mb-2 mt-5 text-xs font-semibold" style={{ color: "var(--muted)" }}>
+          전체 통계 검색 (ECOS · KOSIS · FRED)
+        </h3>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") runSearch();
+            }}
+            placeholder="통계명·항목 검색 — 예: 소비자물가, housing starts"
+            className="flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-1"
+            style={{
+              borderColor: "var(--border)",
+              background: "var(--surface)",
+              color: "var(--foreground)",
+            }}
+          />
+          <button
+            onClick={runSearch}
+            disabled={query.trim().length < 2 || searching}
+            className="rounded-lg border px-4 py-1.5 text-sm font-semibold disabled:opacity-40"
+            style={{
+              borderColor: "var(--primary)",
+              color: "var(--primary)",
+              background: "var(--primary-soft)",
+            }}
+          >
+            {searching ? "검색 중…" : "검색"}
+          </button>
+        </div>
+
+        {/* 검색 추가분 (선택됨) */}
+        {adhoc.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {adhoc.map((a) => (
+              <span
+                key={a.id}
+                className="flex items-center gap-1.5 rounded-lg border border-dashed px-2.5 py-1.5 text-xs"
+                style={{
+                  borderColor: "var(--primary)",
+                  background: "var(--primary-soft)",
+                }}
+              >
+                <span
+                  className="rounded px-1 py-0.5 font-semibold"
+                  style={{ background: "var(--surface)", color: "var(--primary)" }}
+                >
+                  {SOURCE_LABELS[a.source] ?? a.source.toUpperCase()} 검색 추가
+                </span>
+                <span>{a.name}</span>
+                <button
+                  onClick={() => removeAdhoc(a.id)}
+                  aria-label={`${a.name} 제거`}
+                  className="ml-0.5 font-bold"
+                  style={{ color: "var(--muted)" }}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* 검색 결과 */}
+        {searchErrors.length > 0 && (
+          <div className="mt-2 text-xs" style={{ color: "var(--muted)" }}>
+            {searchErrors.map((e, i) => (
+              <p key={i}>⚠ {e}</p>
+            ))}
+          </div>
+        )}
+        {searchDone && searchResults.length === 0 && searchErrors.length === 0 && (
+          <p className="mt-2 text-xs" style={{ color: "var(--muted)" }}>
+            검색 결과가 없어요.
+          </p>
+        )}
+        {searchResults.length > 0 && (
+          <ul
+            className="mt-2 max-h-64 overflow-auto rounded-lg border"
+            style={{ borderColor: "var(--border)" }}
+          >
+            {searchResults.map((r) => {
+              const id = adhocId(r);
+              const added = adhoc.some((a) => a.id === id);
+              const full = !added && totalSelected >= MAX_SERIES;
+              return (
+                <li key={id} style={{ borderTop: "1px solid var(--border)" }}>
+                  <button
+                    onClick={() => (added ? removeAdhoc(id) : addAdhoc(r))}
+                    disabled={full}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm disabled:opacity-40"
+                    style={{
+                      background: added ? "var(--primary-soft)" : "transparent",
+                    }}
+                  >
+                    <span
+                      className="shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold"
+                      style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+                    >
+                      {SOURCE_LABELS[r.source] ?? r.source.toUpperCase()}
+                    </span>
+                    <span className="flex-1">
+                      {r.name}
+                      <span className="ml-1 text-xs" style={{ color: "var(--muted)" }}>
+                        {r.cycle}
+                        {r.unit ? ` · ${r.unit}` : ""} · {r.origin}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-xs" style={{ color: "var(--primary)" }}>
+                      {added ? "선택됨 ✓" : full ? "가득 참" : "+ 추가"}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
         {/* 옵션 */}
         <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
           <select
@@ -291,7 +525,7 @@ export default function Home() {
           </div>
           <button
             onClick={load}
-            disabled={selected.length === 0 || loading}
+            disabled={totalSelected === 0 || loading}
             className="rounded-lg px-4 py-1.5 font-semibold text-white disabled:opacity-40"
             style={{ background: "var(--primary)" }}
           >
