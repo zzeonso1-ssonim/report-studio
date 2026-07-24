@@ -6,7 +6,8 @@ import { bls } from "./bls";
 import { dart } from "./dart";
 import { fisis } from "./fisis";
 import { krx } from "./krx";
-import { rone, bea } from "./stubs";
+import { rone } from "./rone";
+import { bea } from "./stubs";
 
 export const sources: Record<SourceId, SourceAdapter> = {
   ecos,

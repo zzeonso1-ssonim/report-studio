@@ -3,7 +3,6 @@ import { SourceAdapter, SourceError } from "./types";
 /**
  * 아직 미구현인 소스들의 자리표시자.
  * 각 소스를 붙일 때 이 파일에서 꺼내 개별 파일로 승격시킬 것.
- * - rone: 부동산원 R-ONE 통계 API
  * - bea: 미 경제분석국 (GDP 원천 — 당분간 FRED 재수록본으로 대체)
  */
 function stub(id: SourceAdapter["id"], name: string): SourceAdapter {
@@ -17,5 +16,4 @@ function stub(id: SourceAdapter["id"], name: string): SourceAdapter {
   };
 }
 
-export const rone = stub("rone", "부동산원 R-ONE");
 export const bea = stub("bea", "미 경제분석국 BEA");

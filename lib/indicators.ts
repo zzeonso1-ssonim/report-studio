@@ -122,6 +122,31 @@ export const indicators: IndicatorDef[] = [
     },
     verified: true,
   },
+  {
+    id: "kr_apt_sale_idx",
+    name: "전국 아파트 매매가격지수 (2026.01=100)",
+    country: "KR",
+    unit: "지수",
+    cycle: "M",
+    origin: "한국부동산원",
+    source: "rone",
+    // R-ONE 자체 OpenAPI 실검증 완료: A_2024_00045 (월) 매매가격지수_아파트,
+    // clsId 500001=전국, itmId 100001=지수 (2025-05 실측 98.31)
+    params: { statblId: "A_2024_00045", cycle: "MM", clsId: "500001", itmId: "100001" },
+    verified: true,
+  },
+  {
+    id: "kr_apt_jeonse_idx",
+    name: "전국 아파트 전세가격지수 (2026.01=100)",
+    country: "KR",
+    unit: "지수",
+    cycle: "M",
+    origin: "한국부동산원",
+    source: "rone",
+    // R-ONE 실검증 완료: A_2024_00050 (월) 전세가격지수_아파트 (2025-06 실측 98.44)
+    params: { statblId: "A_2024_00050", cycle: "MM", clsId: "500001", itmId: "100001" },
+    verified: true,
+  },
 
   // ── 미국 ──────────────────────────────────────────────
   {
