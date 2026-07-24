@@ -18,7 +18,7 @@ flowchart LR
     ECOS["한국은행 ECOS<br/>기준금리·환율·GDP"]
     KOSIS["통계청 KOSIS<br/>CPI"]
     DART["금감원 DART<br/>공시검색"]
-    KRSTUB["KRX · R-ONE · FreeSIS<br/>(자리표시자)"]
+    KRSTUB["KRX · R-ONE · FISIS<br/>(자리표시자)"]
   end
 
   subgraph US["미국"]

@@ -4,7 +4,7 @@ export type SourceId =
   | "krx"     // 한국거래소
   | "rone"    // 부동산원 R-ONE
   | "dart"    // 금감원 전자공시
-  | "freesis" // 금융투자협회
+  | "fisis"   // 금융감독원 금융통계정보시스템
   | "fred"    // 세인트루이스 연은
   | "bls"     // 미 노동통계국
   | "bea";    // 미 경제분석국
