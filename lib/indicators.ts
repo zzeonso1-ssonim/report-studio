@@ -71,6 +71,57 @@ export const indicators: IndicatorDef[] = [
     params: { statCode: "200Y104", cycle: "Q", itemCode1: "1400" },
     verified: true,
   },
+  {
+    id: "kr_ktb_3y_yield",
+    name: "국고채 3년 지표물 수익률 (장내 최종호가)",
+    country: "KR",
+    unit: "%",
+    cycle: "D",
+    origin: "한국거래소",
+    source: "krx",
+    // KRX 국채전문유통시장 실검증 완료. ISU_NM "국고*"는 물가연동국채 제외 필터(필수),
+    // GOVBND_ISU_TP_NM=지표 기준이라 지표물 교체 시 자동 추종
+    params: {
+      endpoint: "bon/kts_bydd_trd",
+      valueField: "CLSPRC_YD",
+      GOVBND_ISU_TP_NM: "지표",
+      BND_EXP_TP_NM: "3",
+      ISU_NM: "국고*",
+    },
+    verified: true,
+  },
+  {
+    id: "kr_ktb_10y_yield",
+    name: "국고채 10년 지표물 수익률 (장내 최종호가)",
+    country: "KR",
+    unit: "%",
+    cycle: "D",
+    origin: "한국거래소",
+    source: "krx",
+    params: {
+      endpoint: "bon/kts_bydd_trd",
+      valueField: "CLSPRC_YD",
+      GOVBND_ISU_TP_NM: "지표",
+      BND_EXP_TP_NM: "10",
+      ISU_NM: "국고*",
+    },
+    verified: true,
+  },
+  {
+    id: "kr_ktb_fut10y_index",
+    name: "10년국채선물지수",
+    country: "KR",
+    unit: "지수",
+    cycle: "D",
+    origin: "한국거래소",
+    source: "krx",
+    params: {
+      endpoint: "idx/drvprod_dd_trd",
+      valueField: "CLSPRC_IDX",
+      IDX_NM: "10년국채선물지수",
+    },
+    verified: true,
+  },
 
   // ── 미국 ──────────────────────────────────────────────
   {
