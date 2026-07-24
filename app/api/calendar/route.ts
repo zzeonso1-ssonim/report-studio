@@ -1,5 +1,6 @@
 import { CalendarEvent, fetchUsReleaseDates, localDate } from "@/lib/calendar";
 import { krCalendarSeed } from "@/lib/calendar-kr";
+import { usCalendarSeed } from "@/lib/calendar-us";
 
 const MIN_DAYS = 1;
 const MAX_DAYS = 90;
@@ -37,7 +38,12 @@ export async function GET(request: Request) {
     .filter((e) => e.date >= start && e.date <= end)
     .map((e) => ({ ...e, country: "KR" as const, major: true }));
 
-  const events = [...kr, ...us].sort(
+  // 미국 시드(FOMC 결정일) — FRED 일간 노이즈에 묻히는 항목을 major로 보강.
+  const usSeed: CalendarEvent[] = usCalendarSeed
+    .filter((e) => e.date >= start && e.date <= end)
+    .map((e) => ({ ...e, country: "US" as const, major: true }));
+
+  const events = [...kr, ...usSeed, ...us].sort(
     (a, b) =>
       a.date.localeCompare(b.date) ||
       Number(b.major) - Number(a.major) ||
