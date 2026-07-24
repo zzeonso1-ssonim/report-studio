@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "경제데이터 콕핏",
+  title: "경제데이터 통합조회",
   description: "한국·미국 공공 경제데이터 통합 조회",
 };
 

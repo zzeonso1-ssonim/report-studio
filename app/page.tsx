@@ -207,7 +207,7 @@ export default function Home() {
     <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-8">
       <header className="mb-6">
         <h1 className="text-2xl font-bold" style={{ color: "var(--primary)" }}>
-          경제데이터 콕핏
+          경제데이터 통합조회
         </h1>
         <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
           한국·미국 공공 경제데이터 통합 조회 — 원천기관 우선
