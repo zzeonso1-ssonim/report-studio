@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { transformLabels } from "@/lib/transforms";
 import {
   CartesianGrid,
   Legend,
@@ -31,12 +32,10 @@ interface SeriesResponse {
   error?: string;
 }
 
-const TRANSFORMS = [
-  { value: "raw", label: "원계열" },
-  { value: "yoy", label: "전년동기대비 %" },
-  { value: "pop", label: "전기대비 %" },
-  { value: "rebase", label: "재기준화 (시작=100)" },
-] as const;
+const TRANSFORMS = Object.entries(transformLabels).map(([value, label]) => ({
+  value,
+  label,
+}));
 
 const YEAR_PRESETS = [1, 3, 5, 10] as const;
 const MAX_SERIES = 4;
