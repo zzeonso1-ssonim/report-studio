@@ -1,8 +1,23 @@
 @import "tailwindcss";
 
+/* AI OS 민트 팔레트 (bondAI_OS .streamlit/config.toml 기준) — UI 크롬 전용.
+   차트 시리즈 색은 색약 검증 팔레트(--series-*)를 사용하고 민트를 쓰지 않는다. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8fbf9;
+  --surface: #ffffff;
+  --foreground: #173b35;
+  --primary: #147b6d;
+  --primary-soft: #e3f2ee;
+  --muted: #6b8a83;
+  --border: rgba(23, 59, 53, 0.12);
+
+  /* 차트 토큰 (validated palette, light) */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --grid: #e1e0d9;
+  --axis: #898781;
 }
 
 @theme inline {
@@ -14,13 +29,26 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #101413;
+    --surface: #1a1f1e;
+    --foreground: #e8f0ee;
+    --primary: #2aa392;
+    --primary-soft: #16332e;
+    --muted: #8aa39d;
+    --border: rgba(232, 240, 238, 0.14);
+
+    /* 차트 토큰 (validated palette, dark) */
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --grid: #2c2c2a;
+    --axis: #898781;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
 }
