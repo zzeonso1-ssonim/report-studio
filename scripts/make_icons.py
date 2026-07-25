@@ -41,11 +41,16 @@ def layer(size):
     return Image.new("RGBA", (size, size), (0, 0, 0, 0))
 
 
-def draw_icon(out_size):
+def draw_icon(out_size, maskable=False):
+    """maskable=True면 안드로이드 적응형 아이콘용.
+
+    안드로이드는 아이콘을 원형·스퀴클 등 임의 모양으로 자르며, 안전영역은
+    중앙 지름 80% 원이다. 도트 반경까지 그 안에 들어오도록 여백을 더 준다.
+    """
     S = out_size * SS
     base = gradient(S).convert("RGBA")
 
-    pad = S * 0.21  # iOS squircle 마스킹 대비 안전영역
+    pad = S * (0.30 if maskable else 0.21)
     w = h = S - pad * 2
 
     pts_norm = [(0.00, 0.80), (0.22, 0.60), (0.44, 0.68), (0.68, 0.34), (1.00, 0.10)]
@@ -53,7 +58,7 @@ def draw_icon(out_size):
 
     line = layer(S)
     ld = ImageDraw.Draw(line)
-    lw = max(2, round(S * 0.050))
+    lw = max(2, round(S * (0.042 if maskable else 0.050)))
     ld.line(pts, fill=WHITE + (255,), width=lw, joint="curve")
     r = lw / 2
     for x, y in pts:  # 꼭짓점을 원으로 메워 라운드 조인 효과
@@ -61,7 +66,7 @@ def draw_icon(out_size):
 
     # 최신 지점 강조 도트 (흰 원 + 민트 속)
     lx, ly = pts[-1]
-    outer = S * 0.070
+    outer = S * (0.058 if maskable else 0.070)
     inner = outer * 0.42
     ld.ellipse([lx - outer, ly - outer, lx + outer, ly + outer], fill=WHITE + (255,))
     ld.ellipse(
@@ -82,18 +87,21 @@ def draw_icon(out_size):
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     targets = {
-        "apple-icon.png": 180,  # iOS 홈 화면
-        "icon-192.png": 192,    # 안드로이드·PWA
-        "icon-512.png": 512,    # PWA 스플래시
-        "icon-32.png": 32,      # 브라우저 탭
+        "apple-icon.png": (180, False),           # iOS 홈 화면
+        "icon-192.png": (192, False),             # 브라우저·일반 용도
+        "icon-512.png": (512, False),
+        "icon-32.png": (32, False),               # 브라우저 탭
+        "icon-maskable-192.png": (192, True),     # 안드로이드 적응형(마스킹)
+        "icon-maskable-512.png": (512, True),
     }
-    for name, size in targets.items():
+    for name, (size, maskable) in targets.items():
         path = os.path.join(OUT_DIR, name)
-        # iOS는 투명 픽셀을 검게 칠하므로 RGB로 저장
-        draw_icon(size).convert("RGB").save(path, "PNG")
+        # 투명 픽셀은 플랫폼이 검게 칠할 수 있으므로 RGB로 저장
+        draw_icon(size, maskable).convert("RGB").save(path, "PNG")
         print(name, os.path.getsize(path), "bytes")
 
     draw_icon(512).convert("RGB").save(os.path.join(PREVIEW, "icon-preview.png"), "PNG")
+    draw_icon(512, True).convert("RGB").save(os.path.join(PREVIEW, "icon-maskable.png"), "PNG")
 
 
 if __name__ == "__main__":

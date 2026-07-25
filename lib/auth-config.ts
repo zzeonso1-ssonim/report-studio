@@ -40,6 +40,9 @@ export const PUBLIC_EXACT_PATHS = [
   "/sitemap.xml",
   "/manifest.json",
   "/manifest.webmanifest",
+  // 서비스워커 — 스코프가 "/"라 루트에서 인증 없이 받아져야 등록된다.
+  // 캐싱을 하지 않는 통과용 워커라 노출돼도 정보가 없다(public/sw.js).
+  "/sw.js",
 ] as const;
 
 /** 인증 없이 통과시키는 public/ 정적 파일 확장자 (API 경로에는 적용하지 않는다) */
