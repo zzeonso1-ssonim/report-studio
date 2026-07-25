@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 
 interface Disclosure {
   corpName: string;
@@ -118,6 +119,13 @@ export default function DisclosuresPage() {
         <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
           금감원 전자공시(DART) — 회사명·기간·유형으로 검색, 원문 링크 제공
         </p>
+        <Link
+          href="/"
+          className="mt-1 inline-block text-xs underline"
+          style={{ color: "var(--primary)" }}
+        >
+          ← 통합조회로
+        </Link>
       </header>
 
       {/* 검색폼 */}
