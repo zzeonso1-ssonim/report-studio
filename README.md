@@ -27,9 +27,11 @@
 | KRX | 한국거래소 | 국고채 수익률·지수. 일별 확정치 영구 캐시(`<DATA_DIR>/krx`), 3y/10y 캐시 공유, 400영업일 단위 백필 |
 | R-ONE | 한국부동산원 | 카탈로그 기반 범용 (통계표 738개) |
 | DART | 금감원 | 공시검색 |
-| FISIS | 금감원 | 월 분할 호출·일 28/30회 안전한도·증분 적재(`<DATA_DIR>/fisis`) |
+| FISIS | 금감원 | ⚠️ **미가동** — 어댑터는 구현(월 분할 호출·일 28/30회 안전한도·증분 적재 `<DATA_DIR>/fisis`)했으나 발급 키가 서버에서 `010 미등록 인증키`로 거부됨(2026-07-25 재확인). 등록 지표 없음, 정상 응답 파싱 경로 미검증 |
 | FRED / BLS | 미 연준·노동통계국 | 미국 지표 + 발표 캘린더 |
 | BEA | 미 경제분석국 | 자리표시자 (당분간 FRED 대체) |
+
+KRX는 채권지수 서비스(`idx/bon_dd_trd`)가 미승인 상태지만 불필요 판단으로 추가 신청하지 않았다.
 
 ## 설계 원칙
 
@@ -50,12 +52,35 @@
 
 정확한 한도 관리·성능이 필요하면 `DATA_DIR`을 영속 볼륨으로 지정하거나 저장소를 외부 DB로 교체할 것.
 
+## 접근 보호
+
+공개 URL이므로 앱 전체에 비밀번호 게이트를 둔다. Vercel 플랫폼 보호(프로덕션 Vercel Authentication, Advanced
+Deployment Protection의 비밀번호 보호)는 **현재 요금제에서 사용 불가**여서(설정 API가 428 응답) 앱 레벨로 구현했다.
+
+- `proxy.ts` (Next 16에서 `middleware.ts`가 개명된 파일) — matcher 없이 **모든 요청**이 게이트를 통과하고, 예외 경로는 `lib/auth-config.ts`의 명명 상수로 판정한다
+- 세션 쿠키 `econ_cockpit_session` = `v1.<만료ms>.<HMAC-SHA256>` — 평문 비밀번호는 쿠키에 넣지 않는다. 유효기간 30일, httpOnly·secure·SameSite=Lax, 비교는 `timingSafeEqual`
+- 환경변수 `APP_PASSWORD`(필수) / `APP_SECRET`(선택 — 미설정 시 `APP_PASSWORD`에서 서명키 파생, 비밀번호를 바꾸면 기존 세션이 자동 무효화)
+- **프로덕션에서 `APP_PASSWORD`가 없으면 전면 차단**(페이지는 안내 화면, API는 503). 로컬 개발에서만 미설정 시 무인증 통과
+- 차단 시 페이지는 `/login?from=…`으로 리다이렉트(오픈 리다이렉트 방지 검증), API는 401 JSON
+
 ## 실행
 
 ```bash
 npm install
-cp .env.example .env.local   # 키 입력
+cp .env.example .env.local   # APP_PASSWORD + 기관 키 입력
 npm run dev
 ```
+
+`.env.example`의 소스별 주석 일부는 어댑터 구현 이전 시점 표기라 실제와 다를 수 있다 — 현재 상태는 위 소스 표를 기준으로 볼 것.
+
+## 배포
+
+Vercel 프로젝트 `econ-cockpit` — **Git 자동배포가 아니라 수동 배포**다.
+
+```bash
+vercel deploy --prod
+```
+
+`APP_PASSWORD`·`OPENAI_API_KEY`·기관 키는 Vercel 환경변수(Production)에 등록되어 있어야 한다.
 
 UI는 AI OS 민트 팔레트, 차트 시리즈 색은 색약 검증(validate_palette) 통과 팔레트(그린·블루·오렌지·슬레이트) 사용.
