@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 
 interface Disclosure {
@@ -104,11 +104,8 @@ export default function DisclosuresPage() {
     [q, days, type]
   );
 
-  // 첫 진입 시 전체 최근 공시
-  useEffect(() => {
-    run();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // 자동 조회하지 않는다 — DART 호출·corp_code 카탈로그 다운로드가 무거워서
+  // 사용자가 검색을 눌렀을 때만 조회한다(필요할 때만 검색).
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-8">
@@ -240,6 +237,19 @@ export default function DisclosuresPage() {
               </li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {/* 최초 진입 안내 — 자동 조회하지 않으므로 무엇을 하면 되는지 알린다 */}
+      {!disclosures && !error && !loading && candidates.length === 0 && (
+        <section
+          className="mt-4 rounded-xl border p-5 text-sm"
+          style={{ borderColor: "var(--border)", background: "var(--surface)" }}
+        >
+          <p style={{ color: "var(--muted)" }}>
+            회사명을 입력해 검색하세요. 회사명을 비우고 검색하면 해당 기간의 전체 최근
+            공시를 봅니다.
+          </p>
         </section>
       )}
 
