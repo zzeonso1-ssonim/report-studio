@@ -71,7 +71,10 @@ cp .env.example .env.local   # APP_PASSWORD + 기관 키 입력
 npm run dev
 ```
 
-`.env.example`의 소스별 주석 일부는 어댑터 구현 이전 시점 표기라 실제와 다를 수 있다 — 현재 상태는 위 소스 표를 기준으로 볼 것.
+`.env.example`에는 두 가지 누락·구식 표기가 있으니 주의:
+
+- **`OPENAI_API_KEY`(자연어 조회 필수)·`OPENAI_MODEL`(선택, 기본 `gpt-4o-mini`)이 빠져 있다** — `.env.local`에 직접 추가할 것
+- KRX·R-ONE·FISIS에 붙은 "미구현" 주석은 어댑터 구현 이전 시점 표기다. 현재 상태는 위 소스 표 기준
 
 ## 배포
 
