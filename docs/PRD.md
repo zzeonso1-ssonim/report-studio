@@ -41,6 +41,8 @@
   한국은 공표일정 API가 없어 시드파일(`lib/calendar-kr.ts` — 금통위·CPI·GDP)로 적재.
   FOMC 결정일도 FRED 노이즈에 묻혀 별도 시드(`lib/calendar-us.ts`). **두 시드는 연 1회 수동 갱신 필요.**
 - **DART 공시검색** (`/disclosures`, `GET /api/disclosures`): 회사명→corp_code 카탈로그 캐시, 기간·유형 필터.
+  **페이지 진입 시 자동 조회하지 않는다** — 검색을 눌렀을 때만 호출(2026-07-25 변경). DART 호출과 8MB대
+  corp_code 카탈로그 다운로드가 무거워 필요할 때만 부담하도록 한 것.
 - **차트 UX**: 유형 토글(꺾은선·막대·영역), 단위 표기, PNG 다운로드(2배 해상도).
 - **내 모델 바로가기** (`/models`): 별도 레지스트리(`lib/models.ts`) 기반 링크 모음 — 7절.
 
