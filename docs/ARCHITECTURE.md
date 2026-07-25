@@ -1,49 +1,121 @@
 # 아키텍처
 
+최종 갱신: 2026-07-25 (구현 상태 기준) · 배포: <https://econ-cockpit.vercel.app>
+
 ```mermaid
 flowchart LR
   subgraph CLIENT["클라이언트 (브라우저)"]
-    UI["대시보드 UI<br/>비교 차트 · 변환 · 테이블"]
-    BOT["챗봇 (v2)<br/>function calling"]
+    ASK["자연어 입력<br/>메인 검색창"]
+    UI["대시보드 /<br/>비교 차트 · 변환 · 통계검색 · PNG"]
+    CAL["/calendar<br/>발표 캘린더"]
+    DISC["/disclosures<br/>DART 공시검색"]
+    MOD["/models<br/>내 모델 바로가기"]
+    LOGIN["/login<br/>비밀번호 입력"]
+  end
+
+  subgraph GATE["접근 게이트 (proxy.ts — 모든 요청)"]
+    PX["비밀번호 게이트<br/>HMAC 서명 쿠키 30일<br/>APP_PASSWORD · APP_SECRET<br/>미설정+프로덕션 → 전면 차단"]
   end
 
   subgraph SERVER["Next.js 서버 — API 키·캐시 (서버 전용)"]
-    API["통합 API<br/>/api/series/{id}?transform=yoy|pop|rebase"]
-    REG["지표 레지스트리<br/>lib/indicators.ts<br/>(지표→소스 매핑 단일 소스,<br/>원천기관 우선 + fallback)"]
+    CHAT["/api/chat<br/>OpenAI function calling 플래너<br/>gpt-4o-mini (OPENAI_MODEL)<br/>계획만 수립 · 숫자 생성 금지"]
+    SER["/api/series/[id]<br/>transform: raw · yoy · pop · rebase"]
+    ADHOC["/api/series/adhoc<br/>미등록 시계열 직접 조회"]
+    SRCH["/api/search<br/>카탈로그 통합검색"]
+    CALAPI["/api/calendar"]
+    DISCAPI["/api/disclosures"]
+    REG["지표 레지스트리<br/>lib/indicators.ts<br/>13개 · 원천기관 우선 + fallback"]
     TR["변환 계층<br/>lib/transforms.ts<br/>YoY · 전기대비 · 재기준화"]
+    SRCHLIB["카탈로그 검색<br/>lib/search.ts"]
     AD["어댑터 계층<br/>lib/sources/*<br/>(인증·포맷·날짜표기 흡수)"]
+    CACHE[("파일 캐시 lib/data-dir.ts<br/>DATA_DIR → /tmp(서버리스) → .data<br/>krx · fisis · dart corp_code")]
+    SEED["캘린더 시드<br/>lib/calendar-kr.ts (금통위·CPI·GDP)<br/>lib/calendar-us.ts (FOMC)<br/>연 1회 수동 갱신"]
+    MODREG["모델 레지스트리<br/>lib/models.ts"]
   end
 
   subgraph KR["한국"]
-    ECOS["한국은행 ECOS<br/>기준금리·환율·GDP"]
-    KOSIS["통계청 KOSIS<br/>CPI"]
+    ECOS["한국은행 ECOS<br/>기준금리·환율·GDP + 통계표 카탈로그"]
+    KOSIS["통계청 KOSIS<br/>CPI + 통합검색"]
+    KRX["한국거래소 KRX<br/>국고채 3y/10y·국채선물지수"]
+    RONE["한국부동산원 R-ONE<br/>아파트 매매·전세가격지수"]
     DART["금감원 DART<br/>공시검색"]
-    KRSTUB["KRX · R-ONE · FISIS<br/>(자리표시자)"]
+    FISIS["금감원 FISIS<br/>어댑터 구현·키 미활성(010)<br/>등록 지표 없음"]
   end
 
   subgraph US["미국"]
-    FRED["FRED<br/>금리·GDP + 발표 캘린더(v2)"]
+    FRED["FRED<br/>금리·GDP + series/search + releases/dates"]
     BLS["BLS<br/>CPI"]
-    USSTUB["BEA<br/>(자리표시자)"]
+    BEA["BEA<br/>자리표시자 — FRED로 대체"]
   end
 
-  UI --> API
-  BOT --> API
-  API --> REG
-  API --> TR
+  OPENAI["OpenAI<br/>Chat Completions"]
+
+  LOGIN --> PX
+  ASK --> PX
+  UI --> PX
+  CAL --> PX
+  DISC --> PX
+  MOD --> PX
+
+  PX --> CHAT
+  PX --> SER
+  PX --> ADHOC
+  PX --> SRCH
+  PX --> CALAPI
+  PX --> DISCAPI
+  PX --> MODREG
+
+  CHAT <--> OPENAI
+  CHAT --> REG
+  CHAT --> SRCHLIB
+  CHAT -. "조회 계획(JSON)" .-> SER
+  CHAT -. "조회 계획(JSON)" .-> ADHOC
+
+  SER --> REG
+  SER --> TR
+  ADHOC --> TR
+  SRCH --> SRCHLIB
   REG --> AD
+  ADHOC --> AD
+  SRCHLIB --> ECOS
+  SRCHLIB --> KOSIS
+  SRCHLIB --> FRED
+
+  CALAPI --> SEED
+  CALAPI --> FRED
+  DISCAPI --> DART
+
   AD --> ECOS
   AD --> KOSIS
-  AD --> DART
-  AD -.-> KRSTUB
+  AD --> KRX
+  AD --> RONE
   AD --> FRED
   AD --> BLS
-  AD -.-> USSTUB
+  AD -. "키 미활성" .-> FISIS
+  AD -. "미구현" .-> BEA
+
+  AD <--> CACHE
+  DISCAPI <--> CACHE
 ```
+
+## 라우트
+
+| 경로 | 역할 |
+|---|---|
+| `/` | 자연어 입력 + 지표 선택·통계검색 + 비교 차트 (변환·차트유형·PNG) |
+| `/calendar` | 한·미 발표 캘린더 |
+| `/disclosures` | DART 공시검색 |
+| `/models` | 내가 만든 모델·앱 바로가기 |
+| `/login` | 비밀번호 게이트 진입점 (게이트 예외) |
+| `/api/indicators` · `/api/series/[id]` · `/api/series/adhoc` · `/api/search` · `/api/chat` · `/api/calendar` · `/api/disclosures` | 데이터 API (게이트 적용) |
+| `/api/login` · `/api/logout` | 세션 쿠키 발급·삭제 (게이트 예외 — 자체 검증) |
 
 ## 원칙
 
 - **순수 소비자**: 계산·추정 로직 없음. 나우캐스팅 결과가 필요하면 기존 엔진(GDP/CPI) API만 호출.
-- **키는 서버에서만**: 모든 기관 키는 환경변수 → 어댑터. 클라이언트에는 절대 미노출.
-- **캐싱**: 어댑터의 외부 fetch에 revalidate 10분 — 기관 호출 한도 보호.
+- **키는 서버에서만**: 모든 기관 키·OpenAI 키는 환경변수 → 서버 라우트/어댑터. 클라이언트에는 절대 미노출.
+- **모델은 계획만**: 챗봇은 조회 계획(JSON)을 만들 뿐, 수치는 반드시 어댑터가 조회한 실데이터를 쓴다.
+- **게이트는 화이트리스트 없이 전량 통과**: `proxy.ts`에 matcher를 두지 않고 예외를 코드 상수로 판정 — matcher 정규식 실수로 경로가 통째로 열리는 사고를 막기 위함.
+- **캐싱 2단**: 어댑터의 외부 fetch에 revalidate 10분(기관 한도 보호) + 확정치·저한도·대용량 카탈로그만 파일 캐시.
+- **저장 루트 단일 소스**: 파일 경로는 `lib/data-dir.ts`의 `dataPath()`만 사용. 캐시 읽기/쓰기 실패는 요청을 깨뜨리지 않는다.
 - **UI**: AI OS 민트 팔레트(#147b6d 계열)로 통일. 차트 시리즈 색은 색약 검증 팔레트 별도 사용.
