@@ -1,14 +1,23 @@
-import { promises as fs } from "fs";
-import path from "path";
 import { inflateRawSync } from "zlib";
 import { SourceError, requireKey } from "./types";
+import { dataPath, isEphemeralDataRoot, readJsonFile, warnOnce, writeJsonFile } from "../data-dir";
 
 /**
  * DART 회사 고유번호(corp_code) 카탈로그.
  * https://opendart.fss.or.kr/api/corpCode.xml 은 zip(내부에 CORPCODE.xml 1개)으로 내려오며
  * 전체 회사(~11만 건)를 담고 있어 매 요청마다 받을 수 없다.
- * → .data/dart/corp-codes.json 에 1회 캐시, 30일 경과 시 재다운로드.
+ * → <데이터루트>/dart/corp-codes.json 에 1회 캐시, 30일 경과 시 재다운로드
+ *   (루트 결정은 lib/data-dir.ts).
  * zip 해제는 셸아웃 없이 Node 내장 zlib(inflateRaw)로 최소 구현.
+ *
+ * ⚠️ 휘발성 환경(Vercel 등 → /tmp)에서의 한계:
+ * - JSON 캐시가 ~8.4MB다. /tmp는 인스턴스마다 별도이고 콜드스타트마다 비므로
+ *   새 인스턴스의 첫 공시검색은 다운로드+파싱(수 초)을 다시 치른다.
+ *   같은 인스턴스가 살아 있는 동안은 memCache(프로세스 메모리)로 즉시 응답한다.
+ * - 파일 쓰기가 불가능해도 검색은 동작한다: 메모리 캐시만으로 그 인스턴스의
+ *   수명 동안 재사용하고, 다음 콜드스타트에서 다시 받는다.
+ * - 근본 해소책은 영속 저장소(DATA_DIR 볼륨 / 외부 DB)이거나, 검색을 DART의
+ *   회사명 검색 API 쪽으로 옮기는 것. 현재는 전량 캐시 방식을 유지한다.
  */
 
 export interface CorpEntry {
@@ -23,8 +32,8 @@ interface CorpCache {
   corps: CorpEntry[];
 }
 
-const CACHE_DIR = path.join(process.cwd(), ".data", "dart");
-const CACHE_FILE = path.join(CACHE_DIR, "corp-codes.json");
+/** 저장 위치 — 매 호출 시 계산 (DATA_DIR 런타임 주입 대응) */
+const cacheFile = () => dataPath("dart", "corp-codes.json");
 const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30일
 
 /** ---- 최소 zip 해제 (단일/소수 엔트리, deflate 또는 store) ---- */
@@ -103,7 +112,12 @@ function parseCorpXml(xml: string): CorpEntry[] {
 
 /** ---- 캐시 로드/갱신 ---- */
 
-let memCache: CorpCache | null = null; // 프로세스 내 재파싱 방지
+/**
+ * 프로세스 내 재파싱 방지 겸, 파일 캐시를 못 쓰는 환경의 유일한 캐시.
+ * 만료(30일 경과)된 값도 버리지 않는다 — 재다운로드가 실패하면 stale이라도
+ * 반환하는 편이 검색 자체를 실패시키는 것보다 낫기 때문.
+ */
+let memCache: CorpCache | null = null;
 
 async function downloadCorpCodes(): Promise<CorpCache> {
   const key = requireKey("dart", "DART_API_KEY");
@@ -128,33 +142,51 @@ async function downloadCorpCodes(): Promise<CorpCache> {
     count: corps.length,
     corps,
   };
-  await fs.mkdir(CACHE_DIR, { recursive: true });
-  // 부분 쓰기 방지: 임시 파일에 쓰고 rename
-  const tmp = `${CACHE_FILE}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(cache));
-  await fs.rename(tmp, CACHE_FILE);
+  // 파일 쓰기 실패는 무시한다(경고만) — 이번 프로세스는 memCache로 계속 동작한다.
+  const written = await writeJsonFile(cacheFile(), cache, { warnKey: "dart:corp-codes" });
+  if (written && isEphemeralDataRoot()) {
+    warnOnce(
+      "dart:corp-codes-ephemeral",
+      `[dart] corp_code 카탈로그(${corps.length}건)를 휘발성 경로에 캐시했습니다 — ` +
+        `콜드스타트마다 재다운로드(수 MB)가 발생할 수 있습니다.`
+    );
+  }
   return cache;
 }
 
 export async function getCorpCatalog(): Promise<CorpCache> {
   const fresh = (c: CorpCache) =>
     Date.now() - new Date(c.fetchedAt).getTime() < CACHE_TTL_MS;
+  const usable = (c: CorpCache | null): c is CorpCache =>
+    Boolean(c && Array.isArray(c.corps) && c.corps.length > 0);
 
-  if (memCache && fresh(memCache)) return memCache;
+  if (usable(memCache) && fresh(memCache)) return memCache;
 
-  try {
-    const raw = await fs.readFile(CACHE_FILE, "utf8");
-    const cached = JSON.parse(raw) as CorpCache;
-    if (Array.isArray(cached.corps) && cached.corps.length > 0 && fresh(cached)) {
-      memCache = cached;
-      return cached;
-    }
-  } catch {
-    // 캐시 없음/손상 → 재다운로드
+  // 파일 캐시 (읽기 실패·손상은 "캐시 없음"으로 간주)
+  const cached = await readJsonFile<CorpCache | null>(cacheFile(), null);
+  if (usable(cached) && fresh(cached)) {
+    memCache = cached;
+    return cached;
   }
 
-  memCache = await downloadCorpCodes();
-  return memCache;
+  try {
+    memCache = await downloadCorpCodes();
+    return memCache;
+  } catch (e) {
+    // 다운로드 실패 — stale 캐시가 있으면 그것으로라도 검색을 계속한다.
+    // (회사 고유번호는 거의 변하지 않으므로 만료본도 실용적으로 유효)
+    const stale = usable(memCache) ? memCache : usable(cached) ? cached : null;
+    if (stale) {
+      warnOnce(
+        "dart:corp-codes-stale",
+        `[dart] corp_code 재다운로드 실패 — 만료된 캐시(${stale.fetchedAt})로 계속합니다: ` +
+          `${e instanceof Error ? e.message : String(e)}`
+      );
+      memCache = stale;
+      return stale;
+    }
+    throw e; // 캐시가 전혀 없으면 검색 불가 — 원래 오류를 그대로 노출
+  }
 }
 
 /**

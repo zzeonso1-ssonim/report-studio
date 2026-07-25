@@ -8,7 +8,7 @@ import { KrxStore, StoredKrxDay, fileStore } from "./krx-store";
  * 모든 서비스가 기준일(basDd) 1일 단위로 해당일의 전 종목/전 지수 행을 반환하므로,
  * 요청 범위의 영업일을 순회 호출한 뒤 필터로 원하는 행을 골라 시계열을 구성한다.
  *
- * 영속 캐시 (.data/krx/{endpoint}/{YYYYMMDD}.json — krx-store.ts):
+ * 영속 캐시 (<데이터루트>/krx/{endpoint}/{YYYYMMDD}.json — krx-store.ts, 루트는 lib/data-dir.ts):
  * - 일별 확정치는 과거 소급 수정이 없으므로 한 번 받은 날은 영구 재사용.
  *   5년 요청 ≈ 영업일 1,250회 연속 호출이 KRX 속도 제한(HTTP 403)에 걸린 실사례가
  *   배경 — 미캐시 일자만 API를 호출한다.
@@ -19,6 +19,9 @@ import { KrxStore, StoredKrxDay, fileStore } from "./krx-store";
  * - 미캐시 일자가 BACKFILL_MAX_DAYS_PER_REQUEST를 넘는 대량 백필은 최신부터
  *   그만큼만 채우고 부분 반환(나머지는 서버 콘솔에 안내 — 다음 조회에서 이어짐).
  * - 403을 만나면 즉시 중단하고 그때까지 받은 것은 캐시에 남긴 뒤 SourceError.
+ * - 캐시 쓰기 실패(읽기전용 FS 등)는 조회를 실패시키지 않는다 — 경고 후 API 결과를
+ *   그대로 반환한다. 재호출해도 값이 달라지지 않으므로 정확성 영향은 없고,
+ *   느려지고 403 위험이 커질 뿐이다(krx-store.ts 주석 참조).
  *
  * params:
  * - endpoint     (필수) 서비스 경로. 예: "bon/kts_bydd_trd", "idx/drvprod_dd_trd"
@@ -121,7 +124,7 @@ export async function fetchKrxSeries(
       throw new SourceError(
         "krx",
         `HTTP 403 (${endpoint}) — 속도 제한(또는 서비스 미승인)으로 수집을 중단했습니다. ` +
-          `지금까지 받은 일자는 캐시(.data/krx/)에 저장되어 다음 조회에서 즉시 반환되므로, ` +
+          `지금까지 받은 일자는 캐시(<데이터루트>/krx/)에 저장되어 다음 조회에서 즉시 반환되므로, ` +
           `잠시 후 다시 시도하면 남은 구간부터 이어서 채워집니다.`
       );
     }
@@ -183,7 +186,7 @@ function kstDayEndUtcMs(day: string): number {
 /** 단일 일자 원시응답 조회 — 해당일 전체 행 반환 (빈 배열 = 데이터 없음) */
 async function fetchDayRows(key: string, endpoint: string, day: string): Promise<KrxRow[]> {
   const url = `https://data-dbg.krx.co.kr/svc/apis/${endpoint}?basDd=${day}`;
-  // 자체 영속 캐시(.data/krx/)를 쓰므로 Next fetch 캐시는 사용하지 않음
+  // 자체 영속 캐시(krx-store)를 쓰므로 Next fetch 캐시는 사용하지 않음
   const res = await fetch(url, { headers: { AUTH_KEY: key }, cache: "no-store" });
   if (!res.ok) throw new KrxHttpError(res.status, `HTTP ${res.status} (${endpoint} ${day})`);
 

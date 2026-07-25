@@ -9,8 +9,15 @@ import { FisisStore, StoredSeries, fileStore } from "./fisis-store";
  * 제약:
  * - 호출당 조회기간 최대 1개월 → 요청 범위를 월 단위로 분할해 호출 (startBaseMm == endBaseMm)
  * - 1일 30회 한도 → KST 날짜별 영속 카운터로 추적, 안전 버퍼(28회) 도달 시 중단
- * - 과거분 증분 적재: 받은 월은 .data/fisis/에 저장하고 재호출하지 않음.
- *   단, 최근 월(당월·직전월)은 갱신 가능성이 있어 저장 후 7일 지나면 재호출.
+ * - 과거분 증분 적재: 받은 월은 <데이터루트>/fisis/에 저장하고 재호출하지 않음
+ *   (루트 결정은 lib/data-dir.ts). 단, 최근 월(당월·직전월)은 갱신 가능성이 있어
+ *   저장 후 7일 지나면 재호출.
+ *
+ * ⚠️ 휘발성 저장(Vercel 등 → /tmp)에서의 한계: 캐시·카운터가 인스턴스마다 별도이고
+ * 콜드스타트마다 초기화되므로 (1) 이미 받은 월을 다시 호출하게 되고 (2) 일 30회
+ * 한도 추적이 느슨해져 실제로는 한도를 넘길 수 있다. 카운터 쓰기가 아예 실패하면
+ * 프로세스 메모리로 폴백한다(fisis-store.ts 참조) — 그때는 프로세스 수명 내에서만
+ * 한도가 지켜진다.
  */
 
 const FISIS_ENDPOINT = "https://fisis.fss.or.kr/openapi/statisticsSearch.json";
