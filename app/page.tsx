@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { transformLabels } from "@/lib/transforms";
+import { LOGIN_PATH, LOGOUT_API_PATH } from "@/lib/auth-config";
 import {
   Area,
   AreaChart,
@@ -485,6 +486,16 @@ export default function Home() {
           >
             내 모델
           </a>
+          <button
+            onClick={async () => {
+              await fetch(LOGOUT_API_PATH, { method: "POST" });
+              window.location.assign(LOGIN_PATH);
+            }}
+            className="rounded-lg border px-3 py-1.5"
+            style={{ borderColor: "var(--border)", color: "var(--muted)" }}
+          >
+            로그아웃
+          </button>
         </nav>
       </header>
 
