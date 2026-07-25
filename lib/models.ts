@@ -68,20 +68,6 @@ export const models: ModelLink[] = [
     url: "https://github.com/zzeonso1-ssonim/csi-lead-test",
     kind: "repo",
   },
-  {
-    id: "dongnam-econ-report",
-    name: "동남권 지역경제 분기보고서",
-    description: "동남권 지역경제 분기 보고서 생성",
-    url: "https://github.com/zzeonso1-ssonim/dongnam-econ-report",
-    kind: "repo",
-  },
-  {
-    id: "bond-spread-system",
-    name: "채권 스프레드 동기화",
-    description: "채권 스프레드 수집·동기화 시스템",
-    url: "https://github.com/zzeonso1-ssonim/bond-spread-system",
-    kind: "repo",
-  },
 ];
 
 /** 그룹 표기 — 페이지의 섹션 제목·설명·뱃지가 모두 여기서 파생된다 */
