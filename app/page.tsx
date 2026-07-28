@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { transformLabels } from "@/lib/transforms";
 import { LOGIN_PATH, LOGOUT_API_PATH } from "@/lib/auth-config";
+import { CLIENT_TIMEOUT_MS, seconds } from "@/lib/search-config";
 import {
   Area,
   AreaChart,
@@ -205,7 +206,10 @@ export default function Home() {
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchErrors, setSearchErrors] = useState<string[]>([]);
+  const [searchNotes, setSearchNotes] = useState<string[]>([]);
   const [searchDone, setSearchDone] = useState(false);
+  /** 검색 시작 후 경과 초 — 멈춘 걸로 오인하지 않게 진행 상황을 보여준다 */
+  const [searchElapsed, setSearchElapsed] = useState(0);
   const [adhoc, setAdhoc] = useState<AdhocItem[]>([]);
 
   useEffect(() => {
@@ -235,8 +239,22 @@ export default function Home() {
     if (q.length < 2 || searching) return;
     setSearching(true);
     setSearchDone(false);
+    setSearchNotes([]);
+    setSearchElapsed(0);
+
+    const startedAt = Date.now();
+    const ticker = setInterval(
+      () => setSearchElapsed(Math.floor((Date.now() - startedAt) / 1000)),
+      1000
+    );
+    // 서버가 스스로 끊지 못한 경우의 마지막 안전장치 (모바일·사내망은 그 전에 끊긴다)
+    const abort = new AbortController();
+    const killer = setTimeout(() => abort.abort(), CLIENT_TIMEOUT_MS);
+
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, {
+        signal: abort.signal,
+      });
       const json = await res.json();
       if (!res.ok) {
         setSearchResults([]);
@@ -244,11 +262,18 @@ export default function Home() {
       } else {
         setSearchResults(json.results ?? []);
         setSearchErrors(json.errors ?? []);
+        setSearchNotes(json.notes ?? []);
       }
     } catch (e) {
       setSearchResults([]);
-      setSearchErrors([String(e)]);
+      setSearchErrors([
+        abort.signal.aborted
+          ? `${seconds(CLIENT_TIMEOUT_MS)}초 안에 응답이 오지 않았습니다 — 잠시 후 다시 검색하거나 검색어를 더 구체적으로 입력해 보세요`
+          : `검색 요청이 실패했습니다 (${String(e)}) — 네트워크를 확인하고 다시 시도하세요`,
+      ]);
     } finally {
+      clearInterval(ticker);
+      clearTimeout(killer);
       setSearching(false);
       setSearchDone(true);
     }
@@ -645,9 +670,36 @@ export default function Home() {
               background: "var(--primary-soft)",
             }}
           >
-            {searching ? "검색 중…" : "검색"}
+            {searching ? (
+              <span className="flex items-center gap-1.5">
+                <span
+                  aria-hidden
+                  className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"
+                />
+                검색 중…
+              </span>
+            ) : (
+              "검색"
+            )}
           </button>
         </div>
+
+        {/* 진행 표시 — 멈춘 게 아니라 조회 중임을 알린다 */}
+        {searching && (
+          <p
+            className="mt-2 flex items-center gap-1.5 text-xs"
+            role="status"
+            aria-live="polite"
+            style={{ color: "var(--muted)" }}
+          >
+            <span
+              aria-hidden
+              className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"
+            />
+            ECOS · KOSIS · FRED 조회 중 ({searchElapsed}초) — 최대{" "}
+            {seconds(CLIENT_TIMEOUT_MS)}초까지 기다립니다
+          </p>
+        )}
 
         {/* 검색 추가분 (선택됨) */}
         {adhoc.length > 0 && (
@@ -686,6 +738,13 @@ export default function Home() {
           <div className="mt-2 text-xs" style={{ color: "var(--muted)" }}>
             {searchErrors.map((e, i) => (
               <p key={i}>⚠ {e}</p>
+            ))}
+          </div>
+        )}
+        {searchNotes.length > 0 && (
+          <div className="mt-2 text-xs" style={{ color: "var(--muted)" }}>
+            {searchNotes.map((n, i) => (
+              <p key={i}>ℹ {n}</p>
             ))}
           </div>
         )}

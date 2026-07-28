@@ -1,5 +1,14 @@
 import { Cycle } from "./indicators";
 import { SourceId } from "./sources/types";
+import {
+  ECOS_TABLE_FANOUT,
+  FRED_SKIP_NOTE,
+  KOSIS_TABLE_FANOUT,
+  PER_SOURCE_CAP,
+  SOURCE_TIMEOUT_MS,
+  isFredSearchable,
+  timeoutNote,
+} from "./search-config";
 
 /**
  * 전체 통계 카탈로그 검색 — ECOS·KOSIS·FRED.
@@ -17,26 +26,70 @@ export interface SearchResult {
 
 export interface SearchOutcome {
   results: SearchResult[];
-  /** 소스별 부분 실패 메시지 (키 미설정, HTTP 오류 등) */
+  /** 소스별 부분 실패 메시지 (키 미설정, HTTP 오류, 제한시간 초과 등) */
   errors: string[];
+  /** 실패가 아닌 안내 — 조회 대상이 아니라 건너뛴 소스 등 */
+  notes: string[];
 }
 
-const PER_SOURCE_CAP = 20;
+/** 제한시간을 넘긴 소스를 식별하는 표식 (거부 사유로 던진다) */
+const TIMED_OUT = Symbol("search-source-timeout");
+
+/**
+ * 소스 하나에 제한시간을 건다.
+ *
+ * fetch에 AbortSignal을 넘기지 않고 결과만 버리는 이유: Next의 데이터 캐시
+ * (`next: { revalidate }`)는 abort된 요청을 적재하지 않아, 한 번 느렸던 소스가
+ * 영영 캐시되지 않는 상태에 갇힌다. 함수는 응답을 보낸 뒤 종료되므로 남은
+ * 요청은 캐시만 채우고 끝난다 (웜 캐시 0.45초 경로가 유지된다).
+ */
+function withDeadline<T>(work: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    work,
+    new Promise<never>((_, reject) => {
+      const timer = setTimeout(() => reject(TIMED_OUT), ms);
+      // 정상 완료 시 타이머가 이벤트 루프를 붙잡지 않게 한다
+      void work.then(
+        () => clearTimeout(timer),
+        () => clearTimeout(timer)
+      );
+    }),
+  ]);
+}
 
 export async function searchAll(q: string): Promise<SearchOutcome> {
-  const settled = await Promise.allSettled([
-    searchEcos(q),
-    searchKosis(q),
-    searchFred(q),
-  ]);
+  const notes: string[] = [];
+
+  // 소스별로 독립 실행 — 한 곳이 느리거나 실패해도 나머지를 막지 않는다
+  const tasks: { source: SourceId; run: () => Promise<SearchResult[]> }[] = [
+    { source: "ecos", run: () => searchEcos(q) },
+    { source: "kosis", run: () => searchKosis(q) },
+  ];
+  if (isFredSearchable(q)) {
+    tasks.push({ source: "fred", run: () => searchFred(q) });
+  } else {
+    notes.push(FRED_SKIP_NOTE);
+  }
+
+  const settled = await Promise.allSettled(
+    tasks.map((t) => withDeadline(t.run(), SOURCE_TIMEOUT_MS))
+  );
+
   const results: SearchResult[] = [];
   const errors: string[] = [];
-  const names: SourceId[] = ["ecos", "kosis", "fred"];
   settled.forEach((s, i) => {
-    if (s.status === "fulfilled") results.push(...s.value);
-    else errors.push(`[${names[i]}] ${s.reason instanceof Error ? s.reason.message : String(s.reason)}`);
+    const { source } = tasks[i];
+    if (s.status === "fulfilled") {
+      results.push(...s.value);
+    } else if (s.reason === TIMED_OUT) {
+      errors.push(timeoutNote(source));
+    } else {
+      errors.push(
+        `[${source}] ${s.reason instanceof Error ? s.reason.message : String(s.reason)}`
+      );
+    }
   });
-  return { results, errors };
+  return { results, errors, notes };
 }
 
 function getKey(envName: string): string {
@@ -88,7 +141,7 @@ async function searchEcos(q: string): Promise<SearchResult[]> {
 
   const matched = tables
     .filter((t) => t.SRCH_YN === "Y" && matches(t.STAT_NAME, q))
-    .slice(0, 5);
+    .slice(0, ECOS_TABLE_FANOUT);
 
   const perTable = await Promise.all(
     matched.map((t) => expandEcosTable(key, t).catch(() => []))
@@ -207,7 +260,7 @@ async function searchKosis(q: string): Promise<SearchResult[]> {
   const rows: KosisSearchRow[] = json;
 
   const perTable = await Promise.all(
-    rows.slice(0, 4).map((t) => expandKosisTable(key, t).catch(() => []))
+    rows.slice(0, KOSIS_TABLE_FANOUT).map((t) => expandKosisTable(key, t).catch(() => []))
   );
   return perTable.flat().slice(0, PER_SOURCE_CAP);
 }
