@@ -1,0 +1,61 @@
+name: 유동성 워치 (주간)
+
+# 목 22:00 UTC = 금 07:00 KST.
+# H.4.1은 목요일 16:30 ET(=금 05:30 KST)에 나온다. 그 뒤 90분을 두고 받는다.
+# 디렉터 리듬상 금요일 아침 출근 직전에 노션에 올라가 있어야 한다.
+on:
+  schedule:
+    - cron: "0 22 * * 4"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: liquidity-watch
+  cancel-in-progress: false
+
+jobs:
+  briefing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # 의존성 설치 없음 — 두 스크립트 모두 표준 라이브러리 + curl만 쓴다.
+
+      # 토큰이 없으면 조용히 넘어가지 않고 여기서 죽는다.
+      # (수집만 성공하고 적재가 스킵되면 '성공'으로 찍힌 채 노션이 비는 사고가 난다)
+      - name: NOTION_TOKEN 확인
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+        run: |
+          if [ -z "${NOTION_TOKEN}" ]; then
+            echo "::error title=NOTION_TOKEN 미등록::gh secret set NOTION_TOKEN -R zzeonso1-ssonim/econ-cockpit 로 등록해야 한다 (등록은 디렉터 몫)"
+            exit 1
+          fi
+
+      - name: FRED 수집·교차검증
+        run: |
+          python3 scripts/liquidity/fetch_liquidity.py \
+            --json --out "${RUNNER_TEMP}/liquidity.json" > /dev/null
+          python3 -c "import json,sys;d=json.load(open(sys.argv[1]));print('기준일',d['basis_date'],'불일치',len(d['mismatches']))" "${RUNNER_TEMP}/liquidity.json"
+
+      # 불일치가 있으면 post_briefing이 값 대신 '데이터 이상' 페이지를 만든다(침묵 실패 없음).
+      - name: 노션 적재
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+        run: python3 scripts/liquidity/post_briefing.py --input "${RUNNER_TEMP}/liquidity.json"
+
+      # H.4.1 주간계열은 소급 수정된다. 재현용으로 회차 원본을 남긴다.
+      - name: 스냅샷 보관
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: liquidity-snapshot-${{ github.run_id }}
+          path: ${{ runner.temp }}/liquidity.json
+          if-no-files-found: warn
+          retention-days: 90
