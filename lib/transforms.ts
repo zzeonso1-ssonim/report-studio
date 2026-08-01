@@ -12,6 +12,21 @@ export const transformLabels: Record<Transform, string> = {
 
 const periodsPerYear: Record<Cycle, number | null> = { D: null, M: 12, Q: 4, A: 1 };
 
+/**
+ * 단위가 이미 변화율인 시리즈 판정 — FRED 등이 "% Chg. from Yr. Ago" 같은
+ * 전년비·전기비 시리즈를 직수록하는데, 여기에 yoy/pop을 다시 걸면
+ * 변화율의 변화율이라는 무의미한 숫자가 나온다(이중 변환). 그 가드의 단일 소스.
+ */
+export function isRateUnit(unit: string | undefined): boolean {
+  if (!unit) return false;
+  return /%\s*chg|percent change|rate of change|전년\s*(동기)?\s*대비|전기\s*대비/i.test(unit);
+}
+
+/** 이중 변환을 막고 원계열로 강등했을 때 사용자에게 보여줄 안내문 */
+export function rateUnitNote(name: string, unit: string): string {
+  return `"${name}"은(는) 이미 변화율 단위(${unit})라 변환 없이 원계열로 표시합니다`;
+}
+
 export function applyTransform(
   points: SeriesPoint[],
   transform: Transform,

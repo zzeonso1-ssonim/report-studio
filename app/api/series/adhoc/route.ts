@@ -1,6 +1,6 @@
 import { Cycle } from "@/lib/indicators";
 import { normalizePointDates } from "@/lib/dates";
-import { applyTransform, Transform } from "@/lib/transforms";
+import { applyTransform, isRateUnit, rateUnitNote, Transform } from "@/lib/transforms";
 import { sources } from "@/lib/sources";
 
 const TRANSFORMS: Transform[] = ["raw", "yoy", "pop", "rebase"];
@@ -42,24 +42,36 @@ export async function POST(request: Request) {
   if (!CYCLES.includes(cycle)) {
     return Response.json({ error: `지원하지 않는 주기: ${String(b.cycle)}` }, { status: 400 });
   }
-  const transform = (b.transform ?? "raw") as Transform;
+  let transform = (b.transform ?? "raw") as Transform;
   if (!TRANSFORMS.includes(transform)) {
     return Response.json({ error: `지원하지 않는 변환: ${String(b.transform)}` }, { status: 400 });
   }
   const start = typeof b.start === "string" ? b.start : defaultStart();
   const end = typeof b.end === "string" ? b.end : today();
 
+  const name = typeof b.name === "string" ? b.name : "임의 시계열";
+  const unit = typeof b.unit === "string" ? b.unit : "";
+
+  // 이중 변환 가드 — 이미 전년비·전기비 단위인 시리즈(FRED "% Chg." 등)에
+  // yoy/pop을 다시 걸면 변화율의 변화율이 나온다. 원계열로 강등하고 안내한다.
+  let note: string | undefined;
+  if ((transform === "yoy" || transform === "pop") && isRateUnit(unit)) {
+    note = rateUnitNote(name, unit);
+    transform = "raw";
+  }
+
   try {
     const points = await sources[source as keyof typeof sources].fetchSeries(params, { start, end });
     return Response.json({
       indicator: {
         id: typeof b.id === "string" ? b.id : "adhoc",
-        name: typeof b.name === "string" ? b.name : "임의 시계열",
-        unit: typeof b.unit === "string" ? b.unit : "",
+        name,
+        unit,
         cycle,
       },
       source,
       transform,
+      note,
       points: applyTransform(normalizePointDates(points, cycle), transform, cycle),
     });
   } catch (err) {

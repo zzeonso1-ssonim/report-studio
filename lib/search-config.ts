@@ -69,6 +69,8 @@ export function isFredSearchable(q: string): boolean {
  */
 const FRED_KO_EN: [string, string][] = [
   ["근원 소비자물가", "core consumer price index"],
+  ["슈퍼코어", "services less rent of shelter"],
+  ["절사평균", "trimmed mean"],
   ["소비자물가", "consumer price index"],
   ["생산자물가", "producer price index"],
   ["개인소비지출", "personal consumption expenditures"],

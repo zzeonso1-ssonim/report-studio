@@ -33,6 +33,8 @@ interface SeriesResponse {
   source: string;
   transform: string;
   points: { date: string; value: number | null }[];
+  /** 서버 안내문 — 예: 이미 변화율 단위라 변환을 원계열로 강등한 경우 */
+  note?: string;
   error?: string;
 }
 
@@ -266,6 +268,8 @@ export default function Home() {
   const [derived, setDerived] = useState<DerivedSpec[]>([]);
   const [axes, setAxes] = useState<Record<string, Axis>>({});
   const [styles, setStyles] = useState<Record<string, ChartType>>({});
+  // 조회 응답에 실린 서버 안내문 (변환 강등 등) — 차트 위에 표시
+  const [dataNotes, setDataNotes] = useState<string[]>([]);
 
   // 전체 통계 검색
   const [query, setQuery] = useState("");
@@ -419,6 +423,11 @@ export default function Home() {
       ]);
       setSeries(results);
       setErrors(errs);
+      setDataNotes(
+        Object.values(results)
+          .map((r) => r.note)
+          .filter((n): n is string => Boolean(n))
+      );
       setLoading(false);
     },
     []
@@ -983,6 +992,11 @@ export default function Home() {
               {note}
             </p>
           )}
+          {dataNotes.map((n, i) => (
+            <p key={i} className="mb-2 text-xs" style={{ color: "var(--muted)" }}>
+              ℹ {n}
+            </p>
+          ))}
           {mixedUnits && (
             <p className="mb-2 text-xs" style={{ color: "var(--muted)" }}>
               단위가 다른 지표를 원계열로 겹쳤어요 — 비교하려면 전년동기대비(%)나

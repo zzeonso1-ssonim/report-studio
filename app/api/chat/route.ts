@@ -97,13 +97,15 @@ function buildSystemPrompt(): string {
     ``,
     `규칙:`,
     `- 절대 경제 수치를 직접 창작하거나 답하지 마세요. 실제 데이터 조회는 시스템이 수행하며, 당신은 계획만 세웁니다.`,
-    `- 먼저 list_indicators로 등록 지표를 확인하세요. 등록 지표로 충분하면 series 항목을 {"indicatorId": "..."}로 지정하세요.`,
+    `- 먼저 list_indicators로 등록 지표를 확인하세요. 등록 지표로 충분하면 series 항목을 {"indicatorId": "..."}로 지정하세요. 질의의 표현이 등록 지표의 name 또는 aliases와 맞으면 반드시 그 등록 지표를 쓰고 카탈로그 검색으로 대체하지 마세요.`,
     `- 등록 지표에 없는 데이터만 search_catalog(ECOS·KOSIS·FRED 카탈로그 검색)로 찾으세요. 검색 결과를 쓸 때는 그 결과의 source·params·cycle·name·unit을 변형 없이 그대로 finalize_plan의 series 항목에 넣으세요.`,
     `- 질의가 언급하는 모든 시계열 대상을 빠짐없이 series에 넣으세요. 두 나라·두 지표를 비교하는 질의("A랑 B", "A vs B")면 반드시 각각 별도의 series 항목으로 모두 포함해야 합니다. 시리즈는 최대 ${MAX_SERIES}개.`,
     `- transform: raw(원계열) | yoy(전년동기대비 %) | pop(전기대비 %) | rebase(구간 시작=100). 질의에 "전년동기대비"·"YoY"·"상승률"·"증가율" 등이 있으면 yoy. 단위가 서로 다른 지표를 한 차트에 비교할 때는 yoy 또는 rebase를 권장합니다. 금리처럼 단위(%)가 같은 수준(level) 비교는 raw.`,
     `- 파생 계산(스프레드·비율): 질의가 차나 비율을 명시적으로 요구할 때만("A-B 스프레드", "장단기 금리차", "A 대비 B 비율") derived에 {op, a, b, name}을 넣으세요. 단순 비교·겹치기 질의("A랑 B 보여줘/겹쳐줘")에는 derived를 넣지 마세요. op은 spread(a−b) 또는 ratio(a÷b), a·b는 series 배열의 0-기준 인덱스입니다. "10년-3년 스프레드"면 a=10년 인덱스, b=3년 인덱스. 원본 두 시리즈도 series에 그대로 두세요(함께 그려집니다). 값 계산은 시스템이 합니다.`,
     `- 이축·표현: 스케일이 다른 항목을 오른쪽 축에 두려면 그 항목(series 또는 derived)에 axis:"right"를 지정하세요. 스프레드는 원 시리즈와 스케일이 다르므로 기본적으로 axis:"right"를 권장합니다. "영역형"·"막대"처럼 특정 항목의 표현을 지정하면 style("line"|"bar"|"area")을 넣으세요. 예: "스프레드를 우축 영역형으로" → 해당 derived에 axis:"right", style:"area".`,
     `- 미국 데이터가 등록 지표에 없으면 search_catalog를 source:"fred"로 호출하되, FRED 카탈로그는 영문 전용이므로 검색어는 반드시 영어로 바꿔서 넣으세요 (예: "미국 실업률" → "unemployment rate").`,
+    `- 한국어 별칭을 정확히 해석하세요. 특히 "슈퍼코어"가 나오면 반드시 등록 지표 us_cpi_services_less_shelter를 쓰세요 — FRED에 슈퍼코어 CPI 직수록 시리즈는 없고, 절사평균(trimmed mean) PCE는 슈퍼코어가 아니므로 대체 금지입니다. note에 "공식 슈퍼코어(서비스−에너지−주거)와 정의가 다른 근사 지표"임을 병기하세요. 비슷해 보인다고 다른 지표를 대신 쓰지 말고, 없으면 없다고 되물으세요.`,
+    `- 검색 결과의 unit이 이미 변화율("% Chg.", "Percent Change" 등)인 시리즈에는 yoy·pop을 걸지 마세요 — 변화율의 변화율이 됩니다. 그런 시리즈가 섞이면 시스템이 해당 시리즈만 원계열로 강등하고 안내합니다.`,
     `- 기간: endDate는 오늘(${isoDate(today)}). 질의에 "N년(치)"가 있으면 startDate는 오늘에서 정확히 N년 전 날짜로 계산하고, 기간 언급이 전혀 없을 때만 5년 전(${isoDate(fiveYearsAgo)})을 쓰세요. 날짜 형식은 YYYY-MM-DD.`,
     `- note에는 사용자 차트 위에 표시할 1문장 한국어 안내(선택 지표·변환·기간 요약 또는 주의점)를 적으세요.`,
     `- 질의가 모호해 계획을 세울 수 없으면 도구를 호출하지 말고 한국어로 짧게 되물으세요.`,
@@ -200,13 +202,14 @@ const TOOLS = [
 // ── 도구 실행 ──────────────────────────────────────────────────
 function runListIndicators(): string {
   return JSON.stringify(
-    indicators.map(({ id, name, country, unit, cycle, origin }) => ({
+    indicators.map(({ id, name, country, unit, cycle, origin, aliases }) => ({
       id,
       name,
       country,
       unit,
       cycle,
       origin,
+      ...(aliases ? { aliases } : {}),
     }))
   );
 }
@@ -328,6 +331,26 @@ function validatePlan(raw: unknown): { plan?: Plan; error?: string } {
   return { plan: { series, derived, transform, startDate, endDate } };
 }
 
+/**
+ * 별칭 강제 — 질의에 등록 지표의 별칭("슈퍼코어" 등)이 있는데 계획이 그 지표를
+ * 쓰지 않으면 반려한다. 모델이 비슷해 보이는 다른 시리즈에 이름만 붙여 오는
+ * 사고(절사평균 PCE를 슈퍼코어로 라벨)를 프롬프트가 아니라 코드로 막는다.
+ * 매칭 기준은 레지스트리의 aliases 필드 — 지표 정의 단일 소스에서 파생.
+ */
+function aliasViolation(query: string, plan: Plan): string | null {
+  const q = query.toLowerCase();
+  for (const ind of indicators) {
+    for (const alias of ind.aliases ?? []) {
+      if (!q.includes(alias.toLowerCase())) continue;
+      const used = plan.series.some((s) => s.indicatorId === ind.id);
+      if (!used) {
+        return `질의에 "${alias}"가 있으므로 반드시 등록 지표 {"indicatorId": "${ind.id}"}를 series에 포함하세요. 카탈로그 검색 결과로 대체하지 마세요.`;
+      }
+    }
+  }
+  return null;
+}
+
 // ── 라우트 ─────────────────────────────────────────────────────
 export async function POST(request: Request) {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -398,8 +421,9 @@ export async function POST(request: Request) {
         }
 
         if (tc.function.name === "finalize_plan") {
-          const { plan, error } = validatePlan(args);
-          if (plan) {
+          const { plan, error: planError } = validatePlan(args);
+          const error = planError ?? (plan ? aliasViolation(query.trim(), plan) : null);
+          if (plan && !error) {
             const note = (args as Record<string, unknown>)?.note;
             console.log(
               `[chat] model=${model} plan ok rounds=${round + 1} tokens p=${promptTokens} c=${completionTokens}`

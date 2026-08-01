@@ -9,6 +9,8 @@ export interface IndicatorDef {
   unit: string;
   cycle: Cycle;
   origin: string; // 작성기관 — 원천 우선 원칙의 근거
+  /** 사용자가 쓰는 별칭 (챗 플래너의 지표 매칭용 — 예: "슈퍼코어") */
+  aliases?: string[];
   source: SourceId;
   params: Record<string, string>;
   fallback?: { source: SourceId; params: Record<string, string> };
@@ -223,6 +225,22 @@ export const indicators: IndicatorDef[] = [
     origin: "미 경제분석국(BEA) — 당분간 FRED 재수록본",
     source: "fred",
     params: { seriesId: "PCEPILFE" },
+    verified: true,
+  },
+  {
+    id: "us_cpi_services_less_shelter",
+    name: "미국 CPI 서비스(주거임차료 제외, SA) — 통칭 슈퍼코어 근사",
+    country: "US",
+    unit: "지수",
+    cycle: "M",
+    origin: "미 노동통계국(BLS)",
+    aliases: ["슈퍼코어", "supercore"],
+    source: "bls",
+    // BLS CUSR0000SASL2RS = Services Less Rent of Shelter (SA). 공식 슈퍼코어
+    // (서비스−에너지서비스−주거)와 정의가 완전히 같지는 않은 근사 지표.
+    // 2026-08-01 BLS·FRED 실호출 교차검증 (2026-06 지수 445.144 양쪽 일치)
+    params: { seriesId: "CUSR0000SASL2RS" },
+    fallback: { source: "fred", params: { seriesId: "CUSR0000SASL2RS" } },
     verified: true,
   },
   {
