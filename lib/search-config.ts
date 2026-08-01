@@ -64,41 +64,112 @@ export function isFredSearchable(q: string): boolean {
 
 /**
  * 한글 거시 용어 → FRED 영문 검색어. 한글만으로 된 질의도 미국 데이터를
- * 탐색할 수 있게 하는 최소 용어집 — 지표 정의가 아니라 검색어 변환 사전이므로
- * 여기(검색 설정 단일 소스)에 둔다. 매칭 우선순위: 먼저 등장하는 긴 표현부터.
+ * 탐색할 수 있게 하는 용어집 — 지표 정의가 아니라 검색어 변환 사전이므로
+ * 여기(검색 설정 단일 소스)에 둔다. 채권 데스크에서 실제로 부르는 표현 기준.
+ *
+ * 매칭 규칙(fredSearchQuery): 긴 표현부터 대조하고, 매칭된 구간은 질의에서
+ * 지운 뒤 계속한다 — "근원 소비자물가"가 잡히면 그 안의 "소비자물가"가
+ * 중복으로 또 잡히지 않는다. 배열 순서는 가독성용 분류일 뿐 우선순위가 아니다.
  */
 const FRED_KO_EN: [string, string][] = [
+  // ── 물가 ──
   ["근원 소비자물가", "core consumer price index"],
-  ["슈퍼코어", "services less rent of shelter"],
-  ["절사평균", "trimmed mean"],
   ["소비자물가", "consumer price index"],
   ["생산자물가", "producer price index"],
+  ["수입물가", "import price index"],
   ["개인소비지출", "personal consumption expenditures"],
+  ["슈퍼코어", "services less rent of shelter"],
+  ["절사평균", "trimmed mean"],
+  ["중위 물가", "median consumer price index"],
+  ["기대인플레이션", "inflation expectations"],
+  ["기대인플레", "inflation expectations"],
+  ["브레이크이븐", "breakeven inflation"],
+  ["물가연동", "treasury inflation indexed"],
+  // ── 고용 ──
   ["실업률", "unemployment rate"],
   ["비농업", "nonfarm payrolls"],
+  ["신규 실업수당", "initial claims"],
+  ["실업수당", "unemployment insurance claims"],
+  ["구인", "job openings"],
+  ["경제활동참가율", "labor force participation rate"],
+  ["시간당 임금", "average hourly earnings"],
+  ["임금", "average hourly earnings"],
+  ["고용비용", "employment cost index"],
   ["고용", "employment"],
-  ["소매판매", "retail sales"],
+  // ── 성장·실물 ──
   ["산업생산", "industrial production"],
+  ["설비가동률", "capacity utilization"],
+  ["내구재 주문", "durable goods orders"],
+  ["공장주문", "factory orders"],
+  ["소매판매", "retail sales"],
+  ["개인소득", "personal income"],
+  ["경기선행지수", "leading index"],
+  ["재고", "business inventories"],
+  // ── 심리·서베이 ──
+  ["소비자심리", "consumer sentiment"],
+  ["소비자신뢰", "consumer confidence"],
+  ["미시간", "michigan consumer sentiment"],
+  ["중소기업 낙관", "small business optimism"],
+  ["제조업지수", "manufacturing index"],
+  ["필라델피아 연은", "philadelphia fed manufacturing"],
+  ["엠파이어", "empire state manufacturing"],
+  // ── 금리·크레딧 ──
   ["기준금리", "federal funds rate"],
-  ["국채", "treasury yield"],
   ["장단기", "yield spread"],
-  ["환율", "exchange rate"],
+  ["국채", "treasury yield"],
+  ["모기지금리", "mortgage rate"],
+  ["하이일드", "high yield spread"],
+  ["크레딧 스프레드", "credit spread"],
+  ["회사채 스프레드", "corporate bond spread"],
+  ["회사채", "corporate bond yield"],
+  // ── 주택 ──
   ["주택착공", "housing starts"],
+  ["주택허가", "building permits"],
+  ["신규주택판매", "new home sales"],
+  ["기존주택판매", "existing home sales"],
+  ["케이스실러", "case shiller home price"],
+  ["주택가격", "home price index"],
   ["주택", "housing"],
+  // ── 대외·재정 ──
   ["무역수지", "trade balance"],
+  ["경상수지", "current account"],
+  ["수출", "exports"],
+  ["수입", "imports"],
+  ["재정적자", "federal budget deficit"],
+  ["국가부채", "federal debt"],
+  // ── 통화·유동성 ──
+  ["통화량", "money stock M2"],
+  ["연준 총자산", "fed total assets"],
+  ["역레포", "reverse repurchase"],
+  ["은행 대출", "bank credit"],
+  // ── 달러·원자재 ──
+  ["달러인덱스", "dollar index"],
+  ["환율", "exchange rate"],
+  ["국제유가", "crude oil price"],
+  ["유가", "crude oil price"],
+  ["금값", "gold price"],
+  ["천연가스", "natural gas price"],
+  ["구리", "copper price"],
+  // ── 기타 ──
   ["경기침체", "recession"],
 ];
 
+/** 긴 표현 우선 정렬본 — 모듈 로드 시 1회 계산 */
+const FRED_KO_EN_BY_LENGTH = [...FRED_KO_EN].sort((a, b) => b[0].length - a[0].length);
+
 /**
  * 질의에서 FRED에 실제로 보낼 검색어를 도출한다.
- * 영숫자가 있으면 원문 그대로, 한글뿐이면 용어집 매칭으로 영문 변환,
- * 변환 불가면 null(FRED 건너뜀).
+ * 영숫자가 있으면 원문 그대로, 한글뿐이면 용어집 매칭(긴 표현 우선,
+ * 매칭 구간 소거)으로 영문 변환, 변환 불가면 null(FRED 건너뜀).
  */
 export function fredSearchQuery(q: string): string | null {
   if (isFredSearchable(q)) return q;
   const terms: string[] = [];
-  for (const [ko, en] of FRED_KO_EN) {
-    if (q.includes(ko) && !terms.includes(en)) terms.push(en);
+  let rest = q;
+  for (const [ko, en] of FRED_KO_EN_BY_LENGTH) {
+    if (!rest.includes(ko)) continue;
+    if (!terms.includes(en)) terms.push(en);
+    rest = rest.split(ko).join(" ");
   }
   return terms.length > 0 ? terms.join(" ") : null;
 }

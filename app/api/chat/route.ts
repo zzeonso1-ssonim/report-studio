@@ -15,8 +15,13 @@ import { sources } from "@/lib/sources";
  *  - { error } — 실패
  */
 
-/** 기본 모델 — 유일한 기본값 상수. 환경변수 OPENAI_MODEL로 재정의 가능. */
-const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
+/**
+ * 기본 모델 — 유일한 기본값 상수. 환경변수 OPENAI_MODEL로 재정의 가능.
+ * gpt-4o-mini는 전체 컨텍스트에서 기간("1년치")을 만기로 오해하고 중복
+ * 시리즈를 넣는 오답이 반복돼(2026-08-01 배터리 실측) gpt-4o로 올렸다 —
+ * 재시도 라운드가 사라져 응답도 더 빠르다(실측 1.7~2.1초 vs 3~8초).
+ */
+const DEFAULT_OPENAI_MODEL = "gpt-4o";
 
 const MAX_TOOL_ROUNDS = 6;
 const MAX_SERIES = 4;
@@ -63,14 +68,13 @@ interface PlanSeriesItem {
   style?: Style;
 }
 
-/** 시리즈 간 파생 계산 — 값은 서버/클라이언트 코드가 계산한다(모델은 숫자를 만들지 않는다) */
+/** 시리즈 간 파생 계산 — 값·단위는 시스템이 계산한다(모델은 숫자를 만들지 않는다) */
 interface PlanDerivedItem {
   op: DerivedOp;
   /** series 배열의 0-기준 인덱스. spread = a−b, ratio = a÷b */
   a: number;
   b: number;
   name: string;
-  unit?: string;
   axis?: Axis;
   style?: Style;
 }
@@ -106,6 +110,7 @@ function buildSystemPrompt(): string {
     `- 미국 데이터가 등록 지표에 없으면 search_catalog를 source:"fred"로 호출하되, FRED 카탈로그는 영문 전용이므로 검색어는 반드시 영어로 바꿔서 넣으세요 (예: "미국 실업률" → "unemployment rate").`,
     `- 한국어 별칭을 정확히 해석하세요. 특히 "슈퍼코어"가 나오면 반드시 등록 지표 us_cpi_services_less_shelter를 쓰세요 — FRED에 슈퍼코어 CPI 직수록 시리즈는 없고, 절사평균(trimmed mean) PCE는 슈퍼코어가 아니므로 대체 금지입니다. note에 "공식 슈퍼코어(서비스−에너지−주거)와 정의가 다른 근사 지표"임을 병기하세요. 비슷해 보인다고 다른 지표를 대신 쓰지 말고, 없으면 없다고 되물으세요.`,
     `- 검색 결과의 unit이 이미 변화율("% Chg.", "Percent Change" 등)인 시리즈에는 yoy·pop을 걸지 마세요 — 변화율의 변화율이 됩니다. 그런 시리즈가 섞이면 시스템이 해당 시리즈만 원계열로 강등하고 안내합니다.`,
+    `- 기간 표현과 만기(테너)를 구분하세요. 지표명 뒤에 오는 "N년"·"N년치"는 조회 기간입니다. 예: "CD금리 1년" → series는 CD 91일 금리 단 1개, startDate만 1년 전으로 (국고채 1년을 추가하면 오답). 만기 지표는 "국고 1년물"처럼 종목으로 명시될 때만 포함하세요.`,
     `- 기간: endDate는 오늘(${isoDate(today)}). 질의에 "N년(치)"가 있으면 startDate는 오늘에서 정확히 N년 전 날짜로 계산하고, 기간 언급이 전혀 없을 때만 5년 전(${isoDate(fiveYearsAgo)})을 쓰세요. 날짜 형식은 YYYY-MM-DD.`,
     `- note에는 사용자 차트 위에 표시할 1문장 한국어 안내(선택 지표·변환·기간 요약 또는 주의점)를 적으세요.`,
     `- 질의가 모호해 계획을 세울 수 없으면 도구를 호출하지 말고 한국어로 짧게 되물으세요.`,
@@ -181,7 +186,6 @@ const TOOLS = [
                 a: { type: "integer" },
                 b: { type: "integer" },
                 name: { type: "string", description: "차트 범례에 쓸 한국어 이름" },
-                unit: { type: "string" },
                 axis: { type: "string", enum: AXES },
                 style: { type: "string", enum: STYLES },
               },
@@ -238,6 +242,7 @@ function validatePlan(raw: unknown): { plan?: Plan; error?: string } {
     return { error: `series는 최대 ${MAX_SERIES}개입니다` };
   }
   const series: PlanSeriesItem[] = [];
+  const seen = new Set<string>(); // 같은 지표를 두 번 넣는 모델 실수 방지
   for (const item of b.series as Record<string, unknown>[]) {
     const axis = item?.axis;
     if (axis !== undefined && !AXES.includes(axis as Axis)) {
@@ -252,6 +257,8 @@ function validatePlan(raw: unknown): { plan?: Plan; error?: string } {
       if (!getIndicator(item.indicatorId)) {
         return { error: `알 수 없는 indicatorId: ${item.indicatorId}. list_indicators의 id를 사용하세요.` };
       }
+      if (seen.has(item.indicatorId)) continue;
+      seen.add(item.indicatorId);
       series.push({ indicatorId: item.indicatorId, ...display });
       continue;
     }
@@ -270,6 +277,9 @@ function validatePlan(raw: unknown): { plan?: Plan; error?: string } {
     }
     const cycle = (typeof item.cycle === "string" ? item.cycle : "M") as Cycle;
     if (!CYCLES.includes(cycle)) return { error: `지원하지 않는 주기: ${String(item.cycle)}` };
+    const sig = `${source}:${JSON.stringify(Object.entries(params).sort())}`;
+    if (seen.has(sig)) continue;
+    seen.add(sig);
     series.push({
       source,
       params,
@@ -312,7 +322,6 @@ function validatePlan(raw: unknown): { plan?: Plan; error?: string } {
         a: a as number,
         b: bIdx as number,
         name: d.name,
-        unit: typeof d.unit === "string" ? d.unit : undefined,
         axis: d.axis as Axis | undefined,
         style: d.style as Style | undefined,
       });
@@ -338,10 +347,12 @@ function validatePlan(raw: unknown): { plan?: Plan; error?: string } {
  * 매칭 기준은 레지스트리의 aliases 필드 — 지표 정의 단일 소스에서 파생.
  */
 function aliasViolation(query: string, plan: Plan): string | null {
-  const q = query.toLowerCase();
+  // 띄어쓰기 무시 매칭 — "국고10년"과 "국고 10년"을 같은 표현으로 취급
+  const norm = (s: string) => s.toLowerCase().replace(/\s/g, "");
+  const q = norm(query);
   for (const ind of indicators) {
     for (const alias of ind.aliases ?? []) {
-      if (!q.includes(alias.toLowerCase())) continue;
+      if (!q.includes(norm(alias))) continue;
       const used = plan.series.some((s) => s.indicatorId === ind.id);
       if (!used) {
         return `질의에 "${alias}"가 있으므로 반드시 등록 지표 {"indicatorId": "${ind.id}"}를 series에 포함하세요. 카탈로그 검색 결과로 대체하지 마세요.`;
@@ -380,18 +391,34 @@ export async function POST(request: Request) {
 
   try {
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({ model, messages, tools: TOOLS, temperature: 0 }),
-      });
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error(`[chat] OpenAI HTTP ${res.status}: ${errText.slice(0, 500)}`);
-        return Response.json({ error: `OpenAI 호출 실패 (HTTP ${res.status})` }, { status: 502 });
+      // 429(분당 토큰 한도)는 몇 초 뒤 풀리므로 짧은 백오프로 최대 2회 재시도.
+      // 총 대기는 Vercel 20초 상한 안에 들어오도록 6초로 제한한다.
+      let res: Response | null = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        res = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({ model, messages, tools: TOOLS, temperature: 0 }),
+        });
+        if (res.status !== 429 || attempt === 2) break;
+        const retryAfter = Number(res.headers.get("retry-after"));
+        const waitMs = Math.min(
+          Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 + 300 : 3000,
+          6000
+        );
+        console.log(`[chat] 429 — ${waitMs}ms 후 재시도 (${attempt + 1}/2)`);
+        await new Promise((r) => setTimeout(r, waitMs));
+      }
+      if (!res || !res.ok) {
+        const status = res?.status ?? 0;
+        const errText = res ? await res.text() : "no response";
+        console.error(`[chat] OpenAI HTTP ${status}: ${errText.slice(0, 500)}`);
+        const hint =
+          status === 429 ? " — 요청이 몰렸습니다. 몇 초 뒤 다시 시도하세요" : "";
+        return Response.json({ error: `OpenAI 호출 실패 (HTTP ${status})${hint}` }, { status: 502 });
       }
       const json = await res.json();
       const usage: Usage | undefined = json.usage;
