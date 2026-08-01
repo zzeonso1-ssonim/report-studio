@@ -38,6 +38,9 @@ TESTS = [
     ("회사채 AA-랑 국고 3년 스프레드 5년치", ["kr_corp_3y_aa_yield", "kr_ktb_3y_yield"], True),
     ("한국 CPI랑 미국 CPI 전년비로 겹쳐줘", ["kr_cpi", "us_cpi"], True),
     ("미국 케이스실러 주택가격 5년", [], False),
+    ("수출금액지수랑 수출물량지수 3년", ["kr_export_value_idx", "kr_export_volume_idx"], True),
+    ("광공업생산이랑 경기선행지수 5년치", ["kr_ip_index", "kr_leading_index"], True),
+    ("미국 근원 CPI랑 미국 PCE 전년비 3년", ["us_core_cpi", "us_pce"], True),
 ]
 
 
