@@ -46,14 +46,14 @@ export const kosis: SourceAdapter = {
 
     return rows.map(
       (r): SeriesPoint => ({
-        date: fromKosisPeriod(r.PRD_DE),
+        date: fromKosisPeriod(r.PRD_DE, prdSe),
         value: r.DT === "" || r.DT === "-" ? null : Number(r.DT),
       })
     );
   },
 };
 
-/** YYYY-MM-DD → KOSIS 주기별 표기 (M: YYYYMM, Q: YYYYQn... KOSIS는 분기도 YYYYMM 아님 주의, Y: YYYY) */
+/** YYYY-MM-DD → KOSIS 주기별 표기 (M: YYYYMM, Q: YYYY0n — KOSIS는 분기도 6자리, Y: YYYY) */
 function toKosisPeriod(iso: string, prdSe: string): string {
   const [y, m] = iso.split("-");
   switch (prdSe) {
@@ -63,7 +63,15 @@ function toKosisPeriod(iso: string, prdSe: string): string {
   }
 }
 
-function fromKosisPeriod(prdDe: string): string {
-  if (prdDe.length === 6) return `${prdDe.slice(0, 4)}-${prdDe.slice(4, 6)}`;
+/**
+ * KOSIS PRD_DE → 정규형. 분기도 6자리("202602"=2026 Q2)라 월과 구분이 안 되므로
+ * 반드시 prdSe로 해석한다 — 월로 오독하면 분기 시계열의 시점이 통째로 틀린다.
+ */
+function fromKosisPeriod(prdDe: string, prdSe: string): string {
+  if (prdDe.length === 6) {
+    const y = prdDe.slice(0, 4);
+    const tail = prdDe.slice(4, 6);
+    return prdSe === "Q" ? `${y}-Q${Number(tail)}` : `${y}-${tail}`;
+  }
   return prdDe;
 }

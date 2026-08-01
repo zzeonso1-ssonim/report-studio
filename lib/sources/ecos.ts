@@ -1,4 +1,4 @@
-import { SeriesPoint, SeriesRange, SourceAdapter, SourceError, requireKey } from "./types";
+import { SeriesPoint, SourceAdapter, SourceError, requireKey } from "./types";
 
 /**
  * 한국은행 경제통계시스템(ECOS) OpenAPI
@@ -48,6 +48,7 @@ function fromEcosPeriod(time: string, cycle: string): string {
   switch (cycle) {
     case "D": return `${time.slice(0, 4)}-${time.slice(4, 6)}-${time.slice(6, 8)}`;
     case "M": return `${time.slice(0, 4)}-${time.slice(4, 6)}`;
-    default: return time; // Q/A는 ECOS 표기 그대로
+    case "Q": return time.replace(/^(\d{4})Q(\d)$/, "$1-Q$2"); // "2026Q2" → "2026-Q2" (정렬·병합 정규형)
+    default: return time; // A는 YYYY 그대로
   }
 }

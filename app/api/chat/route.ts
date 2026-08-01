@@ -20,8 +20,16 @@ const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
 
 const MAX_TOOL_ROUNDS = 6;
 const MAX_SERIES = 4;
+const MAX_DERIVED = 2;
 const TRANSFORMS: Transform[] = ["raw", "yoy", "pop", "rebase"];
 const CYCLES: Cycle[] = ["D", "M", "Q", "A"];
+const AXES = ["left", "right"] as const;
+const STYLES = ["line", "bar", "area"] as const;
+const DERIVED_OPS = ["spread", "ratio"] as const;
+
+type Axis = (typeof AXES)[number];
+type Style = (typeof STYLES)[number];
+type DerivedOp = (typeof DERIVED_OPS)[number];
 
 // ── OpenAI 와이어 타입 (필요한 부분만) ─────────────────────────
 interface ToolCall {
@@ -50,10 +58,26 @@ interface PlanSeriesItem {
   cycle?: Cycle;
   name?: string;
   unit?: string;
+  /** 이축·표현 지정 (선택) — 생략 시 좌축·전역 차트유형 */
+  axis?: Axis;
+  style?: Style;
+}
+
+/** 시리즈 간 파생 계산 — 값은 서버/클라이언트 코드가 계산한다(모델은 숫자를 만들지 않는다) */
+interface PlanDerivedItem {
+  op: DerivedOp;
+  /** series 배열의 0-기준 인덱스. spread = a−b, ratio = a÷b */
+  a: number;
+  b: number;
+  name: string;
+  unit?: string;
+  axis?: Axis;
+  style?: Style;
 }
 
 interface Plan {
   series: PlanSeriesItem[];
+  derived?: PlanDerivedItem[];
   transform: Transform;
   startDate: string;
   endDate: string;
@@ -77,6 +101,9 @@ function buildSystemPrompt(): string {
     `- 등록 지표에 없는 데이터만 search_catalog(ECOS·KOSIS·FRED 카탈로그 검색)로 찾으세요. 검색 결과를 쓸 때는 그 결과의 source·params·cycle·name·unit을 변형 없이 그대로 finalize_plan의 series 항목에 넣으세요.`,
     `- 질의가 언급하는 모든 시계열 대상을 빠짐없이 series에 넣으세요. 두 나라·두 지표를 비교하는 질의("A랑 B", "A vs B")면 반드시 각각 별도의 series 항목으로 모두 포함해야 합니다. 시리즈는 최대 ${MAX_SERIES}개.`,
     `- transform: raw(원계열) | yoy(전년동기대비 %) | pop(전기대비 %) | rebase(구간 시작=100). 질의에 "전년동기대비"·"YoY"·"상승률"·"증가율" 등이 있으면 yoy. 단위가 서로 다른 지표를 한 차트에 비교할 때는 yoy 또는 rebase를 권장합니다. 금리처럼 단위(%)가 같은 수준(level) 비교는 raw.`,
+    `- 파생 계산(스프레드·비율): 질의가 차나 비율을 명시적으로 요구할 때만("A-B 스프레드", "장단기 금리차", "A 대비 B 비율") derived에 {op, a, b, name}을 넣으세요. 단순 비교·겹치기 질의("A랑 B 보여줘/겹쳐줘")에는 derived를 넣지 마세요. op은 spread(a−b) 또는 ratio(a÷b), a·b는 series 배열의 0-기준 인덱스입니다. "10년-3년 스프레드"면 a=10년 인덱스, b=3년 인덱스. 원본 두 시리즈도 series에 그대로 두세요(함께 그려집니다). 값 계산은 시스템이 합니다.`,
+    `- 이축·표현: 스케일이 다른 항목을 오른쪽 축에 두려면 그 항목(series 또는 derived)에 axis:"right"를 지정하세요. 스프레드는 원 시리즈와 스케일이 다르므로 기본적으로 axis:"right"를 권장합니다. "영역형"·"막대"처럼 특정 항목의 표현을 지정하면 style("line"|"bar"|"area")을 넣으세요. 예: "스프레드를 우축 영역형으로" → 해당 derived에 axis:"right", style:"area".`,
+    `- 미국 데이터가 등록 지표에 없으면 search_catalog를 source:"fred"로 호출하되, FRED 카탈로그는 영문 전용이므로 검색어는 반드시 영어로 바꿔서 넣으세요 (예: "미국 실업률" → "unemployment rate").`,
     `- 기간: endDate는 오늘(${isoDate(today)}). 질의에 "N년(치)"가 있으면 startDate는 오늘에서 정확히 N년 전 날짜로 계산하고, 기간 언급이 전혀 없을 때만 5년 전(${isoDate(fiveYearsAgo)})을 쓰세요. 날짜 형식은 YYYY-MM-DD.`,
     `- note에는 사용자 차트 위에 표시할 1문장 한국어 안내(선택 지표·변환·기간 요약 또는 주의점)를 적으세요.`,
     `- 질의가 모호해 계획을 세울 수 없으면 도구를 호출하지 말고 한국어로 짧게 되물으세요.`,
@@ -135,7 +162,28 @@ const TOOLS = [
                 cycle: { type: "string", enum: CYCLES },
                 name: { type: "string" },
                 unit: { type: "string" },
+                axis: { type: "string", enum: AXES },
+                style: { type: "string", enum: STYLES },
               },
+            },
+          },
+          derived: {
+            type: "array",
+            maxItems: MAX_DERIVED,
+            description:
+              "시리즈 간 파생 계산. spread=a−b, ratio=a÷b (a·b는 series의 0-기준 인덱스). 값 계산은 시스템이 수행.",
+            items: {
+              type: "object",
+              properties: {
+                op: { type: "string", enum: DERIVED_OPS },
+                a: { type: "integer" },
+                b: { type: "integer" },
+                name: { type: "string", description: "차트 범례에 쓸 한국어 이름" },
+                unit: { type: "string" },
+                axis: { type: "string", enum: AXES },
+                style: { type: "string", enum: STYLES },
+              },
+              required: ["op", "a", "b", "name"],
             },
           },
           transform: { type: "string", enum: TRANSFORMS },
@@ -188,11 +236,20 @@ function validatePlan(raw: unknown): { plan?: Plan; error?: string } {
   }
   const series: PlanSeriesItem[] = [];
   for (const item of b.series as Record<string, unknown>[]) {
+    const axis = item?.axis;
+    if (axis !== undefined && !AXES.includes(axis as Axis)) {
+      return { error: `axis는 left 또는 right여야 합니다: ${String(axis)}` };
+    }
+    const style = item?.style;
+    if (style !== undefined && !STYLES.includes(style as Style)) {
+      return { error: `style은 line·bar·area 중 하나여야 합니다: ${String(style)}` };
+    }
+    const display = { axis: axis as Axis | undefined, style: style as Style | undefined };
     if (typeof item?.indicatorId === "string" && item.indicatorId) {
       if (!getIndicator(item.indicatorId)) {
         return { error: `알 수 없는 indicatorId: ${item.indicatorId}. list_indicators의 id를 사용하세요.` };
       }
-      series.push({ indicatorId: item.indicatorId });
+      series.push({ indicatorId: item.indicatorId, ...display });
       continue;
     }
     const source = item?.source;
@@ -216,7 +273,47 @@ function validatePlan(raw: unknown): { plan?: Plan; error?: string } {
       cycle,
       name: typeof item.name === "string" ? item.name : "임의 시계열",
       unit: typeof item.unit === "string" ? item.unit : undefined,
+      ...display,
     });
+  }
+
+  // 파생 계산 검증 — 인덱스가 series 범위 안에 있어야 한다
+  let derived: PlanDerivedItem[] | undefined;
+  if (b.derived !== undefined) {
+    if (!Array.isArray(b.derived)) return { error: "derived는 배열이어야 합니다" };
+    if (b.derived.length > MAX_DERIVED) return { error: `derived는 최대 ${MAX_DERIVED}개입니다` };
+    derived = [];
+    for (const d of b.derived as Record<string, unknown>[]) {
+      if (!DERIVED_OPS.includes(d?.op as DerivedOp)) {
+        return { error: `derived.op은 spread 또는 ratio여야 합니다: ${String(d?.op)}` };
+      }
+      const a = d.a;
+      const bIdx = d.b;
+      if (
+        !Number.isInteger(a) || !Number.isInteger(bIdx) ||
+        (a as number) < 0 || (a as number) >= series.length ||
+        (bIdx as number) < 0 || (bIdx as number) >= series.length
+      ) {
+        return { error: `derived의 a·b는 series의 0~${series.length - 1} 인덱스여야 합니다` };
+      }
+      if (a === bIdx) return { error: "derived의 a와 b는 서로 달라야 합니다" };
+      if (typeof d.name !== "string" || !d.name) return { error: "derived.name이 필요합니다" };
+      if (d.axis !== undefined && !AXES.includes(d.axis as Axis)) {
+        return { error: `derived.axis는 left 또는 right여야 합니다: ${String(d.axis)}` };
+      }
+      if (d.style !== undefined && !STYLES.includes(d.style as Style)) {
+        return { error: `derived.style은 line·bar·area 중 하나여야 합니다: ${String(d.style)}` };
+      }
+      derived.push({
+        op: d.op as DerivedOp,
+        a: a as number,
+        b: bIdx as number,
+        name: d.name,
+        unit: typeof d.unit === "string" ? d.unit : undefined,
+        axis: d.axis as Axis | undefined,
+        style: d.style as Style | undefined,
+      });
+    }
   }
 
   const transform = b.transform as Transform;
@@ -228,7 +325,7 @@ function validatePlan(raw: unknown): { plan?: Plan; error?: string } {
   const endDate = typeof b.endDate === "string" && dateRe.test(b.endDate) ? b.endDate : null;
   if (!startDate || !endDate) return { error: "startDate/endDate는 YYYY-MM-DD 형식이어야 합니다" };
 
-  return { plan: { series, transform, startDate, endDate } };
+  return { plan: { series, derived, transform, startDate, endDate } };
 }
 
 // ── 라우트 ─────────────────────────────────────────────────────

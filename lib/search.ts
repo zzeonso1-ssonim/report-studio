@@ -6,7 +6,8 @@ import {
   KOSIS_TABLE_FANOUT,
   PER_SOURCE_CAP,
   SOURCE_TIMEOUT_MS,
-  isFredSearchable,
+  fredSearchQuery,
+  fredTranslatedNote,
   timeoutNote,
 } from "./search-config";
 
@@ -65,8 +66,10 @@ export async function searchAll(q: string): Promise<SearchOutcome> {
     { source: "ecos", run: () => searchEcos(q) },
     { source: "kosis", run: () => searchKosis(q) },
   ];
-  if (isFredSearchable(q)) {
-    tasks.push({ source: "fred", run: () => searchFred(q) });
+  const fredQ = fredSearchQuery(q);
+  if (fredQ) {
+    tasks.push({ source: "fred", run: () => searchFred(fredQ) });
+    if (fredQ !== q) notes.push(fredTranslatedNote(fredQ));
   } else {
     notes.push(FRED_SKIP_NOTE);
   }

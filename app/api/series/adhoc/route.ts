@@ -1,4 +1,5 @@
 import { Cycle } from "@/lib/indicators";
+import { normalizePointDates } from "@/lib/dates";
 import { applyTransform, Transform } from "@/lib/transforms";
 import { sources } from "@/lib/sources";
 
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
       },
       source,
       transform,
-      points: applyTransform(points, transform, cycle),
+      points: applyTransform(normalizePointDates(points, cycle), transform, cycle),
     });
   } catch (err) {
     return Response.json({ error: String(err) }, { status: 502 });

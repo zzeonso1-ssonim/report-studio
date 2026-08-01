@@ -6,13 +6,11 @@ import { LOGIN_PATH, LOGOUT_API_PATH } from "@/lib/auth-config";
 import { CLIENT_TIMEOUT_MS, seconds } from "@/lib/search-config";
 import {
   Area,
-  AreaChart,
   Bar,
-  BarChart,
   CartesianGrid,
+  ComposedChart,
   Legend,
   Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -163,6 +161,8 @@ async function chartContainerToPngBlob(container: HTMLElement): Promise<Blob> {
   return blob;
 }
 
+type Axis = "left" | "right";
+
 /** /api/chat 응답의 plan.series 항목 */
 interface PlanSeriesItem {
   indicatorId?: string;
@@ -171,13 +171,74 @@ interface PlanSeriesItem {
   cycle?: string;
   name?: string;
   unit?: string;
+  axis?: Axis;
+  style?: ChartType;
+}
+
+/** /api/chat 응답의 plan.derived 항목 — a·b는 plan.series 인덱스 */
+interface PlanDerivedItem {
+  op: "spread" | "ratio";
+  a: number;
+  b: number;
+  name: string;
+  unit?: string;
+  axis?: Axis;
+  style?: ChartType;
 }
 
 interface ChatPlan {
   series: PlanSeriesItem[];
+  derived?: PlanDerivedItem[];
   transform: string;
   startDate: string;
   endDate: string;
+}
+
+/** 파생 계산 사양 — 계획 인덱스를 실제 시리즈 id로 해석해 보관 (수동 재조회에도 유지) */
+interface DerivedSpec {
+  op: "spread" | "ratio";
+  aId: string;
+  bId: string;
+  name: string;
+  unit?: string;
+}
+
+function derivedKey(d: DerivedSpec): string {
+  return `derived_${d.op}_${d.aId}_${d.bId}`;
+}
+
+/**
+ * 파생 시리즈 계산 — spread=a−b, ratio=a÷b. 모델이 아니라 코드가 계산한다.
+ * 날짜는 서버에서 주기별 정규형으로 통일돼 오므로 문자열 일치로 짝짓는다.
+ */
+function computeDerived(d: DerivedSpec, a: SeriesResponse, b: SeriesResponse): SeriesResponse {
+  const bByDate = new Map(b.points.map((p) => [p.date, p.value]));
+  const points = a.points.map((p) => {
+    const bv = bByDate.get(p.date);
+    let v: number | null = null;
+    if (p.value != null && bv != null) {
+      v = d.op === "spread" ? p.value - bv : bv !== 0 ? p.value / bv : null;
+    }
+    return { date: p.date, value: v == null ? null : Math.round(v * 10000) / 10000 };
+  });
+  const unit =
+    d.unit ??
+    (d.op === "spread"
+      ? a.indicator.unit === "%" && b.indicator.unit === "%"
+        ? "%p"
+        : a.indicator.unit
+      : "배");
+  return {
+    indicator: { id: derivedKey(d), name: d.name, unit, cycle: a.indicator.cycle },
+    source: "계산",
+    transform: a.transform,
+    points,
+  };
+}
+
+/** 시리즈가 그릴 값이 하나라도 있는지 — 빈 결과를 조용히 넘기지 않기 위한 판정 */
+function hasAnyValue(s: SeriesResponse): boolean {
+  return Array.isArray(s.points) && s.points.some((p) => p.value != null);
 }
 
 export default function Home() {
@@ -200,6 +261,11 @@ export default function Home() {
   const [chatError, setChatError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null); // 계획 안내문 (차트 위)
   const [manualOpen, setManualOpen] = useState(false); // 수동 선택 패널
+
+  // 자연어 계획의 파생 계산·이축·항목별 표현 — id 기준이라 수동 재조회에도 유지된다
+  const [derived, setDerived] = useState<DerivedSpec[]>([]);
+  const [axes, setAxes] = useState<Record<string, Axis>>({});
+  const [styles, setStyles] = useState<Record<string, ChartType>>({});
 
   // 전체 통계 검색
   const [query, setQuery] = useState("");
@@ -316,6 +382,8 @@ export default function Home() {
             const res = await fetch(`/api/series/${id}?${qs}`);
             const json = await res.json();
             if (!res.ok) errs[id] = json.error ?? `HTTP ${res.status}`;
+            else if (!hasAnyValue(json))
+              errs[id] = "데이터 없음 — 조회 기간에 관측치가 없습니다 (기간·지표를 확인하세요)";
             else results[id] = json;
           } catch (e) {
             errs[id] = String(e);
@@ -340,6 +408,9 @@ export default function Home() {
             });
             const json = await res.json();
             if (!res.ok) errs[a.id] = json.error ?? `HTTP ${res.status}`;
+            else if (!hasAnyValue(json))
+              errs[a.id] =
+                "데이터 없음 — 조회 기간에 관측치가 없습니다 (검색 결과의 코드 조합이 유효하지 않을 수 있어요)";
             else results[a.id] = json;
           } catch (e) {
             errs[a.id] = String(e);
@@ -392,9 +463,15 @@ export default function Home() {
       }
       const regIds: string[] = [];
       const adhocItems: AdhocItem[] = [];
+      // planIds는 plan.series와 같은 순서 — derived의 인덱스(a·b)를 id로 해석하는 기준
+      const planIds: string[] = [];
+      const newAxes: Record<string, Axis> = {};
+      const newStyles: Record<string, ChartType> = {};
       for (const s of plan.series) {
+        let id: string | null = null;
         if (s.indicatorId) {
           regIds.push(s.indicatorId);
+          id = s.indicatorId;
         } else if (s.source && s.params) {
           const r: SearchResult = {
             source: s.source,
@@ -404,13 +481,33 @@ export default function Home() {
             unit: s.unit,
             origin: "AI 검색",
           };
-          adhocItems.push({ ...r, id: adhocId(r) });
+          id = adhocId(r);
+          adhocItems.push({ ...r, id });
         }
+        if (id) {
+          planIds.push(id);
+          if (s.axis) newAxes[id] = s.axis;
+          if (s.style) newStyles[id] = s.style;
+        }
+      }
+      const specs: DerivedSpec[] = [];
+      for (const d of plan.derived ?? []) {
+        const aId = planIds[d.a];
+        const bId = planIds[d.b];
+        if (!aId || !bId) continue;
+        const spec: DerivedSpec = { op: d.op, aId, bId, name: d.name, unit: d.unit };
+        specs.push(spec);
+        const k = derivedKey(spec);
+        if (d.axis) newAxes[k] = d.axis;
+        if (d.style) newStyles[k] = d.style;
       }
       // 수동 패널 상태를 계획과 동기화 — 이후 수동 재조회도 이어서 가능
       setSelected(regIds);
       setAdhoc(adhocItems);
       setTransform(plan.transform);
+      setDerived(specs);
+      setAxes(newAxes);
+      setStyles(newStyles);
       setNote(typeof json.note === "string" ? json.note : null);
       await runLoad(regIds, adhocItems, plan.transform, plan.startDate, plan.endDate);
     } catch (e) {
@@ -420,9 +517,21 @@ export default function Home() {
     }
   }, [chatInput, chatLoading, runLoad]);
 
+  /** 표시 대상 시리즈 = 조회 결과 + 파생 계산(스프레드·비율) */
+  const displaySeries = useMemo(() => {
+    const out: Record<string, SeriesResponse> = { ...series };
+    for (const d of derived) {
+      const a = series[d.aId];
+      const b = series[d.bId];
+      if (!a || !b) continue; // 참조 시리즈가 로드되지 않으면 그리지 않는다
+      out[derivedKey(d)] = computeDerived(d, a, b);
+    }
+    return out;
+  }, [series, derived]);
+
   const chartData = useMemo(() => {
     const byDate = new Map<string, Record<string, string | number | null>>();
-    for (const [id, s] of Object.entries(series)) {
+    for (const [id, s] of Object.entries(displaySeries)) {
       for (const p of s.points) {
         if (!byDate.has(p.date)) byDate.set(p.date, { date: p.date });
         byDate.get(p.date)![id] = p.value;
@@ -431,29 +540,40 @@ export default function Home() {
     return [...byDate.values()].sort((a, b) =>
       String(a.date).localeCompare(String(b.date))
     );
-  }, [series]);
+  }, [displaySeries]);
 
-  const loadedIds = Object.keys(series);
-  const units = new Set(loadedIds.map((id) => series[id].indicator.unit));
-  const mixedUnits = transform === "raw" && units.size > 1;
+  const loadedIds = Object.keys(displaySeries);
+  const axisOf = (id: string): Axis => axes[id] ?? "left";
+  const hasRightAxis = loadedIds.some((id) => axisOf(id) === "right");
+  // 이축이면 축별로 단위 혼합을 판정한다 — 우축 분리가 단위 충돌의 해법이므로
+  const mixedUnits =
+    transform === "raw" &&
+    (["left", "right"] as Axis[]).some(
+      (ax) =>
+        new Set(
+          loadedIds.filter((id) => axisOf(id) === ax).map((id) => displaySeries[id].indicator.unit)
+        ).size > 1
+    );
 
   /** "단위: %" 표기 — 로드된 시리즈의 unit에서 파생, 변환 적용 시 변환 단위 우선 */
   const unitLabel = useMemo(() => {
     const seen = new Set<string>();
     const list: string[] = [];
-    for (const s of Object.values(series)) {
-      const u = transformUnit(s.transform) ?? (s.indicator.unit ?? "").trim();
+    for (const s of Object.values(displaySeries)) {
+      const u =
+        (s.source === "계산" ? s.indicator.unit : transformUnit(s.transform)) ??
+        (s.indicator.unit ?? "").trim();
       if (u && !seen.has(u)) {
         seen.add(u);
         list.push(u);
       }
     }
     return list.length > 0 ? `단위: ${list.join(" · ")}` : null;
-  }, [series]);
+  }, [displaySeries]);
   const nameOf = (id: string) =>
+    displaySeries[id]?.indicator.name ??
     meta.find((m) => m.id === id)?.name ??
     adhoc.find((a) => a.id === id)?.name ??
-    series[id]?.indicator.name ??
     id;
 
   const downloadPng = useCallback(async () => {
@@ -904,120 +1024,121 @@ export default function Home() {
             <ResponsiveContainer width="100%" height="100%">
               {(() => {
                 const margin = { top: 8, right: 16, bottom: 4, left: 4 };
-                // 축·그리드·툴팁·범례 — 세 차트 유형이 공유
-                const common = [
-                  <CartesianGrid
-                    key="grid"
-                    stroke="var(--grid)"
-                    strokeWidth={1}
-                    vertical={false}
-                  />,
-                  <XAxis
-                    key="x"
-                    dataKey="date"
-                    tick={{ fill: "var(--axis)", fontSize: 11 }}
-                    tickLine={false}
-                    axisLine={{ stroke: "var(--grid)" }}
-                    minTickGap={48}
-                  />,
-                  <YAxis
-                    key="y"
-                    tick={{ fill: "var(--axis)", fontSize: 11 }}
-                    tickLine={false}
-                    axisLine={false}
-                    width={64}
-                    domain={["auto", "auto"]}
-                  />,
-                  <Tooltip
-                    key="tooltip"
-                    cursor={
-                      chartType === "bar"
-                        ? { fill: "var(--primary-soft)", fillOpacity: 0.6 }
-                        : { stroke: "var(--axis)", strokeOpacity: 0.4 }
-                    }
-                    contentStyle={{
-                      background: "var(--surface)",
-                      border: "1px solid var(--border)",
-                      borderRadius: 8,
-                      color: "var(--foreground)",
-                      fontSize: 12,
-                    }}
-                    formatter={(v, key) => [
-                      typeof v === "number" ? v.toLocaleString() : "—",
-                      nameOf(String(key)),
-                    ]}
-                  />,
-                  ...(loadedIds.length > 1
-                    ? [
-                        <Legend
-                          key="legend"
-                          formatter={(id) => (
-                            <span
-                              style={{ color: "var(--foreground)", fontSize: 12 }}
-                            >
-                              {nameOf(String(id))}
-                            </span>
-                          )}
-                        />,
-                      ]
-                    : []),
-                ];
-                if (chartType === "bar") {
-                  return (
-                    <BarChart
-                      data={chartData}
-                      margin={margin}
-                      barGap={2}
-                      barCategoryGap="25%"
-                    >
-                      {common}
-                      {loadedIds.map((id, i) => (
-                        <Bar
-                          key={id}
-                          dataKey={id}
-                          fill={`var(${SERIES_VARS[i]})`}
-                          maxBarSize={20}
-                          radius={[2, 2, 0, 0]}
-                        />
-                      ))}
-                    </BarChart>
-                  );
-                }
-                if (chartType === "area") {
-                  return (
-                    <AreaChart data={chartData} margin={margin}>
-                      {common}
-                      {loadedIds.map((id, i) => (
-                        <Area
+                // 항목별 표현(계획의 style) > 전역 차트유형 토글
+                const styleOf = (id: string): ChartType => styles[id] ?? chartType;
+                return (
+                  <ComposedChart
+                    data={chartData}
+                    margin={margin}
+                    barGap={2}
+                    barCategoryGap="25%"
+                  >
+                    <CartesianGrid
+                      stroke="var(--grid)"
+                      strokeWidth={1}
+                      vertical={false}
+                    />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fill: "var(--axis)", fontSize: 11 }}
+                      tickLine={false}
+                      axisLine={{ stroke: "var(--grid)" }}
+                      minTickGap={48}
+                    />
+                    <YAxis
+                      yAxisId="left"
+                      tick={{ fill: "var(--axis)", fontSize: 11 }}
+                      tickLine={false}
+                      axisLine={false}
+                      width={64}
+                      domain={["auto", "auto"]}
+                    />
+                    {hasRightAxis && (
+                      <YAxis
+                        yAxisId="right"
+                        orientation="right"
+                        tick={{ fill: "var(--axis)", fontSize: 11 }}
+                        tickLine={false}
+                        axisLine={false}
+                        width={64}
+                        domain={["auto", "auto"]}
+                      />
+                    )}
+                    <Tooltip
+                      cursor={
+                        chartType === "bar"
+                          ? { fill: "var(--primary-soft)", fillOpacity: 0.6 }
+                          : { stroke: "var(--axis)", strokeOpacity: 0.4 }
+                      }
+                      contentStyle={{
+                        background: "var(--surface)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 8,
+                        color: "var(--foreground)",
+                        fontSize: 12,
+                      }}
+                      formatter={(v, key) => [
+                        typeof v === "number" ? v.toLocaleString() : "—",
+                        nameOf(String(key)),
+                      ]}
+                    />
+                    {loadedIds.length > 1 && (
+                      <Legend
+                        formatter={(id) => (
+                          <span
+                            style={{ color: "var(--foreground)", fontSize: 12 }}
+                          >
+                            {nameOf(String(id))}
+                          </span>
+                        )}
+                      />
+                    )}
+                    {loadedIds.map((id, i) => {
+                      const color = `var(${SERIES_VARS[i % SERIES_VARS.length]})`;
+                      const axis = axisOf(id);
+                      const style = styleOf(id);
+                      if (style === "bar") {
+                        return (
+                          <Bar
+                            key={id}
+                            dataKey={id}
+                            yAxisId={axis}
+                            fill={color}
+                            maxBarSize={20}
+                            radius={[2, 2, 0, 0]}
+                          />
+                        );
+                      }
+                      if (style === "area") {
+                        return (
+                          <Area
+                            key={id}
+                            type="monotone"
+                            dataKey={id}
+                            yAxisId={axis}
+                            stroke={color}
+                            strokeWidth={2}
+                            fill={color}
+                            fillOpacity={0.15}
+                            dot={false}
+                            connectNulls
+                          />
+                        );
+                      }
+                      return (
+                        <Line
                           key={id}
                           type="monotone"
                           dataKey={id}
-                          stroke={`var(${SERIES_VARS[i]})`}
+                          yAxisId={axis}
+                          stroke={color}
                           strokeWidth={2}
-                          fill={`var(${SERIES_VARS[i]})`}
-                          fillOpacity={0.15}
                           dot={false}
                           connectNulls
                         />
-                      ))}
-                    </AreaChart>
-                  );
-                }
-                return (
-                  <LineChart data={chartData} margin={margin}>
-                    {common}
-                    {loadedIds.map((id, i) => (
-                      <Line
-                        key={id}
-                        type="monotone"
-                        dataKey={id}
-                        stroke={`var(${SERIES_VARS[i]})`}
-                        strokeWidth={2}
-                        dot={false}
-                        connectNulls
-                      />
-                    ))}
-                  </LineChart>
+                      );
+                    })}
+                  </ComposedChart>
                 );
               })()}
             </ResponsiveContainer>

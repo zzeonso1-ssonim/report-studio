@@ -62,6 +62,50 @@ export function isFredSearchable(q: string): boolean {
   return /[a-z0-9]/i.test(q);
 }
 
+/**
+ * 한글 거시 용어 → FRED 영문 검색어. 한글만으로 된 질의도 미국 데이터를
+ * 탐색할 수 있게 하는 최소 용어집 — 지표 정의가 아니라 검색어 변환 사전이므로
+ * 여기(검색 설정 단일 소스)에 둔다. 매칭 우선순위: 먼저 등장하는 긴 표현부터.
+ */
+const FRED_KO_EN: [string, string][] = [
+  ["근원 소비자물가", "core consumer price index"],
+  ["소비자물가", "consumer price index"],
+  ["생산자물가", "producer price index"],
+  ["개인소비지출", "personal consumption expenditures"],
+  ["실업률", "unemployment rate"],
+  ["비농업", "nonfarm payrolls"],
+  ["고용", "employment"],
+  ["소매판매", "retail sales"],
+  ["산업생산", "industrial production"],
+  ["기준금리", "federal funds rate"],
+  ["국채", "treasury yield"],
+  ["장단기", "yield spread"],
+  ["환율", "exchange rate"],
+  ["주택착공", "housing starts"],
+  ["주택", "housing"],
+  ["무역수지", "trade balance"],
+  ["경기침체", "recession"],
+];
+
+/**
+ * 질의에서 FRED에 실제로 보낼 검색어를 도출한다.
+ * 영숫자가 있으면 원문 그대로, 한글뿐이면 용어집 매칭으로 영문 변환,
+ * 변환 불가면 null(FRED 건너뜀).
+ */
+export function fredSearchQuery(q: string): string | null {
+  if (isFredSearchable(q)) return q;
+  const terms: string[] = [];
+  for (const [ko, en] of FRED_KO_EN) {
+    if (q.includes(ko) && !terms.includes(en)) terms.push(en);
+  }
+  return terms.length > 0 ? terms.join(" ") : null;
+}
+
+/** 한글 질의를 영문으로 변환해 FRED를 조회했음을 알리는 안내문 */
+export function fredTranslatedNote(en: string): string {
+  return `FRED는 영문 카탈로그라 "${en}"(으)로 검색했습니다`;
+}
+
 /** FRED를 건너뛴 이유 안내문 */
 export const FRED_SKIP_NOTE =
   "FRED는 영문 카탈로그라 한글 검색어는 건너뜁니다 — 영문으로 검색하세요 (예: consumer price)";

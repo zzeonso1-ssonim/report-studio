@@ -1,4 +1,5 @@
 import { getIndicator } from "@/lib/indicators";
+import { normalizePointDates } from "@/lib/dates";
 import { applyTransform, Transform } from "@/lib/transforms";
 import { sources, SeriesPoint } from "@/lib/sources";
 
@@ -46,7 +47,11 @@ export async function GET(
     indicator: { id: indicator.id, name: indicator.name, unit: indicator.unit, cycle: indicator.cycle },
     source: usedSource,
     transform,
-    points: applyTransform(points, transform, indicator.cycle),
+    points: applyTransform(
+      normalizePointDates(points, indicator.cycle),
+      transform,
+      indicator.cycle
+    ),
   });
 }
 
