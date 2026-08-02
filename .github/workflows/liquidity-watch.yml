@@ -15,11 +15,11 @@ on:
         type: choice
         options: ["0", "1"]
       probe_risk:
-        description: "Risk Log 판정 프로브. 1=지금 실데이터로 평가·기입 1회 실행(브리핑 적재는 건너뜀). dump=노션 '판정 기준' 원문만 출력하고 아무것도 쓰지 않음."
+        description: "Risk Log 판정 프로브. 1=지금 실데이터로 평가·기입 1회 실행(브리핑 적재는 건너뜀). drift=드리프트 검사·평가까지만 하고 기입은 안 함. dump=노션 '판정 기준' 원문만 출력."
         required: false
         default: "0"
         type: choice
-        options: ["0", "1", "dump"]
+        options: ["0", "1", "drift", "dump"]
 
 permissions:
   contents: read
@@ -95,7 +95,8 @@ jobs:
         run: |
           python3 scripts/liquidity/risk_verdicts.py \
             --input "${RUNNER_TEMP}/liquidity.json" \
-            --out "${RUNNER_TEMP}/verdicts.json"
+            --out "${RUNNER_TEMP}/verdicts.json" \
+            ${{ github.event.inputs.probe_risk == 'drift' && '--dry-run' || '' }}
 
       # 불일치가 있으면 post_briefing이 값 대신 '데이터 이상' 페이지를 만든다(침묵 실패 없음).
       # 차트는 격리돼 있다 — 생성·업로드가 실패해도 표는 그대로 실린다.
