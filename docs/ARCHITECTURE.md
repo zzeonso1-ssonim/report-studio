@@ -1,6 +1,6 @@
 # 아키텍처
 
-최종 갱신: 2026-07-25 (구현 상태 기준) · 배포: <https://econ-cockpit.vercel.app>
+최종 갱신: 2026-08-02 (구현 상태 기준) · 배포: <https://econ-cockpit.vercel.app>
 
 ```mermaid
 flowchart LR
@@ -9,6 +9,7 @@ flowchart LR
     UI["대시보드 /<br/>비교 차트 · 변환 · 통계검색 · PNG"]
     CAL["/calendar<br/>발표 캘린더"]
     DISC["/disclosures<br/>DART 공시검색"]
+    LIQ["/liquidity<br/>미 유동성 프리셋<br/>수준 · 주간증감 · 스프레드"]
     MOD["/models<br/>내 모델 바로가기"]
     LOGIN["/login<br/>비밀번호 입력"]
   end
@@ -24,7 +25,8 @@ flowchart LR
     SRCH["/api/search<br/>카탈로그 통합검색"]
     CALAPI["/api/calendar"]
     DISCAPI["/api/disclosures"]
-    REG["지표 레지스트리<br/>lib/indicators.ts<br/>13개 · 원천기관 우선 + fallback"]
+    REG["지표 레지스트리<br/>lib/indicators.ts<br/>46개 · 원천기관 우선 + fallback"]
+    LIQCFG[("유동성 계열 설정<br/>scripts/liquidity/config.json<br/>lib/liquidity.ts가 파생<br/>노션 브리핑과 공유")]
     TR["변환 계층<br/>lib/transforms.ts<br/>YoY · 전기대비 · 재기준화"]
     SRCHLIB["카탈로그 검색<br/>lib/search.ts"]
     AD["어댑터 계층<br/>lib/sources/*<br/>(인증·포맷·날짜표기 흡수)"]
@@ -55,6 +57,7 @@ flowchart LR
   UI --> PX
   CAL --> PX
   DISC --> PX
+  LIQ --> PX
   MOD --> PX
 
   PX --> CHAT
@@ -73,6 +76,8 @@ flowchart LR
 
   SER --> REG
   SER --> TR
+  REG --> LIQCFG
+  LIQ --> SER
   ADHOC --> TR
   SRCH --> SRCHLIB
   REG --> AD
@@ -105,6 +110,7 @@ flowchart LR
 | `/` | 자연어 입력 + 지표 선택·통계검색 + 비교 차트 (변환·차트유형·PNG) |
 | `/calendar` | 한·미 발표 캘린더 |
 | `/disclosures` | DART 공시검색 |
+| `/liquidity` | 미 유동성 프리셋 — ①지준·ON RRP·TGA 수준(기본 3년) ②지준 주간 증감(기본 1년) ③SOFR−IORB 스프레드(기본 1년). 구성·문안은 `scripts/liquidity/config.json`에서 파생 |
 | `/models` | 내가 만든 모델·앱 바로가기 |
 | `/login` | 비밀번호 게이트 진입점 (게이트 예외) |
 | `/api/indicators` · `/api/series/[id]` · `/api/series/adhoc` · `/api/search` · `/api/chat` · `/api/calendar` · `/api/disclosures` | 데이터 API (게이트 적용) |
@@ -119,3 +125,11 @@ flowchart LR
 - **캐싱 2단**: 어댑터의 외부 fetch에 revalidate 10분(기관 한도 보호) + 확정치·저한도·대용량 카탈로그만 파일 캐시.
 - **저장 루트 단일 소스**: 파일 경로는 `lib/data-dir.ts`의 `dataPath()`만 사용. 캐시 읽기/쓰기 실패는 요청을 깨뜨리지 않는다.
 - **UI**: AI OS 민트 팔레트(#147b6d 계열)로 통일. 차트 시리즈 색은 색약 검증 팔레트 별도 사용.
+- **유동성 계열은 설정을 공유한다**: 미 유동성 12계열의 FRED ID·표시명·단위·환산계수는
+  `scripts/liquidity/config.json` 하나뿐이고, `lib/liquidity.ts`가 그것을 읽어 지표
+  레지스트리와 `/liquidity` 프리셋을 만든다. **웹앱 코드에 FRED 시리즈 ID를 다시 적지 않는다** —
+  노션 브리핑과 웹앱이 같은 계열을 다르게 부르는 사고를 구조로 막는다.
+  등록 대상은 config의 `in_table !== false`(잔액 표에 싣는 계열)로 정해진다.
+- **단위 환산은 조회 계층에서**: `IndicatorDef.divideBy`(=config의 `display.divide_by`)를
+  `/api/series/[id]`가 변환 전에 적용한다. 원천이 백만 달러로 주는 계열과 십억 달러로 주는
+  계열이 같은 축에 1,000배 차이로 섞이는 것을 막는다.

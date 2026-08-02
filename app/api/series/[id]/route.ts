@@ -55,8 +55,19 @@ export async function GET(
     }
   }
 
+  // 표시단위 환산 — 원천이 백만 달러로 주는 계열을 십억 달러로 맞춘다.
+  // 변환(yoy·rebase)보다 먼저 적용해야 원계열 단위와 표기가 어긋나지 않는다.
+  // (fallback 경로도 같은 지표의 재수록본이므로 같은 계수를 쓴다.)
+  const scaled =
+    indicator.divideBy && indicator.divideBy !== 1
+      ? points.map((p) => ({
+          ...p,
+          value: p.value == null ? null : p.value / indicator.divideBy!,
+        }))
+      : points;
+
   const transformed = applyTransform(
-    normalizePointDates(points, indicator.cycle),
+    normalizePointDates(scaled, indicator.cycle),
     transform,
     indicator.cycle
   );

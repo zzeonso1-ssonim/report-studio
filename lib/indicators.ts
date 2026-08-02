@@ -1,4 +1,5 @@
 import { SourceId } from "./sources/types";
+import { liquidityAliases, liquiditySeries } from "./liquidity";
 
 export type Cycle = "D" | "M" | "Q" | "A";
 
@@ -30,6 +31,13 @@ export interface IndicatorDef {
   source: SourceId;
   params: Record<string, string>;
   fallback?: { source: SourceId; params: Record<string, string> };
+  /**
+   * 원자료 → 표시단위 환산 제수. 조회 직후 `/api/series/[id]`가 나눈다.
+   * 원천이 백만 달러로 주는 계열과 십억 달러로 주는 계열을 같은 축에 놓으려면
+   * 단위를 먼저 맞춰야 한다(1,000배 차이가 조용히 섞이는 것을 막는다).
+   * 값의 출처는 지표 정의 단일 소스 — 유동성 계열은 config.json의 display.divide_by.
+   */
+  divideBy?: number;
   /** false면 포털에서 실코드 검증 전 — UI에 표시됨 */
   verified: boolean;
 }
@@ -427,6 +435,35 @@ export const indicators: IndicatorDef[] = [
     params: { seriesId: "RSAFS" },
     verified: true,
   },
+
+  // ── 미 유동성 (H.4.1·머니마켓) ─────────────────────────────
+  // 계열 정의(FRED ID·표시명·단위·환산계수)는 scripts/liquidity/config.json에서
+  // 파생한다 — 노션 유동성 워치 파이프라인과 같은 파일을 본다. 여기에 시리즈
+  // ID를 다시 적지 않는다(lib/liquidity.ts 주석 참조).
+  //
+  // cycle은 전부 "D"다. 주간계열(H.4.1)도 FRED가 수요일 날짜의 YYYY-MM-DD로
+  // 주기 때문이고, 카탈로그 검색의 기존 관례(lib/search.ts FRED_FREQ: W→D)와도
+  // 같다. 시점 정의(주평균·수요일 잔액·일간)는 지표명 괄호에 적는다.
+  //
+  // featured=false — 주요지표 체크리스트는 디렉터 확정 구성을 유지하고,
+  // 이 12종은 챗 질의와 /liquidity 프리셋 화면에서 쓴다.
+  ...liquiditySeries.map(
+    (s): IndicatorDef => ({
+      id: s.indicatorId,
+      name: `${s.label}${s.qualifier ? ` (${s.qualifier})` : ""}`,
+      country: "US",
+      unit: s.unit,
+      kind: s.unit === "%" ? "rate" : "amount",
+      cycle: "D",
+      origin: "미 연준 (FRED 수록)",
+      aliases: liquidityAliases(s.fredId),
+      featured: false,
+      source: "fred",
+      params: { seriesId: s.fredId },
+      divideBy: s.divideBy,
+      verified: true,
+    })
+  ),
 ];
 
 export function getIndicator(id: string): IndicatorDef | undefined {

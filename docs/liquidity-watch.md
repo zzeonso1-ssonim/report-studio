@@ -4,7 +4,9 @@
 Phase 0 검증(`team-soyoung/docs/liquidity-watch-phase0.md`)의 결론을 그대로 이식한 Phase 1에서 출발했고,
 2026-08-02에 **미 국채 입찰 결과 부록**과 **v2 5구획 개편**을 붙였다(아래 별도 절).
 
-- 이 파이프라인은 **웹앱(app/·lib/)과 무관하다.** Vercel 배포 대상이 아니고, 배포에 영향을 주지 않는다.
+- 이 파이프라인의 **실행 경로는 웹앱(app/·lib/)과 무관하다.** Vercel 배포 대상이 아니고, 배포에 영향을 주지 않는다.
+  다만 **`config.json`은 2026-08-02부터 웹앱과 공유한다** — 웹앱이 `lib/liquidity.ts`로 읽어
+  지표 카탈로그와 `/liquidity` 프리셋 화면을 만든다(아래 '웹앱 연결' 절). 파이썬 코드는 그대로다.
 - `as_of: 2026-08-02` — 아래 실측값은 이 시점 기준선이다.
 
 ## 무엇을 · 언제 · 어디로
@@ -112,7 +114,38 @@ Wednesday-ending **week average**다. 같은 H.4.1의 수요일 잔액과 지준
 | ④ 요인 분해 | Δ지준을 5요인으로 분해 + **항등식 잔차를 교차검증으로 사용** | `config.factors` |
 | ⑤ 입찰 부록 | 기존 그대로 | `config.treasurydirect` |
 
-마지막에 인터랙티브 드릴다운 링크(`https://econ-cockpit.vercel.app`) 한 줄이 붙는다.
+마지막에 인터랙티브 드릴다운 링크(`https://econ-cockpit.vercel.app/liquidity`) 한 줄이 붙는다 —
+2026-08-02부터 대문이 아니라 **유동성 프리셋 화면으로 직행**한다(`config.body.cockpit_url`).
+
+## 웹앱 연결 — `/liquidity` 프리셋 (2026-08-02 추가)
+
+노션 브리핑은 주 1회 스냅샷이고, 기간을 바꿔 보거나 다른 지표와 겹쳐 보려면 웹앱이 필요하다.
+그래서 **같은 `config.json`을 웹앱이 읽는다.**
+
+| 웹앱 파일 | 역할 |
+|---|---|
+| [`lib/liquidity.ts`](../lib/liquidity.ts) | config → 웹앱용 파생. 등록 대상은 `in_table !== false`(잔액 표 12계열), 단위는 `display.unit`을 `"십억 USD"` + 시점 정의(`주평균`·`수요일 잔액`·`일간`)로 쪼갠다 |
+| [`lib/indicators.ts`](../lib/indicators.ts) | 위 12계열을 `us_liq_*` id로 등록. **FRED ID를 여기 다시 적지 않는다** |
+| [`app/liquidity/`](../app/liquidity/) | 프리셋 3구획 — ①수준(기본 3년) ②지준 주간 증감(기본 1년) ③SOFR−IORB(기본 1년) |
+
+지켜야 할 것 셋:
+
+**① 시리즈 ID·표시명·환산계수의 단일 소스는 여전히 `config.json`이다.**
+웹앱에 상수를 새로 두지 않는다. `in_table=false`로 바꾸면 웹 카탈로그에서도 자동으로 빠진다.
+`lib/liquidity.ts`의 별칭 맵(웹 전용)은 키가 config에 없으면 **빌드에서 터진다** — 조용히 죽지 않는다.
+
+**② 단위 환산 지점이 파이썬과 다르다.**
+파이썬은 원자료(백만 달러)를 담고 표시할 때 `divide_by`를 적용하지만, 웹앱은
+`/api/series/[id]`가 조회 직후 나눠서 십억 달러로 내려준다(`IndicatorDef.divideBy`).
+계수의 출처는 양쪽 모두 config다. 2026-08-02 12계열 전부 앱 응답 ↔ `fredgraph.csv`÷`divide_by` 일치 확인.
+
+**③ 파생 계산식은 파이썬과 같은 식을 쓴다.**
+스프레드는 `round((minuend − subtrahend) × multiplier, round_to)` — `fetch_liquidity.build_derived`와 동일하다.
+2026-08-02 SOFR−IORB 1년치 공통 관측 247일 전부 일치 확인. 두 곳의 값이 어긋나면 그건 버그다.
+
+**주간 증감 차트는 노션에 없는 웹 전용 차트다.** 노션은 12주 요인 분해를 쓴다.
+차트 문안(`claim`·`note`)은 `lib/liquidity.ts`에 있고 `config.charts.items`에 넣지 않았다 —
+넣으면 `charts.py`가 모르는 `kind`를 그리려다 실패한다.
 
 ### 판정 규칙 — 기계적 분류일 뿐이다
 

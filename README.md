@@ -15,8 +15,10 @@
 - **발표 캘린더** (`/calendar`) — 미국 FRED 자동 + 한국(금통위·CPI·GDP)·FOMC 공식 일정 시드 (시드는 연 1회 수동 갱신)
 - **공시 검색** (`/disclosures`) — DART 회사명 검색(corp_code 캐시), 기간·유형 필터
 - **내 모델 바로가기** (`/models`) — 직접 만든 경제모델·앱 링크 레지스트리(`lib/models.ts`, 현재 웹앱 5 · 저장소 2)
+- **미 유동성 프리셋** (`/liquidity`) — 지준·ON RRP·TGA 수준(기본 3년), 지준 주간 증감(기본 1년), SOFR−IORB 스프레드(기본 1년). 계열·문안은 노션 유동성 워치와 같은 `scripts/liquidity/config.json`에서 파생 ([docs/liquidity-watch.md](docs/liquidity-watch.md) '웹앱 연결')
 
-등록 지표는 `lib/indicators.ts`에 13개(한국 9 · 미국 4), 전부 포털 실응답으로 코드 검증됨. 목록은 [docs/PRD.md 6절](docs/PRD.md) 참조.
+등록 지표는 `lib/indicators.ts`에 46개(한국 23 · 미국 23 — 이 중 미 유동성 12계열은 config 파생),
+전부 포털 실응답으로 코드 검증됨(2026-08-02 기준). 목록은 [docs/PRD.md 6절](docs/PRD.md) 참조.
 
 ## 데이터 소스 (어댑터)
 
