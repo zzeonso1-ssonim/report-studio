@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { transformLabels } from "@/lib/transforms";
+import { REQUEST_TRANSFORMS, transformLabels } from "@/lib/transforms";
 import { LOGIN_PATH, LOGOUT_API_PATH } from "@/lib/auth-config";
 import { CLIENT_TIMEOUT_MS, seconds } from "@/lib/search-config";
 import {
@@ -65,10 +65,10 @@ function adhocId(r: SearchResult): string {
   return `adhoc_${r.source}_${sig}`;
 }
 
-const TRANSFORMS = Object.entries(transformLabels).map(([value, label]) => ({
-  value,
-  label,
-}));
+// 사용자가 고르는 변환만 노출 — 차(%p) 변환은 서버가 지표 성격에 따라 자동 대체
+const TRANSFORMS = Object.entries(transformLabels)
+  .filter(([value]) => (REQUEST_TRANSFORMS as readonly string[]).includes(value))
+  .map(([value, label]) => ({ value, label }));
 
 const YEAR_PRESETS = [1, 3, 5, 10] as const;
 const MAX_SERIES = 4;
@@ -243,6 +243,40 @@ function hasAnyValue(s: SeriesResponse): boolean {
   return Array.isArray(s.points) && s.points.some((p) => p.value != null);
 }
 
+// ── 주기 정렬 ────────────────────────────────────────────────
+// 일간·월간처럼 주기가 다른 시리즈를 겹치면 날짜 키가 서로 달라 병합 행마다
+// 한쪽 값만 남는다(툴팁에 값이 하나만 보이는 원인). 가장 성긴 주기로
+// 세밀한 시리즈를 평균 환산해 같은 키로 정렬한다 — 계산은 코드가 한다.
+const CYCLE_RANK: Record<string, number> = { D: 0, M: 1, Q: 2, A: 3 };
+const CYCLE_LABEL: Record<string, string> = { M: "월", Q: "분기", A: "연" };
+
+function bucketDate(date: string, target: string): string {
+  if (target === "M") return date.slice(0, 7);
+  if (target === "Q") {
+    if (date.includes("Q")) return date;
+    return `${date.slice(0, 4)}-Q${Math.ceil(Number(date.slice(5, 7)) / 3)}`;
+  }
+  return date.slice(0, 4); // A
+}
+
+function resampleTo(s: SeriesResponse, target: string): SeriesResponse {
+  const buckets = new Map<string, number[]>();
+  for (const p of s.points) {
+    if (p.value == null) continue;
+    const k = bucketDate(p.date, target);
+    const arr = buckets.get(k);
+    if (arr) arr.push(p.value);
+    else buckets.set(k, [p.value]);
+  }
+  const points = [...buckets.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([date, vals]) => ({
+      date,
+      value: Math.round((vals.reduce((x, y) => x + y, 0) / vals.length) * 10000) / 10000,
+    }));
+  return { ...s, indicator: { ...s.indicator, cycle: target }, points };
+}
+
 export default function Home() {
   const [meta, setMeta] = useState<IndicatorMeta[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
@@ -270,6 +304,11 @@ export default function Home() {
   const [styles, setStyles] = useState<Record<string, ChartType>>({});
   // 조회 응답에 실린 서버 안내문 (변환 강등 등) — 차트 위에 표시
   const [dataNotes, setDataNotes] = useState<string[]>([]);
+  // 축 반전(역축) — 금리↔가격처럼 역상관 시리즈를 포갤 때 쓴다
+  const [invertAxes, setInvertAxes] = useState<{ left: boolean; right: boolean }>({
+    left: false,
+    right: false,
+  });
 
   // 전체 통계 검색
   const [query, setQuery] = useState("");
@@ -526,17 +565,35 @@ export default function Home() {
     }
   }, [chatInput, chatLoading, runLoad]);
 
-  /** 표시 대상 시리즈 = 조회 결과 + 파생 계산(스프레드·비율) */
+  /** 주기가 섞이면 가장 성긴 주기로 평균 환산해 날짜 키를 맞춘다 */
+  const { alignedSeries, alignNote } = useMemo(() => {
+    const entries = Object.entries(series);
+    const cycles = new Set(entries.map(([, s]) => s.indicator.cycle));
+    if (entries.length < 2 || cycles.size <= 1) {
+      return { alignedSeries: series, alignNote: null as string | null };
+    }
+    const target = [...cycles].reduce((a, b) => ((CYCLE_RANK[b] ?? 0) > (CYCLE_RANK[a] ?? 0) ? b : a));
+    const out: Record<string, SeriesResponse> = {};
+    for (const [id, s] of entries) {
+      out[id] = s.indicator.cycle === target ? s : resampleTo(s, target);
+    }
+    return {
+      alignedSeries: out,
+      alignNote: `주기가 달라 세밀한 시리즈는 ${CYCLE_LABEL[target] ?? target}평균으로 환산해 정렬했어요`,
+    };
+  }, [series]);
+
+  /** 표시 대상 시리즈 = 주기 정렬된 조회 결과 + 파생 계산(스프레드·비율) */
   const displaySeries = useMemo(() => {
-    const out: Record<string, SeriesResponse> = { ...series };
+    const out: Record<string, SeriesResponse> = { ...alignedSeries };
     for (const d of derived) {
-      const a = series[d.aId];
-      const b = series[d.bId];
+      const a = alignedSeries[d.aId];
+      const b = alignedSeries[d.bId];
       if (!a || !b) continue; // 참조 시리즈가 로드되지 않으면 그리지 않는다
       out[derivedKey(d)] = computeDerived(d, a, b);
     }
     return out;
-  }, [series, derived]);
+  }, [alignedSeries, derived]);
 
   const chartData = useMemo(() => {
     const byDate = new Map<string, Record<string, string | number | null>>();
@@ -552,7 +609,41 @@ export default function Home() {
   }, [displaySeries]);
 
   const loadedIds = Object.keys(displaySeries);
-  const axisOf = (id: string): Axis => axes[id] ?? "left";
+
+  /** 시리즈의 표시 단위 — 변환 적용 시 변환 단위, 파생은 자체 단위 */
+  const displayUnitOf = useCallback((s: SeriesResponse): string => {
+    return (
+      (s.source === "계산" ? s.indicator.unit : transformUnit(s.transform)) ??
+      (s.indicator.unit ?? "").trim()
+    );
+  }, []);
+
+  /**
+   * 축 자동 분리 — 계획이 축을 명시하지 않았고 표시 단위가 정확히 2종이면
+   * 두 번째 단위 그룹을 우축으로 보낸다. 단위 충돌 경고 대신 시스템이 해결.
+   */
+  const { effectiveAxes, autoAxisNote } = useMemo(() => {
+    const hasExplicit = loadedIds.some((id) => axes[id]);
+    if (hasExplicit || loadedIds.length < 2) {
+      return { effectiveAxes: axes, autoAxisNote: null as string | null };
+    }
+    const unitsSeen: string[] = [];
+    for (const id of loadedIds) {
+      const u = displayUnitOf(displaySeries[id]);
+      if (!unitsSeen.includes(u)) unitsSeen.push(u);
+    }
+    if (unitsSeen.length !== 2) return { effectiveAxes: axes, autoAxisNote: null };
+    const out: Record<string, Axis> = {};
+    for (const id of loadedIds) {
+      out[id] = displayUnitOf(displaySeries[id]) === unitsSeen[0] ? "left" : "right";
+    }
+    return {
+      effectiveAxes: out,
+      autoAxisNote: `단위가 달라 ${unitsSeen[1] || "두 번째"} 시리즈를 우축으로 분리했어요 (좌 ${unitsSeen[0] || "-"} · 우 ${unitsSeen[1] || "-"})`,
+    };
+  }, [loadedIds, axes, displaySeries, displayUnitOf]);
+
+  const axisOf = (id: string): Axis => effectiveAxes[id] ?? "left";
   const hasRightAxis = loadedIds.some((id) => axisOf(id) === "right");
   // 이축이면 축별로 단위 혼합을 판정한다 — 우축 분리가 단위 충돌의 해법이므로
   const mixedUnits =
@@ -997,6 +1088,16 @@ export default function Home() {
               ℹ {n}
             </p>
           ))}
+          {alignNote && (
+            <p className="mb-2 text-xs" style={{ color: "var(--muted)" }}>
+              ℹ {alignNote}
+            </p>
+          )}
+          {autoAxisNote && (
+            <p className="mb-2 text-xs" style={{ color: "var(--muted)" }}>
+              ℹ {autoAxisNote}
+            </p>
+          )}
           {mixedUnits && (
             <p className="mb-2 text-xs" style={{ color: "var(--muted)" }}>
               단위가 다른 지표를 원계열로 겹쳤어요 — 비교하려면 전년동기대비(%)나
@@ -1027,6 +1128,38 @@ export default function Home() {
                   {t.label}
                 </button>
               ))}
+            </div>
+            {/* 역축 토글 — 금리↔가격 역상관 오버레이용 */}
+            <div
+              role="group"
+              aria-label="축 반전"
+              className="flex overflow-hidden rounded-lg border text-xs"
+              style={{ borderColor: "var(--border)" }}
+            >
+              <button
+                onClick={() => setInvertAxes((v) => ({ ...v, left: !v.left }))}
+                aria-pressed={invertAxes.left}
+                className="px-3 py-1.5 font-semibold"
+                style={{
+                  background: invertAxes.left ? "var(--primary-soft)" : "transparent",
+                  color: invertAxes.left ? "var(--primary)" : "var(--muted)",
+                }}
+              >
+                좌축 반전{invertAxes.left ? " ✓" : ""}
+              </button>
+              {hasRightAxis && (
+                <button
+                  onClick={() => setInvertAxes((v) => ({ ...v, right: !v.right }))}
+                  aria-pressed={invertAxes.right}
+                  className="px-3 py-1.5 font-semibold"
+                  style={{
+                    background: invertAxes.right ? "var(--primary-soft)" : "transparent",
+                    color: invertAxes.right ? "var(--primary)" : "var(--muted)",
+                  }}
+                >
+                  우축 반전{invertAxes.right ? " ✓" : ""}
+                </button>
+              )}
             </div>
             {unitLabel && (
               <span className="text-xs" style={{ color: "var(--muted)" }}>
@@ -1061,6 +1194,7 @@ export default function Home() {
                     />
                     <YAxis
                       yAxisId="left"
+                      reversed={invertAxes.left}
                       tick={{ fill: "var(--axis)", fontSize: 11 }}
                       tickLine={false}
                       axisLine={false}
@@ -1071,6 +1205,7 @@ export default function Home() {
                       <YAxis
                         yAxisId="right"
                         orientation="right"
+                        reversed={invertAxes.right}
                         tick={{ fill: "var(--axis)", fontSize: 11 }}
                         tickLine={false}
                         axisLine={false}

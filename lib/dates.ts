@@ -42,3 +42,14 @@ export function normalizeDate(date: string, cycle: Cycle): string {
 export function normalizePointDates(points: SeriesPoint[], cycle: Cycle): SeriesPoint[] {
   return points.map((p) => ({ ...p, date: normalizeDate(p.date, cycle) }));
 }
+
+/**
+ * 변환 선행조회 시작일 — yoy·pop은 비교 대상(1년 전 값)이 있어야 구간 첫
+ * 시점부터 값이 나온다. 원 조회구간보다 366일 앞서 원자료를 받고, 변환 후
+ * 원 구간으로 잘라낸다(잘라내기는 normalizeDate 정규형의 문자열 비교).
+ */
+export function lookbackStart(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 366);
+  return d.toISOString().slice(0, 10);
+}

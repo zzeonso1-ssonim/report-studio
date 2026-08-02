@@ -41,6 +41,7 @@ TESTS = [
     ("수출금액지수랑 수출물량지수 3년", ["kr_export_value_idx", "kr_export_volume_idx"], True),
     ("광공업생산이랑 경기선행지수 5년치", ["kr_ip_index", "kr_leading_index"], True),
     ("미국 근원 CPI랑 미국 PCE 전년비 3년", ["us_core_cpi", "us_pce"], True),
+    ("서울 아파트 매매가격지수랑 국고 3년 금리 전년대비 4년", ["kr_apt_sale_idx_seoul", "kr_ktb_3y_yield"], True),
 ]
 
 

@@ -2,6 +2,15 @@ import { SourceId } from "./sources/types";
 
 export type Cycle = "D" | "M" | "Q" | "A";
 
+/**
+ * 지표 성격 — 변환·축 자동 결정의 근거 (질의마다 개별 수리하는 대신
+ * 여기 메타데이터 하나로 시스템 전체가 올바르게 동작하게 하는 장치).
+ * - rate:   수준 자체가 %(금리·실업률). 전년대비는 비율이 아니라 차(%p)가 맞다
+ * - index:  지수(물가·생산·가격지수). 전년대비 %가 자연스럽다
+ * - amount: 금액·수량(GDP·고용자수·환율). 전년대비 %가 자연스럽다
+ */
+export type IndicatorKind = "rate" | "index" | "amount";
+
 export interface IndicatorDef {
   id: string;
   name: string;
@@ -9,6 +18,8 @@ export interface IndicatorDef {
   unit: string;
   cycle: Cycle;
   origin: string; // 작성기관 — 원천 우선 원칙의 근거
+  /** 지표 성격 — rate면 yoy/pop을 차(%p) 변환으로 자동 대체 */
+  kind: IndicatorKind;
   /** 사용자가 쓰는 별칭 (챗 플래너의 지표 매칭용 — 예: "슈퍼코어") */
   aliases?: string[];
   /**
@@ -35,6 +46,7 @@ export const indicators: IndicatorDef[] = [
     name: "한국 기준금리",
     country: "KR",
     unit: "%",
+    kind: "rate",
     cycle: "D",
     origin: "한국은행",
     aliases: ["한국 기준금리", "한은 기준금리", "한국은행 기준금리"],
@@ -47,6 +59,7 @@ export const indicators: IndicatorDef[] = [
     name: "원/달러 환율 (매매기준율)",
     country: "KR",
     unit: "원",
+    kind: "amount",
     cycle: "D",
     origin: "한국은행",
     aliases: ["원달러", "원/달러", "달러원"],
@@ -59,6 +72,7 @@ export const indicators: IndicatorDef[] = [
     name: "한국 소비자물가지수 (2020=100)",
     country: "KR",
     unit: "지수",
+    kind: "index",
     cycle: "M",
     origin: "통계청",
     aliases: ["한국 소비자물가", "한국 CPI", "국내 소비자물가"],
@@ -73,6 +87,7 @@ export const indicators: IndicatorDef[] = [
     name: "한국 실질 GDP (계절조정, 분기)",
     country: "KR",
     unit: "십억원",
+    kind: "amount",
     cycle: "Q",
     origin: "한국은행",
     aliases: ["한국 GDP", "한국 국내총생산", "한국 성장률"],
@@ -107,6 +122,7 @@ export const indicators: IndicatorDef[] = [
       name: `${name} (최종호가수익률)`,
       country: "KR",
       unit: "%",
+      kind: "rate",
       cycle: "D",
       origin: "금융투자협회 (ECOS 수록)",
       aliases: [...aliases],
@@ -122,6 +138,7 @@ export const indicators: IndicatorDef[] = [
     name: "수출금액지수 (총지수, 2020=100)",
     country: "KR",
     unit: "지수",
+    kind: "index",
     cycle: "M",
     origin: "한국은행",
     aliases: ["수출금액지수"],
@@ -135,6 +152,7 @@ export const indicators: IndicatorDef[] = [
     name: "수출물량지수 (총지수, 2020=100)",
     country: "KR",
     unit: "지수",
+    kind: "index",
     cycle: "M",
     origin: "한국은행",
     aliases: ["수출물량지수"],
@@ -148,6 +166,7 @@ export const indicators: IndicatorDef[] = [
     name: "광공업생산지수 (계절조정, 전국 총지수, 2020=100)",
     country: "KR",
     unit: "지수",
+    kind: "index",
     cycle: "M",
     origin: "통계청",
     aliases: ["광공업생산", "광공업 생산지수"],
@@ -162,6 +181,7 @@ export const indicators: IndicatorDef[] = [
     name: "선행지수 순환변동치 (경기선행지수)",
     country: "KR",
     unit: "지수",
+    kind: "index",
     cycle: "M",
     origin: "통계청",
     aliases: ["경기선행지수", "선행지수"],
@@ -176,6 +196,7 @@ export const indicators: IndicatorDef[] = [
     name: "10년국채선물지수",
     country: "KR",
     unit: "지수",
+    kind: "index",
     cycle: "D",
     origin: "한국거래소",
     aliases: ["10년 국채선물", "국채선물 지수"],
@@ -193,9 +214,11 @@ export const indicators: IndicatorDef[] = [
     name: "전국 아파트 매매가격지수 (2026.01=100)",
     country: "KR",
     unit: "지수",
+    kind: "index",
     cycle: "M",
     origin: "한국부동산원",
-    aliases: ["아파트 매매가격", "아파트 매매지수", "아파트값"],
+    // "아파트값"류 광범위 별칭은 서울 질의까지 전국으로 강제해 제거 (2026-08-01)
+    aliases: ["전국 아파트 매매"],
     source: "rone",
     // R-ONE 자체 OpenAPI 실검증 완료: A_2024_00045 (월) 매매가격지수_아파트,
     // clsId 500001=전국, itmId 100001=지수 (2025-05 실측 98.31)
@@ -203,16 +226,47 @@ export const indicators: IndicatorDef[] = [
     verified: true,
   },
   {
+    id: "kr_apt_sale_idx_seoul",
+    name: "서울 아파트 매매가격지수 (2026.01=100)",
+    country: "KR",
+    unit: "지수",
+    kind: "index",
+    cycle: "M",
+    origin: "한국부동산원",
+    aliases: ["서울 아파트 매매", "서울 아파트값"],
+    featured: false, // 주요지표 목록은 디렉터 확정 구성 유지 — 챗 질의용
+    source: "rone",
+    // 전국과 같은 표, clsId 500008=서울 (2026-06 실측 103.9566)
+    params: { statblId: "A_2024_00045", cycle: "MM", clsId: "500008", itmId: "100001" },
+    verified: true,
+  },
+  {
     id: "kr_apt_jeonse_idx",
     name: "전국 아파트 전세가격지수 (2026.01=100)",
     country: "KR",
     unit: "지수",
+    kind: "index",
     cycle: "M",
     origin: "한국부동산원",
-    aliases: ["아파트 전세가격", "전세가격지수"],
+    aliases: ["전국 아파트 전세"],
     source: "rone",
     // R-ONE 실검증 완료: A_2024_00050 (월) 전세가격지수_아파트 (2025-06 실측 98.44)
     params: { statblId: "A_2024_00050", cycle: "MM", clsId: "500001", itmId: "100001" },
+    verified: true,
+  },
+  {
+    id: "kr_apt_jeonse_idx_seoul",
+    name: "서울 아파트 전세가격지수 (2026.01=100)",
+    country: "KR",
+    unit: "지수",
+    kind: "index",
+    cycle: "M",
+    origin: "한국부동산원",
+    aliases: ["서울 아파트 전세", "서울 전세"],
+    featured: false,
+    source: "rone",
+    // 전국과 같은 표, clsId 500008=서울 (2026-06 실측 104.3898)
+    params: { statblId: "A_2024_00050", cycle: "MM", clsId: "500008", itmId: "100001" },
     verified: true,
   },
 
@@ -222,6 +276,7 @@ export const indicators: IndicatorDef[] = [
     name: "미국 소비자물가지수 CPI-U (SA)",
     country: "US",
     unit: "지수",
+    kind: "index",
     cycle: "M",
     origin: "미 노동통계국(BLS)",
     aliases: ["미국 CPI", "미국 소비자물가"],
@@ -235,6 +290,7 @@ export const indicators: IndicatorDef[] = [
     name: "미국 연방기금금리 (실효, 월평균)",
     country: "US",
     unit: "%",
+    kind: "rate",
     cycle: "M",
     origin: "미 연준 (FRED 수록)",
     aliases: ["미국 기준금리", "연준 기준금리", "연방기금금리", "페드펀드"],
@@ -247,6 +303,7 @@ export const indicators: IndicatorDef[] = [
     name: "미국 실질 GDP (연율, 2017$)",
     country: "US",
     unit: "십억 달러",
+    kind: "amount",
     cycle: "Q",
     origin: "미 경제분석국(BEA) — 당분간 FRED 재수록본",
     aliases: ["미국 GDP", "미국 국내총생산", "미국 성장률"],
@@ -259,6 +316,7 @@ export const indicators: IndicatorDef[] = [
     name: "미 국채 10년 금리",
     country: "US",
     unit: "%",
+    kind: "rate",
     cycle: "D",
     origin: "미 재무부 (FRED 수록)",
     aliases: ["미국채 10년", "미 국채 10년", "미국 국채 10년", "미국 10년물"],
@@ -271,6 +329,7 @@ export const indicators: IndicatorDef[] = [
     name: "미국 실업률 (SA)",
     country: "US",
     unit: "%",
+    kind: "rate",
     cycle: "M",
     origin: "미 노동통계국(BLS)",
     aliases: ["미국 실업률"],
@@ -285,6 +344,7 @@ export const indicators: IndicatorDef[] = [
     name: "미국 비농업 고용 (SA)",
     country: "US",
     unit: "천 명",
+    kind: "amount",
     cycle: "M",
     origin: "미 노동통계국(BLS)",
     aliases: ["비농업", "논팜"],
@@ -299,6 +359,7 @@ export const indicators: IndicatorDef[] = [
     name: "미국 PCE 물가지수 (SA)",
     country: "US",
     unit: "지수",
+    kind: "index",
     cycle: "M",
     origin: "미 경제분석국(BEA) — 당분간 FRED 재수록본",
     aliases: ["미국 PCE"],
@@ -312,6 +373,7 @@ export const indicators: IndicatorDef[] = [
     name: "미국 근원 소비자물가지수 (식품·에너지 제외, SA)",
     country: "US",
     unit: "지수",
+    kind: "index",
     cycle: "M",
     origin: "미 노동통계국(BLS)",
     aliases: ["미국 근원 CPI", "미국 근원소비자물가"],
@@ -327,6 +389,7 @@ export const indicators: IndicatorDef[] = [
     name: "미국 근원 PCE 물가지수 (식품·에너지 제외, SA)",
     country: "US",
     unit: "지수",
+    kind: "index",
     cycle: "M",
     origin: "미 경제분석국(BEA) — 당분간 FRED 재수록본",
     aliases: ["근원 PCE", "코어 PCE"],
@@ -339,6 +402,7 @@ export const indicators: IndicatorDef[] = [
     name: "미국 CPI 서비스(주거임차료 제외, SA) — 통칭 슈퍼코어 근사",
     country: "US",
     unit: "지수",
+    kind: "index",
     cycle: "M",
     origin: "미 노동통계국(BLS)",
     aliases: ["슈퍼코어", "supercore"],
@@ -355,6 +419,7 @@ export const indicators: IndicatorDef[] = [
     name: "미국 소매판매 (소매·외식, SA)",
     country: "US",
     unit: "백만 달러",
+    kind: "amount",
     cycle: "M",
     origin: "미 센서스국 — 당분간 FRED 재수록본",
     aliases: ["미국 소매판매"],

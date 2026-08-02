@@ -1,13 +1,24 @@
 import { Cycle } from "./indicators";
 import { SeriesPoint } from "./sources/types";
 
-export type Transform = "raw" | "yoy" | "pop" | "rebase";
+/**
+ * 사용자가 고르는 변환은 raw/yoy/pop/rebase 4종이지만, 금리처럼 수준 자체가
+ * %인 지표(kind=rate)에 비율 yoy를 걸면 "+130%" 같은 무의미한 값이 나온다.
+ * 그래서 서버가 지표 성격에 따라 yoy→yoy_diff(전년동기대비 차, %p),
+ * pop→pop_diff로 자동 대체한다 — 요청 스키마는 4종 그대로, 대체는 코드가.
+ */
+export type Transform = "raw" | "yoy" | "pop" | "rebase" | "yoy_diff" | "pop_diff";
+
+/** 요청(입력)으로 허용하는 변환 — 라우트 검증의 단일 소스 */
+export const REQUEST_TRANSFORMS = ["raw", "yoy", "pop", "rebase"] as const;
 
 export const transformLabels: Record<Transform, string> = {
   raw: "원계열",
   yoy: "전년동기대비 (%)",
   pop: "전기대비 (%)",
   rebase: "재기준화 (시작=100)",
+  yoy_diff: "전년동기대비 차 (%p)",
+  pop_diff: "전기대비 차 (%p)",
 };
 
 const periodsPerYear: Record<Cycle, number | null> = { D: null, M: 12, Q: 4, A: 1 };
@@ -36,44 +47,47 @@ export function applyTransform(
     case "raw":
       return points;
     case "yoy":
-      return yoy(points, cycle);
+      return yearShift(points, cycle, pctChange);
+    case "yoy_diff":
+      return yearShift(points, cycle, diff);
     case "pop":
-      return shiftPct(points, 1);
+      return shiftBy(points, 1, pctChange);
+    case "pop_diff":
+      return shiftBy(points, 1, diff);
     case "rebase":
       return rebase(points);
   }
 }
 
-function yoy(points: SeriesPoint[], cycle: Cycle): SeriesPoint[] {
+type Combine = (cur: number, prev: number) => number | null;
+
+const pctChange: Combine = (cur, prev) => (prev !== 0 ? round4((cur / prev - 1) * 100) : null);
+const diff: Combine = (cur, prev) => round4(cur - prev);
+
+/** 1년 전 값과 결합 — 일간은 1년 전 같은 날짜 조회(휴일 등으로 없으면 null) */
+function yearShift(points: SeriesPoint[], cycle: Cycle, combine: Combine): SeriesPoint[] {
   const k = periodsPerYear[cycle];
   if (k === null) {
-    // 일간 시계열: 1년 전 같은 날짜를 조회 (휴일 등으로 없으면 null)
     const byDate = new Map(points.map((p) => [p.date, p.value]));
     return points.map((p) => {
       const prevDate = `${Number(p.date.slice(0, 4)) - 1}${p.date.slice(4)}`;
       const prev = byDate.get(prevDate);
       return {
         date: p.date,
-        value:
-          p.value != null && prev != null && prev !== 0
-            ? round4((p.value / prev - 1) * 100)
-            : null,
+        value: p.value != null && prev != null ? combine(p.value, prev) : null,
       };
     });
   }
-  return shiftPct(points, k);
+  return shiftBy(points, k, combine);
 }
 
-/** k기 전 대비 증감률(%) */
-function shiftPct(points: SeriesPoint[], k: number): SeriesPoint[] {
+/** k기 전 값과 결합 */
+function shiftBy(points: SeriesPoint[], k: number, combine: Combine): SeriesPoint[] {
   return points.map((p, i) => {
     const prev = i >= k ? points[i - k].value : null;
     return {
       date: p.date,
-      value:
-        p.value != null && prev != null && prev !== 0
-          ? round4((p.value / prev - 1) * 100)
-          : null,
+      value: p.value != null && prev != null ? combine(p.value, prev) : null,
     };
   });
 }

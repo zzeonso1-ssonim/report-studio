@@ -1,6 +1,6 @@
 import { indicators, getIndicator, Cycle } from "@/lib/indicators";
 import { searchAll } from "@/lib/search";
-import { Transform } from "@/lib/transforms";
+import { REQUEST_TRANSFORMS, Transform } from "@/lib/transforms";
 import { sources } from "@/lib/sources";
 
 /**
@@ -26,7 +26,7 @@ const DEFAULT_OPENAI_MODEL = "gpt-4o";
 const MAX_TOOL_ROUNDS = 6;
 const MAX_SERIES = 4;
 const MAX_DERIVED = 2;
-const TRANSFORMS: Transform[] = ["raw", "yoy", "pop", "rebase"];
+const TRANSFORMS: Transform[] = [...REQUEST_TRANSFORMS];
 const CYCLES: Cycle[] = ["D", "M", "Q", "A"];
 const AXES = ["left", "right"] as const;
 const STYLES = ["line", "bar", "area"] as const;
@@ -104,10 +104,11 @@ function buildSystemPrompt(): string {
     `- 먼저 list_indicators로 등록 지표를 확인하세요. 등록 지표로 충분하면 series 항목을 {"indicatorId": "..."}로 지정하세요. 질의의 표현이 등록 지표의 name 또는 aliases와 맞으면 반드시 그 등록 지표를 쓰고 카탈로그 검색으로 대체하지 마세요.`,
     `- 등록 지표에 없는 데이터만 search_catalog(ECOS·KOSIS·FRED 카탈로그 검색)로 찾으세요. 검색 결과를 쓸 때는 그 결과의 source·params·cycle·name·unit을 변형 없이 그대로 finalize_plan의 series 항목에 넣으세요.`,
     `- 질의가 언급하는 모든 시계열 대상을 빠짐없이 series에 넣으세요. 두 나라·두 지표를 비교하는 질의("A랑 B", "A vs B")면 반드시 각각 별도의 series 항목으로 모두 포함해야 합니다. 시리즈는 최대 ${MAX_SERIES}개.`,
-    `- transform: raw(원계열) | yoy(전년동기대비 %) | pop(전기대비 %) | rebase(구간 시작=100). 질의에 "전년동기대비"·"YoY"·"상승률"·"증가율" 등이 있으면 yoy. 단위가 서로 다른 지표를 한 차트에 비교할 때는 yoy 또는 rebase를 권장합니다. 금리처럼 단위(%)가 같은 수준(level) 비교는 raw.`,
+    `- transform: raw(원계열) | yoy(전년동기대비) | pop(전기대비) | rebase(구간 시작=100). 질의에 "전년동기대비"·"전년대비"·"YoY"·"상승률" 등이 있으면 yoy로 두세요 — 금리형 지표는 시스템이 자동으로 %p 차이로 계산하니 금리가 섞여 있어도 yoy를 피하지 마세요. 금리 수준(level) 비교("금리 보여줘")는 raw.`,
     `- 파생 계산(스프레드·비율): 질의가 차나 비율을 명시적으로 요구할 때만("A-B 스프레드", "장단기 금리차", "A 대비 B 비율") derived에 {op, a, b, name}을 넣으세요. 단순 비교·겹치기 질의("A랑 B 보여줘/겹쳐줘")에는 derived를 넣지 마세요. op은 spread(a−b) 또는 ratio(a÷b), a·b는 series 배열의 0-기준 인덱스입니다. "10년-3년 스프레드"면 a=10년 인덱스, b=3년 인덱스. 원본 두 시리즈도 series에 그대로 두세요(함께 그려집니다). 값 계산은 시스템이 합니다.`,
-    `- 이축·표현: 스케일이 다른 항목을 오른쪽 축에 두려면 그 항목(series 또는 derived)에 axis:"right"를 지정하세요. 스프레드는 원 시리즈와 스케일이 다르므로 기본적으로 axis:"right"를 권장합니다. "영역형"·"막대"처럼 특정 항목의 표현을 지정하면 style("line"|"bar"|"area")을 넣으세요. 예: "스프레드를 우축 영역형으로" → 해당 derived에 axis:"right", style:"area".`,
+    `- 이축·표현: 단위가 다른 시리즈 조합은 시스템이 자동으로 좌·우축을 분리하므로, axis는 사용자가 축을 콕 집어 말할 때("우축으로", "오른쪽 축에")만 지정하세요. 스프레드(derived)는 원 시리즈와 스케일이 다르므로 axis:"right"를 권장합니다. "영역형"·"막대"처럼 특정 항목의 표현을 지정하면 style("line"|"bar"|"area")을 넣으세요. 예: "스프레드를 우축 영역형으로" → 해당 derived에 axis:"right", style:"area".`,
     `- 미국 데이터가 등록 지표에 없으면 search_catalog를 source:"fred"로 호출하되, FRED 카탈로그는 영문 전용이므로 검색어는 반드시 영어로 바꿔서 넣으세요 (예: "미국 실업률" → "unemployment rate").`,
+    `- 아파트 가격지수는 전국·서울 두 지역만 등록돼 있습니다. 질의가 "서울"을 말하면 반드시 서울 지표(us가 아닌 kr_apt_*_seoul)를 쓰고, 부산 등 다른 지역을 요청하면 등록돼 있지 않다고 되물으세요. 지역이 없으면 전국을 쓰세요.`,
     `- 한국어 별칭을 정확히 해석하세요. 특히 "슈퍼코어"가 나오면 반드시 등록 지표 us_cpi_services_less_shelter를 쓰세요 — FRED에 슈퍼코어 CPI 직수록 시리즈는 없고, 절사평균(trimmed mean) PCE는 슈퍼코어가 아니므로 대체 금지입니다. note에 "공식 슈퍼코어(서비스−에너지−주거)와 정의가 다른 근사 지표"임을 병기하세요. 비슷해 보인다고 다른 지표를 대신 쓰지 말고, 없으면 없다고 되물으세요.`,
     `- 검색 결과의 unit이 이미 변화율("% Chg.", "Percent Change" 등)인 시리즈에는 yoy·pop을 걸지 마세요 — 변화율의 변화율이 됩니다. 그런 시리즈가 섞이면 시스템이 해당 시리즈만 원계열로 강등하고 안내합니다.`,
     `- 기간 표현과 만기(테너)를 구분하세요. 지표명 뒤에 오는 "N년"·"N년치"는 조회 기간입니다. 예: "CD금리 1년" → series는 CD 91일 금리 단 1개, startDate만 1년 전으로 (국고채 1년을 추가하면 오답). 만기 지표는 "국고 1년물"처럼 종목으로 명시될 때만 포함하세요.`,
