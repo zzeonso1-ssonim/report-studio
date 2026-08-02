@@ -14,6 +14,12 @@ on:
         default: "0"
         type: choice
         options: ["0", "1"]
+      probe_risk:
+        description: "Risk Log 판정 프로브. 1=지금 실데이터로 평가·기입 1회 실행(브리핑 적재는 건너뜀). dump=노션 '판정 기준' 원문만 출력하고 아무것도 쓰지 않음."
+        required: false
+        default: "0"
+        type: choice
+        options: ["0", "1", "dump"]
 
 permissions:
   contents: read
@@ -65,16 +71,63 @@ jobs:
           print("판정", (d.get("headline") or {}).get("text"))
           PY
 
+      # 평가·드리프트 로직 자체 검증. 네트워크·토큰 불필요, 1초. **실데이터를 만지기 전에 돈다.**
+      - name: 판정 로직 셀프테스트
+        run: python3 scripts/liquidity/risk_verdicts.py --selftest
+
+      # 노션 '판정 기준' 원문만 출력한다. **아무것도 쓰지 않는다** — config 사본 갱신용.
+      - name: Risk Log 판정 기준 원문 덤프
+        if: github.event.inputs.probe_risk == 'dump'
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+        run: python3 scripts/liquidity/risk_verdicts.py --dump-criteria
+
+      # ---- 2단: Risk Log 판정 기입 ----
+      # **브리핑 적재와 격리한다.** continue-on-error로 이 단계가 실패해도 아래 적재가 돌고,
+      # 마지막 '실패 종합' 단계가 어느 쪽이 깨졌는지 각각 명시한 뒤 잡을 빨갛게 만든다.
+      # 판정 결과 JSON은 실패했더라도 최대한 남긴다 — 브리핑 신호 보드가 그것을 읽는다.
+      - name: Risk Log 판정 평가·기입
+        id: risk
+        if: github.event.inputs.probe_risk != 'dump'
+        continue-on-error: true
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+        run: |
+          python3 scripts/liquidity/risk_verdicts.py \
+            --input "${RUNNER_TEMP}/liquidity.json" \
+            --out "${RUNNER_TEMP}/verdicts.json"
+
       # 불일치가 있으면 post_briefing이 값 대신 '데이터 이상' 페이지를 만든다(침묵 실패 없음).
       # 차트는 격리돼 있다 — 생성·업로드가 실패해도 표는 그대로 실린다.
+      # 판정도 격리돼 있다 — verdicts.json이 없으면 신호 보드가 '확인 불가'로 찍히고 본문은 나간다.
+      # probe_risk 실행에서는 새 브리핑 페이지를 만들지 않는다(판정 경로만 실증한다).
       - name: 노션 적재
+        id: briefing
+        if: github.event.inputs.probe_risk == '0' || github.event.inputs.probe_risk == ''
+        continue-on-error: true
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
         run: |
           python3 scripts/liquidity/post_briefing.py \
             --input "${RUNNER_TEMP}/liquidity.json" \
             --charts-dir "${RUNNER_TEMP}/charts" \
+            --verdicts "${RUNNER_TEMP}/verdicts.json" \
             ${{ github.event.inputs.probe_charts == '1' && '--probe-charts' || '' }}
+
+      # 두 경로의 실패를 **각각** 명시한다. 하나가 죽어도 다른 하나는 이미 돌았다.
+      - name: 실패 종합
+        if: always()
+        run: |
+          FAILED=0
+          if [ "${{ steps.risk.outcome }}" = "failure" ]; then
+            echo "::error title=Risk Log 판정 실패::판정 평가·기입 단계가 실패했다. 로그의 '임계 변경 감지' / '조회 실패' / '기입 실패' 줄을 확인한다. 404면 인테그레이션 액세스에 DASHBOARD 추가가 필요하다(디렉터 조치)."
+            FAILED=1
+          fi
+          if [ "${{ steps.briefing.outcome }}" = "failure" ]; then
+            echo "::error title=브리핑 적재 실패::노션 적재 단계가 실패했다. 판정 기입과는 별개다."
+            FAILED=1
+          fi
+          exit $FAILED
 
       # H.4.1 주간계열은 소급 수정된다. 재현용으로 회차 원본을 남긴다.
       - name: 스냅샷 보관
@@ -82,7 +135,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: liquidity-snapshot-${{ github.run_id }}
-          path: ${{ runner.temp }}/liquidity.json
+          path: |
+            ${{ runner.temp }}/liquidity.json
+            ${{ runner.temp }}/verdicts.json
           if-no-files-found: warn
           retention-days: 90
 

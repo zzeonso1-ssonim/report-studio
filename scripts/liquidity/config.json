@@ -387,16 +387,19 @@
   },
 
   "signal_board": {
-    "_": "구획②. 판독 규칙은 기계적 서술만 쓴다. **이상 신호 임계값은 디렉터가 확정한다 — 자동화가 채우지 않는다.**",
+    "_": "구획②. 판독 규칙은 기계적 서술만 쓴다. 임계는 **디렉터가 노션 Risk Log에서 확정한 것만** 싣는다 — 자동화가 임계를 만들지 않는다. 판정 열은 risk_rules 평가 결과를 그대로 옮긴다.",
     "heading": "신호 보드",
-    "headers": ["지표", "현재값", "관측일", "판독 규칙", "이상 신호 조건"],
-    "pending": "디렉터 확정 대기",
+    "headers": ["지표", "현재값", "관측일", "판독 규칙", "이상 신호 임계 (디렉터 확정)", "판정"],
+    "pending": "확정 임계 없음",
+    "verdict_pending": "—",
     "claim_heading": "이 표의 주장",
-    "claim_format": "{lines}. 세 지표는 관측일이 서로 다를 수 있고 이상 신호 임계값이 아직 확정되지 않아, 이 표는 현재 수준과 판독 규칙만 제시한다 — 이상 여부를 판정하지 않는다.",
-    "claim_line_format": "{label} {value}({date})",
+    "claim_format": "{lines}. 판정은 디렉터가 확정한 임계(노션 Risk Log)를 최근 {window_days}일 관측에 기계적으로 대조한 결과이며, 시장 판단이 아니다. 확정 임계가 없는 행은 판정하지 않았고, 지표별 관측일이 서로 다를 수 있다.",
+    "claim_line_format": "{label} {value}({date}) {verdict}",
+    "verdict_link_format": "{verdict}",
     "rows": [
       {
         "id": "SOFR_IORB_SPREAD",
+        "risk_key": "SOFR_IORB",
         "read_rule": "양(+)으로 전환·확대는 담보부 조달금리가 연준 지급이자를 넘어선 상태로, 지준 희소화 방향의 신호로 통용된다. 음(-)이면 그 반대다."
       },
       {
@@ -405,12 +408,130 @@
       },
       {
         "id": "RPONTSYD",
+        "risk_key": "SRF",
         "read_rule": "상비 레포 창구(SRF) 사용액이다. 평시에는 0에 가깝고, 잔액이 붙기 시작하면 담보부 시장에서 국채를 현금화하려는 수요가 창구까지 왔다는 뜻으로 통용된다."
+      },
+      {
+        "id": "WRESBAL",
+        "risk_key": "WRESBAL",
+        "read_rule": "지급준비금 주평균 잔액이다. 수준이 낮아질수록 지준 희소화 구간에 가까워진 상태로 통용된다. 잔액이 아니라 수요일 종료 주의 평균이라 일간 계열과 직접 가감하지 않는다."
+      },
+      {
+        "id": "WTREGEN",
+        "risk_key": "TGA",
+        "read_rule": "재무부 일반계정 주평균 잔액이다. 증가는 민간에서 재무부로 현금이 이동한 상태로, 다른 조건이 같으면 지준을 줄이는 방향으로 통용된다. 판정은 수준이 아니라 주간 변화로 한다."
       }
     ],
     "cautions": [
-      "이상 신호 임계값은 비워 뒀다 — 디렉터가 확정하기 전까지 자동화가 값을 넣지 않는다. 판독 규칙만으로 이상 여부를 단정하지 말 것.",
-      "세 지표의 관측일이 서로 다를 수 있다. 전부 일간이지만 FRED 반영 시점이 하루씩 어긋난다(2026-08-02 수집 시 SOFR 07-31 / EFFR 07-30 실측)."
+      "판정은 **디렉터가 확정한 임계에 대한 기계적 대조**다. 발동·근접이 곧 시장 판단은 아니며, 임계 자체의 타당성은 노션 Risk Log에서 디렉터가 관리한다.",
+      "임계 원문은 노션 Risk Log의 '판정 기준' 필드가 원본이고 config는 사본이다. 두 값이 다르면 그 리스크는 판정하지 않고 '확인 불가'로 남긴다 — 낡은 임계로 조용히 판정하지 않기 위해서다.",
+      "지표별 관측일이 서로 다를 수 있다. 일간 계열도 FRED 반영 시점이 하루씩 어긋난다(2026-08-02 수집 시 SOFR 07-31 / EFFR 07-30 실측). 주평균 계열(WRESBAL·WTREGEN)은 수요일 종료 주 기준이라 일간 계열보다 최대 1주 뒤처진다."
+    ]
+  },
+
+  "risk_rules": {
+    "_": "노션 Risk Log 자동 판정(2단). **임계는 디렉터가 노션에서 확정하고, 여기 있는 것은 사본이다.** 사본과 노션 원문이 다르면 판정하지 않고 '확인 불가'로 남긴다(drift 검사). 코드에는 페이지 ID·임계·연산자·한글 문안을 두지 않는다.",
+    "enabled": true,
+    "as_of": "2026-08-02",
+    "database_id": "b97816ce-0f33-4bb7-91e8-b3c80286e074",
+    "database_label": "Risk Log",
+    "page_url_format": "https://www.notion.so/{page_id_compact}",
+    "window_days": 7,
+    "_window_note": "주 1회(목 22:00 UTC) 실행 전제. 창은 **해당 지표의 최신 관측일에서 역산한 window_days일**이다. 수집일 기준이 아니라 관측일 기준인 이유: FRED 반영이 하루 늦으면 수집일 기준 창이 비어 전부 '확인 불가'가 되기 때문이다. 대신 관측이 stale_days를 넘게 낡으면 그 자체로 '확인 불가'가 된다.",
+    "properties": {
+      "criteria": "판정 기준",
+      "verdict": "최근 판정",
+      "checked": "최근 확인일"
+    },
+    "verdicts": {
+      "fire": "발동",
+      "near": "근접",
+      "normal": "정상",
+      "unknown": "확인 불가"
+    },
+    "write_properties": ["최근 판정", "최근 확인일"],
+    "_never_write": ["리스크", "영역", "중요도", "시장 영향", "상태", "결말", "관찰 지표", "관찰기간", "판정 기준", "데이터 출처", "대응 방향", "메모", "복기 메모", "보강 필요", "관련 판단"],
+    "_never_write_note": "'상태'·'결말'·'판정 기준'과 본문은 디렉터 영역이다. 자동화는 write_properties 두 개만 쓴다. assert_risk_safe()가 payload를 검사해 다른 키가 섞이면 예외를 던진다.",
+    "drift_message": "임계 변경 감지 — config 갱신 필요",
+    "verdicts_file_missing": "판정 결과가 이번 실행에 없다 — 판정 단계가 실패했거나 실행되지 않았다",
+    "board_caution_format": "판정 단계 결과: {summary}. 판정 근거·사유는 실행 로그에 남는다.",
+    "drift_reason_format": "노션 '{property}' 원문이 config 사본과 다르다 — {drift_message}. 이 리스크는 판정하지 않았다.",
+    "missing_series_format": "{series} 수집 실패 — 판정할 수 없다",
+    "stale_format": "{series} 최신 관측일이 {latest_date}로 {age}일 낡았다(허용 {stale_days}일) — 판정할 수 없다",
+    "no_data_format": "{series} 관측치가 없다 — 판정할 수 없다",
+    "fetch_failed_format": "노션 페이지 조회 실패 — 판정·기입 모두 하지 않았다: {error}",
+    "access_hint": "노션 404/403이면 인테그레이션 액세스 범위 밖이다. **디렉터 조치: 노션 인테그레이션 설정에서 최상위 'DASHBOARD' 페이지에 액세스를 추가**한다(하위 'Risk Log'는 상속된다). 자동화가 우회하지 않는다.",
+    "evidence_format": "{label} {value}{unit} ({date})",
+    "verdict_note_format": "{verdict} — {basis}",
+    "rules": [
+      {
+        "key": "SOFR_IORB",
+        "page_id": "3b05f56d-59f1-8101-87de-fb5132f3ef9c",
+        "label": "SOFR−IORB 스프레드 양전",
+        "series": "SOFR_IORB_SPREAD",
+        "mode": "level",
+        "scale": 1,
+        "unit": "bp",
+        "decimals": 0,
+        "stale_days": 12,
+        "max_gap_days": 6,
+        "_max_gap_note": "'2영업일 연속'의 연속성 판정. 일간 계열은 주말·공휴일로 관측이 끊기므로 달력일이 아니라 인접 관측치로 세되, 두 관측 간격이 max_gap_days를 넘으면 연속으로 보지 않는다(연휴 낀 6일까지 허용).",
+        "trigger": {"op": ">=", "threshold": 5, "consecutive": 2},
+        "near": {"op": ">=", "threshold": 2, "consecutive": 1},
+        "board_threshold": "발동 +5bp 이상 2영업일 연속 / 근접 +2bp 이상 1일",
+        "criteria_text": "발동: +5bp 이상 2영업일 연속 / 근접: +2bp 이상 1일 — 기준: FRED 일간 종가, bp (디렉터 확정 2026-08-02)"
+      },
+      {
+        "key": "SRF",
+        "page_id": "3b05f56d-59f1-816b-b546-d1d52eba2971",
+        "label": "SRF 사용액 발생",
+        "series": "RPONTSYD",
+        "mode": "level",
+        "scale": 1,
+        "unit": "십억$",
+        "decimals": 3,
+        "stale_days": 12,
+        "max_gap_days": 6,
+        "trigger": {"op": ">=", "threshold": 5, "consecutive": 1},
+        "near": {"op": ">=", "threshold": 1, "consecutive": 1},
+        "board_threshold": "발동 일간 5십억$ 이상 / 근접 1십억$ 이상",
+        "criteria_text": "발동: 일간 5십억$ 이상 / 근접: 1십억$ 이상 — 기준: FRED 일간, 십억$ (디렉터 확정 2026-08-02)"
+      },
+      {
+        "key": "WRESBAL",
+        "page_id": "3b05f56d-59f1-81d2-bba1-efdf7dd177d7",
+        "label": "지준 레인지 하단 이탈",
+        "series": "WRESBAL",
+        "mode": "level",
+        "scale": 0.001,
+        "_scale_note": "FRED 원단위는 Millions of U.S. Dollars, 임계는 십억$ — 0.001을 곱해 맞춘다. config.series[WRESBAL].display.divide_by=1000과 같은 환산이다.",
+        "unit": "십억$",
+        "decimals": 1,
+        "stale_days": 16,
+        "_stale_note": "H.4.1 주간계열. 주 1회 갱신이라 12일로는 정상 지연에도 '확인 불가'가 난다.",
+        "max_gap_days": 10,
+        "trigger": {"op": "<", "threshold": 2900, "consecutive": 1},
+        "near": {"op": "<", "threshold": 2950, "consecutive": 1},
+        "board_threshold": "발동 2,900십억$ 하회 / 근접 2,950십억$ 하회",
+        "criteria_text": "발동: 2,900십억$ 하회 / 근접: 2,950십억$ 하회 — 기준: FRED 주평균(H.4.1), 십억$ (디렉터 확정 2026-08-02)"
+      },
+      {
+        "key": "TGA",
+        "page_id": "3b05f56d-59f1-813e-b361-fcce72788c26",
+        "label": "TGA 급증",
+        "series": "WTREGEN",
+        "mode": "change",
+        "_mode_note": "직전 관측치 대비 변화. WTREGEN은 주간계열이라 '주간 변화'가 곧 직전 관측 대비 변화다. 달력 7일을 따로 세지 않는다 — 관측 격자가 이미 주간이다.",
+        "scale": 0.001,
+        "unit": "십억$",
+        "decimals": 1,
+        "stale_days": 16,
+        "max_gap_days": 10,
+        "trigger": {"op": ">=", "threshold": 150, "consecutive": 1},
+        "near": {"op": ">=", "threshold": 100, "consecutive": 1},
+        "board_threshold": "발동 주간 +150십억$ 이상 / 근접 +100십억$ 이상",
+        "criteria_text": "발동: 주간 +150십억$ 이상 / 근접: +100십억$ 이상 — 기준: FRED 주평균(H.4.1) 주간 변화, 십억$ (디렉터 확정 2026-08-02)"
+      }
     ]
   },
 

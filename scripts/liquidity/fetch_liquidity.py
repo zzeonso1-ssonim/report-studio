@@ -142,6 +142,9 @@ def validate_config(cfg, path="<config>"):
     validate_headline(cfg, ids, lb_keys, path)
     validate_signal_board(cfg, ids | derived_ids, path)
     validate_charts(cfg, ids | derived_ids, path)
+    # 판정 설정 검증. **지연 로드**한다 — risk_verdicts가 이 모듈의 load_config을 쓰기 때문이다.
+    from risk_verdicts import validate_risk_rules
+    validate_risk_rules(cfg, ids | derived_ids, path)
     return cfg
 
 
@@ -203,11 +206,17 @@ def validate_headline(cfg, ids, lb_keys, path="<config>"):
 
 def validate_signal_board(cfg, all_ids, path="<config>"):
     sb = cfg["signal_board"]
-    for k in ("heading", "headers", "pending", "rows", "cautions", "claim_format"):
+    for k in ("heading", "headers", "pending", "verdict_pending", "rows", "cautions",
+              "claim_format", "claim_line_format"):
         if k not in sb:
             raise RuntimeError("config.signal_board에 %r가 없다 (%s)" % (k, path))
     if not sb["rows"]:
         raise RuntimeError("config.signal_board.rows가 비었다")
+    # 지표·현재값·관측일·판독 규칙 + 확정 임계 + 판정 = 6열. 어긋나면 표가 밀린다.
+    if len(sb["headers"]) != 6:
+        raise RuntimeError("config.signal_board.headers는 6열이어야 한다(현재 %d열) — "
+                           "signal_board_rows()가 만드는 셀 개수와 맞춰야 표가 밀리지 않는다"
+                           % len(sb["headers"]))
     for r in sb["rows"]:
         if r.get("id") not in all_ids:
             raise RuntimeError("config.signal_board.rows의 %r가 series에도 derived에도 없다"

@@ -175,11 +175,20 @@ def bullet(text):
             "bulleted_list_item": {"rich_text": rich_text(text)}}
 
 
+def link_text(text, url):
+    """링크가 걸린 rich text 한 조각. 표 셀에 그대로 넣을 수 있다."""
+    text = "" if text is None else str(text)
+    if not url:
+        return rich_text(text)
+    return [{"type": "text", "text": {"content": text[:RICH_TEXT_CHUNK], "link": {"url": url}}}]
+
+
 def table(headers, rows):
-    """노션 table 블록. 첫 행이 헤더다."""
+    """노션 table 블록. 첫 행이 헤더다. 셀은 문자열이거나 이미 만들어진 rich text 리스트다."""
     def row(cells):
         return {"object": "block", "type": "table_row",
-                "table_row": {"cells": [rich_text(c) for c in cells]}}
+                "table_row": {"cells": [c if isinstance(c, list) else rich_text(c)
+                                        for c in cells]}}
     return {"object": "block", "type": "table", "table": {
         "table_width": len(headers), "has_column_header": True, "has_row_header": False,
         "children": [row(headers)] + [row(r) for r in rows]}}
@@ -269,8 +278,44 @@ def build_headline_blocks(result, cfg):
 
 # ------------------------------------------------- 구획② 신호 보드
 
-def signal_board_rows(result, cfg):
-    """[현재값·관측일 | 판독 규칙 | 이상 신호 조건]. **임계값 칸은 자동화가 채우지 않는다.**"""
+def load_verdicts(path, cfg):
+    """판정 단계(risk_verdicts.py)가 남긴 결과. **없어도 본문은 나간다.**
+
+    반환: {risk_key: item}. 파일이 없거나 깨졌으면 None — 그 경우 표는 '확인 불가'로 찍힌다.
+    조용히 빈 칸으로 두지 않는다: '판정이 아직 없다'와 '판정이 실패했다'가 구분돼야 한다.
+    """
+    if not path:
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+        return {it["key"]: it for it in payload.get("items", []) if it.get("key")}
+    except Exception as exc:  # noqa: BLE001 — 판정 실패가 브리핑을 막지 않는다
+        print("판정 결과를 읽지 못했다(본문은 '확인 불가'로 계속): %s" % exc, file=sys.stderr)
+        return None
+
+
+def _verdict_for(spec, verdicts, cfg):
+    """(판정 문자열, 링크 URL, 임계 문자열). 규칙이 없는 행은 판정하지 않는다."""
+    sb, rr = cfg["signal_board"], cfg.get("risk_rules") or {}
+    key = spec.get("risk_key")
+    if not key:
+        return sb["verdict_pending"], None, sb["pending"]
+    rule = next((r for r in rr.get("rules", []) if r["key"] == key), None)
+    threshold = rule["board_threshold"] if rule else sb["pending"]
+    url = None
+    if rule:
+        url = rr["page_url_format"].format(page_id_compact=rule["page_id"].replace("-", ""))
+    if verdicts is None:
+        return rr["verdicts"]["unknown"], url, threshold
+    item = verdicts.get(key)
+    if not item:
+        return rr["verdicts"]["unknown"], url, threshold
+    return item.get("verdict") or rr["verdicts"]["unknown"], item.get("page_url") or url, threshold
+
+
+def signal_board_rows(result, cfg, verdicts=None):
+    """[현재값·관측일 | 판독 규칙 | 확정 임계 | 판정]. 임계는 노션 Risk Log에서 온 사본이다."""
     sb = cfg["signal_board"]
     rows = []
     for spec in sb["rows"]:
@@ -279,32 +324,62 @@ def signal_board_rows(result, cfg):
         label = r.get("label", spec["id"])
         value = "미수집" if r.get("latest") is None else "%s %s" % (
             fmt(r["latest"], d), d.get("unit", ""))
+        verdict, url, threshold = _verdict_for(spec, verdicts, cfg)
         rows.append(["%s (%s)" % (label, spec["id"]), value,
-                     r.get("latest_date") or "미수집", spec["read_rule"], sb["pending"]])
+                     r.get("latest_date") or "미수집", spec["read_rule"], threshold,
+                     link_text(verdict, url) if url else verdict])
     return rows
 
 
-def signal_board_claim(result, cfg):
+def signal_board_claim(result, cfg, verdicts=None):
     sb = cfg["signal_board"]
+    rr = cfg.get("risk_rules") or {}
     parts = []
     for spec in sb["rows"]:
+        # 확정 임계가 없는 행은 주장 문장에 넣지 않는다 — 판정하지 않은 것을 판정처럼 읽히게 하지 않는다.
+        if not spec.get("risk_key"):
+            continue
         r = result["series"].get(spec["id"]) or {}
         d = r.get("display") or {}
+        verdict, _url, _thr = _verdict_for(spec, verdicts, cfg)
         parts.append(sb["claim_line_format"].format(
             label=r.get("label", spec["id"]),
             value="미수집" if r.get("latest") is None else "%s%s" % (
                 fmt(r["latest"], d), (" " + d["unit"]) if d.get("unit") else ""),
-            date=r.get("latest_date") or "미수집"))
-    return sb["claim_format"].format(lines=", ".join(parts))
+            date=r.get("latest_date") or "미수집",
+            verdict=verdict))
+    return sb["claim_format"].format(lines=", ".join(parts),
+                                     window_days=rr.get("window_days", "-"))
 
 
-def build_signal_board_blocks(result, cfg):
+def signal_board_cautions(cfg, verdicts):
+    """고정 주의 + 판정 단계 상태 1줄. 판정이 없으면 없다고 본문에 적는다."""
+    sb, rr = cfg["signal_board"], cfg.get("risk_rules") or {}
+    lines = list(sb["cautions"])
+    if not rr:
+        return lines
+    if verdicts is None:
+        summary = rr["verdicts_file_missing"]
+    else:
+        counts = {}
+        for it in verdicts.values():
+            counts[it.get("verdict", "?")] = counts.get(it.get("verdict", "?"), 0) + 1
+        summary = ", ".join("%s %d건" % (k, n) for k, n in sorted(counts.items()))
+        bad = [it for it in verdicts.values() if it.get("verdict_key") == "unknown"]
+        if bad:
+            summary += " / 확인 불가 사유: " + "; ".join(
+                "%s(%s)" % (it["label"], it.get("reason") or "사유 미상") for it in bad)
+    lines.append(rr["board_caution_format"].format(summary=summary))
+    return lines
+
+
+def build_signal_board_blocks(result, cfg, verdicts=None):
     sb = cfg["signal_board"]
     return ([heading(sb["heading"]),
              heading(sb["claim_heading"], 3),
-             paragraph(signal_board_claim(result, cfg)),
-             table(sb["headers"], signal_board_rows(result, cfg))]
-            + [bullet(x) for x in sb["cautions"]])
+             paragraph(signal_board_claim(result, cfg, verdicts)),
+             table(sb["headers"], signal_board_rows(result, cfg, verdicts))]
+            + [bullet(x) for x in signal_board_cautions(cfg, verdicts)])
 
 
 # ------------------------------------------------- 구획④ 요인 분해
@@ -515,7 +590,7 @@ def caution_lines(result, cfg):
     return lines
 
 
-def build_body(result, cfg, charts=None):
+def build_body(result, cfg, charts=None, verdicts=None):
     """v2 본문 — 5구획.
 
       ① 헤드라인 기계 판정   ② 신호 보드   ③ 잔액 표   ④ 요인 분해   ⑤ 입찰 부록
@@ -524,7 +599,7 @@ def build_body(result, cfg, charts=None):
     """
     b = cfg["body"]
     blocks = build_headline_blocks(result, cfg)                       # ①
-    blocks += build_signal_board_blocks(result, cfg)                  # ②
+    blocks += build_signal_board_blocks(result, cfg, verdicts)        # ②
 
     blocks.append(heading(b["table_heading"]))                        # ③
     blocks.append(heading(b["claim_heading"], 3))
@@ -713,6 +788,9 @@ def main():
     ap.add_argument("--markdown-out", help="본문 마크다운 저장 경로(검수용)")
     ap.add_argument("--charts-dir", default=os.environ.get("LIQUIDITY_CHARTS_DIR") or None,
                     help="차트 PNG 출력 디렉터리. 없으면 차트를 만들지 않는다")
+    ap.add_argument("--verdicts", default=os.environ.get("LIQUIDITY_VERDICTS") or None,
+                    help="risk_verdicts.py --out 결과 JSON. **없어도 본문은 나간다**(판정 열이 "
+                         "'확인 불가'로 찍힌다) — 판정 실패가 브리핑 적재를 막지 않는다")
     ap.add_argument("--probe-charts", action="store_true",
                     help="**프로브 모드**: 새 페이지를 만들지 않고, 이번 기준일의 기존 페이지 하단에 "
                          "차트 섹션만 append한다. 같은 제목의 섹션이 이미 있으면 아무것도 하지 않는다(멱등)")
@@ -741,9 +819,10 @@ def main():
     if args.charts_dir and not anomaly:
         charts = make_charts(result, cfg, args.charts_dir)
 
+    verdicts = load_verdicts(args.verdicts, cfg)
     props = build_properties(title, cfg)
     blocks = (build_anomaly_body(result, cfg) if anomaly
-              else build_body(result, cfg, charts))
+              else build_body(result, cfg, charts, verdicts))
 
     payload = {"parent": {"type": "data_source_id", "data_source_id": ncfg["data_source_id"]},
                "properties": props, "children": blocks}
@@ -777,7 +856,7 @@ def main():
     # 업로드는 페이지를 만들기 직전에 한다 — 실패해도 blocks를 다시 조립해 본문은 그대로 낸다.
     if charts:
         charts = upload_charts(notion, cfg, charts)
-        blocks = build_body(result, cfg, charts)
+        blocks = build_body(result, cfg, charts, verdicts)
 
     # 노션 create_page는 children을 100개까지만 받는다. v2 본문은 그보다 길 수 있어
     # **나머지를 append로 이어 붙인다** — 예전처럼 조용히 잘리면 표 뒤가 통째로 사라진다.

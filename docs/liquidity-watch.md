@@ -30,7 +30,8 @@ Phase 0 검증(`team-soyoung/docs/liquidity-watch-phase0.md`)의 결론을 그�
 | [`scripts/liquidity/fetch_auctions.py`](../scripts/liquidity/fetch_auctions.py) | 부록: TreasuryDirect 입찰 결과 수집·스키마 검증 → `result["auctions"]` / 차트용 장기 이력 → `result["auction_history"]` |
 | [`scripts/liquidity/charts.py`](../scripts/liquidity/charts.py) | 차트 4장 PNG 생성. **matplotlib import는 여기에만 있다** |
 | [`scripts/liquidity/notion_upload.py`](../scripts/liquidity/notion_upload.py) | 노션 파일 업로드 3단계 → 이미지 블록 |
-| [`scripts/liquidity/post_briefing.py`](../scripts/liquidity/post_briefing.py) | JSON → 노션 페이지 (멱등·dry-run·프로브 지원) |
+| [`scripts/liquidity/risk_verdicts.py`](../scripts/liquidity/risk_verdicts.py) | 2단: 노션 Risk Log 드리프트 검사·판정 평가·`최근 판정`/`최근 확인일` 기입. **셀프테스트 내장** |
+| [`scripts/liquidity/post_briefing.py`](../scripts/liquidity/post_briefing.py) | JSON → 노션 페이지 (멱등·dry-run·프로브 지원). 판정 결과를 읽어 신호 보드에 싣되 **없어도 본문은 나간다** |
 
 **지표를 늘리거나 문안을 바꾸려면 `config.json`만 고친다.** 코드에 시리즈 ID·한글 문안·단위 상수를 두지 않았다.
 
@@ -120,7 +121,9 @@ Wednesday-ending **week average**다. 같은 H.4.1의 수요일 잔액과 지준
 **규칙 문장이 판정 바로 아래 항상 병기된다** — '흡수'라는 한 단어만 남으면 읽는 사람이 시장 판단으로 받아들이기 때문이다.
 시장 함의·금리 방향은 이 파이프라인이 만들지 않는다(디렉터 몫).
 
-**② 신호 보드의 '이상 신호 조건' 칸은 전부 `디렉터 확정 대기`로 비어 있다.** 자동화가 임계값을 채우지 않는다.
+**② 신호 보드의 임계는 2026-08-02에 디렉터가 확정했다.** 아래 '2단 — Risk Log 판정 자동 기입' 절 참조.
+확정 전까지 비어 있던 '이상 신호 조건' 칸은 `이상 신호 임계 (디렉터 확정)` + `판정` 두 열로 대체됐다.
+**임계를 만드는 주체는 여전히 디렉터다** — 자동화는 노션에 확정된 임계를 대조만 한다.
 
 ### 신규 FRED 계열 — 실호출로 확정한 ID (추측 금지)
 
@@ -202,6 +205,102 @@ gh workflow run liquidity-watch.yml -R zzeonso1-ssonim/econ-cockpit -f probe_cha
 2. `POST {upload_url}` — `multipart/form-data`, 파일 필드명 `file`
 3. 블록 append 시 `{"type":"image","image":{"type":"file_upload","file_upload":{"id":…}}}`
 
+## 2단 — Risk Log 판정 자동 기입 (2026-08-02)
+
+수집·브리핑(1단) 뒤에 **노션 Risk Log의 리스크 4건을 기계적으로 판정해 두 속성만 기입하는 단계**가 붙었다.
+목적은 하나다 — 디렉터가 확정한 임계를 매주 사람이 눈으로 대조하는 일을 없애되,
+**임계를 바꾸는 권한은 디렉터에게 남기는 것**이다.
+
+| 항목 | 내용 |
+|---|---|
+| 대상 | 노션 `Risk Log` (data source `b97816ce-0f33-4bb7-91e8-b3c80286e074`) 4개 페이지 |
+| 쓰는 것 | `최근 판정`(select: 발동/근접/정상/확인 불가) · `최근 확인일`(date, 실행일 KST) — **이 둘뿐** |
+| 절대 안 쓰는 것 | `상태` · `결말` · `판정 기준` · 본문 · 나머지 전 속성 (`config.risk_rules._never_write`) |
+| 코드 | [`scripts/liquidity/risk_verdicts.py`](../scripts/liquidity/risk_verdicts.py) |
+| 설정 | `config.risk_rules` — 페이지 ID·지표·연산자·임계·연속 조건·확정 문안 사본이 전부 여기 있다 |
+| API | Notion `2025-09-03`, `NOTION_TOKEN` 시크릿 (1단과 같은 토큰) |
+
+### 확정 임계 4건 (디렉터 확정 2026-08-02)
+
+| 리스크 | 지표 | 발동 | 근접 |
+|---|---|---|---|
+| SOFR−IORB 스프레드 양전 | `SOFR_IORB_SPREAD` (bp, 일간) | +5bp 이상 **2영업일 연속** | +2bp 이상 1일 |
+| SRF 사용액 발생 | `RPONTSYD` (십억$, 일간) | 일간 5 이상 | 1 이상 |
+| 지준 레인지 하단 이탈 | `WRESBAL` (십억$, 주평균) | 2,900 하회 | 2,950 하회 |
+| TGA 급증 | `WTREGEN` (십억$, 주평균) **주간 변화** | +150 이상 | +100 이상 |
+
+임계 원문은 **노션의 `판정 기준` 필드가 원본**이고 `config.risk_rules.rules[].criteria_text`는 사본이다.
+
+### 드리프트 검사 — 이 장치가 핵심이다
+
+기입 전에 각 페이지의 `판정 기준` **현재 텍스트를 API로 읽어 config 사본과 문자 단위로 대조**한다.
+
+- **일치** → 평가한다.
+- **불일치** → 그 리스크는 **평가하지 않고** `확인 불가`를 기입하고, 로그에
+  `::error title=임계 변경 감지 — config 갱신 필요` 와 `config=… / notion=…` 양쪽 원문(repr)을 남긴다.
+
+낡은 임계로 조용히 `정상`을 찍는 것을 막기 위한 장치다. 디렉터가 노션에서 임계를 고치면
+**자동화는 그 주에 판정을 포기하고 사람을 부른다.** config를 갱신할 때는 `probe_risk=dump`로
+노션 원문을 repr로 받아 그대로 붙여 넣는다(눈으로 옮겨 적다 공백 하나가 어긋나는 것을 막는다).
+
+### 평가 방식
+
+- **창**: 해당 지표의 **최신 관측일에서 역산한 7일**(`config.risk_rules.window_days`). 주 1회 크론 전제다.
+  수집일이 아니라 관측일 기준인 이유 — FRED 반영이 하루 늦으면 수집일 기준 창이 비어 전부 `확인 불가`가 된다.
+- **연속 조건**: `SOFR−IORB`의 '2영업일 연속'은 **일간 이력으로 소급 평가**한다.
+  주 1회 실행이어도 창 안의 연속 이틀을 잡아낸다. 연속은 달력일이 아니라 **인접 관측**으로 세되
+  (주말·공휴일에는 관측이 없다), 간격이 `max_gap_days`를 넘으면 연속으로 보지 않는다.
+- **우선순위**: 발동 → 근접 → 정상. 창 안에서 조건이 성립한 **가장 늦은 날**을 근거로 싣는다.
+- **`확인 불가`가 나오는 4가지** (전부 침묵하지 않고 기입한다):
+  ① 지표 수집 실패 ② 관측이 `stale_days`보다 낡음 ③ 드리프트 감지 ④ 노션 페이지 조회 실패.
+- **단위 환산**: `WRESBAL`·`WTREGEN`은 FRED 원단위가 백만 달러라 `scale: 0.001`로 십억 달러에 맞춘다.
+  `RPONTSYD`는 원래 십억 달러라 `scale: 1`이다. 이 환산을 빼먹으면 임계가 1,000배 어긋난다.
+- **TGA만 `mode: change`** — 수준이 아니라 직전 관측 대비 변화를 본다. `WTREGEN`은 주간 격자라
+  '직전 관측 대비 = 주간 변화'다. 달력 7일을 따로 세지 않는다.
+
+### 격리 — 판정과 브리핑은 서로를 막지 않는다
+
+| 상황 | 동작 |
+|---|---|
+| 판정 기입 실패(404·드리프트·PATCH 실패) | **브리핑은 그대로 적재된다.** 신호 보드 판정 열이 `확인 불가`로 찍히고 사유가 본문 주의에 붙는다 |
+| 브리핑 적재 실패 | **판정 기입은 이미 끝나 있다** — 순서상 판정이 먼저다 |
+| 수집(FRED) 실패 | 판정은 전부 `확인 불가`로 **기입된다**. 칸을 비워 두면 '안 돌았다'와 구분되지 않는다 |
+| 리스크 1건 실패 | 나머지 3건은 그대로 평가·기입된다 |
+
+워크플로에서 두 단계가 각각 `continue-on-error: true`이고, 마지막 `실패 종합` 단계가
+**어느 쪽이 깨졌는지 각각 명시한 뒤** 잡을 실패시킨다.
+
+### 노션 액세스 함정 — 우회하지 않는다
+
+Risk Log는 최상위 **DASHBOARD → 판단 자산 → Risk Log** 계층에 있다.
+team-soyoung 인테그레이션의 액세스 범위가 '노션 AI 오케스트레이션' 하위뿐이면 **404가 난다.**
+
+**디렉터 조치: 노션 인테그레이션 설정에서 최상위 `DASHBOARD` 페이지에 액세스를 추가한다**
+(하위 `판단 자산`·`Risk Log`는 상속된다). 경험상 **이름이 유일한 최상위 페이지**를 부여하는 것이 정답이다.
+코드는 404를 만나면 우회 경로를 찾지 않고 `확인 불가` + `access_hint`를 로그에 남긴다.
+
+### 프로브 (`probe_risk`)
+
+```bash
+# 노션 '판정 기준' 원문만 출력 — 아무것도 쓰지 않는다 (config 사본 갱신용)
+gh workflow run liquidity-watch.yml -R zzeonso1-ssonim/econ-cockpit -f probe_risk=dump
+
+# 지금 실데이터로 평가·기입 1회 (브리핑 페이지는 만들지 않는다)
+gh workflow run liquidity-watch.yml -R zzeonso1-ssonim/econ-cockpit -f probe_risk=1
+```
+
+### 셀프테스트 — 네트워크 없이 도는 30개 검사
+
+```bash
+python3 scripts/liquidity/risk_verdicts.py --selftest
+```
+
+발동/근접/정상 경계, 2영업일 연속 성립·불성립, 연속 이틀이 창 밖일 때, 금·월 주말 낀 연속,
+관측 노후, 수집 실패, 백만→십억 환산, `mode: change`가 수준에 반응하지 않는 것,
+**드리프트 검출과 드리프트 아닌 나머지 3건이 그대로 판정되는 것**, 404 처리,
+`상태`·`판정 기준`이 payload에 섞이면 예외가 나는 것까지 검사한다.
+**워크플로에서 실데이터를 만지기 전에 먼저 돈다.**
+
 ## 안전장치
 
 - **교차검증**: 매 실행마다 `fredgraph.csv`(값) ↔ `fredgraph.xls`(별도 엔드포인트) 최근 10개 관측치를 대조하고,
@@ -260,6 +359,22 @@ python3 scripts/liquidity/charts.py --input /tmp/liquidity.json --outdir /tmp/ch
 # 차트까지 포함한 dry-run (그림은 만들되 업로드는 타지 않는다)
 python3 scripts/liquidity/post_briefing.py --input /tmp/liquidity.json --dry-run \
   --charts-dir /tmp/charts --markdown-out /tmp/body.md
+
+# 판정 로직 셀프테스트 (네트워크·토큰 불필요, 1초)
+python3 scripts/liquidity/risk_verdicts.py --selftest
+
+# 판정 — 노션을 아예 타지 않는다(드리프트 검사를 못 하므로 전부 '확인 불가'가 정상이다)
+python3 scripts/liquidity/risk_verdicts.py --input /tmp/liquidity.json --no-notion --out /tmp/verdicts.json
+
+# 판정 — 드리프트 검사만 하고 기입은 하지 않는다 (토큰 필요)
+python3 scripts/liquidity/risk_verdicts.py --input /tmp/liquidity.json --dry-run --out /tmp/verdicts.json
+
+# 노션 '판정 기준' 원문 repr 출력 (config 사본 갱신용, 토큰 필요)
+python3 scripts/liquidity/risk_verdicts.py --dump-criteria
+
+# 판정 결과를 신호 보드에 반영한 본문 확인
+python3 scripts/liquidity/post_briefing.py --input /tmp/liquidity.json --dry-run \
+  --verdicts /tmp/verdicts.json --markdown-out /tmp/body.md
 ```
 
 Actions에서 수동 실행: 저장소 → Actions → "유동성 워치 (주간)" → Run workflow.
