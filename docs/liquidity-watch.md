@@ -2,16 +2,18 @@
 
 미국 유동성 5개 지표를 FRED에서 주 1회 받아 노션 **매크로 브리핑룸**에 브리핑 페이지를 만든다.
 Phase 0 검증(`team-soyoung/docs/liquidity-watch-phase0.md`)의 결론을 그대로 이식한 Phase 1이다.
+2026-08-02에 **미 국채 입찰 결과 부록**을 붙였다(아래 별도 절).
 
 - 이 파이프라인은 **웹앱(app/·lib/)과 무관하다.** Vercel 배포 대상이 아니고, 배포에 영향을 주지 않는다.
-- `as_of: 2026-08-01` — 아래 실측값은 이 시점 기준선이다.
+- `as_of: 2026-08-02` — 아래 실측값은 이 시점 기준선이다.
 
 ## 무엇을 · 언제 · 어디로
 
 | 항목 | 내용 |
 |---|---|
 | 대상 | `WRESBAL`(지준) · `RRPONTSYD`(ON RRP) · `WTREGEN`(TGA) · `SOFR` · `IORB` + 파생 `SOFR-IORB` |
-| 출처 | FRED `fredgraph.csv` — **API 키 불필요** |
+| 부록 | 미 국채 입찰 결과 (입찰일 기준 지난 7일) |
+| 출처 | FRED `fredgraph.csv` — **API 키 불필요** / 부록은 TreasuryDirect `TA_WS/securities/auctioned` — **키 불필요** |
 | 실행 | GitHub Actions [`liquidity-watch.yml`](../.github/workflows/liquidity-watch.yml) — 목 22:00 UTC(=금 07:00 KST) 주 1회 + 수동 실행 |
 | 왜 그 시각인가 | 연준 H.4.1이 목 16:30 ET(=금 05:30 KST)에 나온다. 90분 여유를 두고 받아 금요일 출근 전에 노션에 올려둔다 |
 | 적재처 | 노션 매크로 브리핑룸 (data source `ff6676d0-8869-40a3-b03b-0a48942df0f1`) |
@@ -24,7 +26,8 @@ Phase 0 검증(`team-soyoung/docs/liquidity-watch-phase0.md`)의 결론을 그�
 | 경로 | 역할 |
 |---|---|
 | [`scripts/liquidity/config.json`](../scripts/liquidity/config.json) | **단일 설정 소스.** 시리즈·표시명·단위·비교기준·노션 좌표·본문 문안이 전부 여기 있다 |
-| [`scripts/liquidity/fetch_liquidity.py`](../scripts/liquidity/fetch_liquidity.py) | FRED 수집·교차검증·집계 → JSON |
+| [`scripts/liquidity/fetch_liquidity.py`](../scripts/liquidity/fetch_liquidity.py) | FRED 수집·교차검증·집계 → JSON. 부록 수집을 호출하되 **실패를 격리**한다 |
+| [`scripts/liquidity/fetch_auctions.py`](../scripts/liquidity/fetch_auctions.py) | 부록: TreasuryDirect 입찰 결과 수집·스키마 검증 → `result["auctions"]` |
 | [`scripts/liquidity/post_briefing.py`](../scripts/liquidity/post_briefing.py) | JSON → 노션 페이지 (멱등·dry-run 지원) |
 
 **지표를 늘리거나 문안을 바꾸려면 `config.json`만 고친다.** 코드에 시리즈 ID·한글 문안·단위 상수를 두지 않았다.
@@ -45,6 +48,54 @@ Wednesday-ending **week average**다. 같은 H.4.1의 수요일 잔액과 지준
 브라우저 User-Agent를 붙이면 HTTP/2 INTERNAL_ERROR·403이 난다(실측). `/series/` 페이지도 막혀 있다.
 `fetch_liquidity._get()`은 **curl 기본 UA**로만 요청한다 — 여기에 `User-Agent` 헤더를 추가하지 말 것.
 단위·주기 메타는 `/series/` 대신 **xls의 sharedStrings**에서 읽는다.
+
+## 부록 — 미 국채 입찰 결과 (2026-08-02 추가)
+
+본문 하단에 `국채 입찰 (지난 7일)` 절이 붙는다. 원천은 TreasuryDirect
+`https://www.treasurydirect.gov/TA_WS/securities/auctioned?format=json&days=10` — **API 키 불필요**,
+실측 HTTP 200 · 1.1~1.2초 · 최근 10일 15건(2026-08-02). `days=10`으로 받아 코드가 **입찰일 기준 7일**로 좁힌다
+(경계일 입찰이 갱신 시차로 빠지는 것을 막는 여유분).
+
+### ① 낙찰 필드는 종목 유형마다 다르다 — 실호출로 확정한 표 (추측 금지)
+
+`highYield` 하나로 통일돼 있지 않다. **Bill과 FRN은 `highYield`가 빈 문자열이다.**
+
+| 유형 | 판별 | 낙찰 필드 | 표시 라벨 | 실측 근거 (2026-08-02) |
+|---|---|---|---|---|
+| 변동금리채(FRN) | `floatingRate=Yes` | `highDiscountMargin` | 최고 할인마진 | 07-29 2Y FRN: `highYield`·`highDiscountRate` 둘 다 빈 문자열, `highDiscountMargin=0.050` |
+| 재정증권(Bill) | `securityType=Bill` | `highDiscountRate` (+`highInvestmentRate` 병기) | 최고 할인율 | 07-30 4-Week: `highYield=""`, `highDiscountRate=3.630`, `highInvestmentRate=3.691` |
+| 물가연동채(TIPS) | `tips=Yes` | `highYield` = **실질수익률** | 최고 실질수익률 | 07-23 10Y TIPS: `highYield=2.4380` (같은 날 명목 10Y와 비교 금지) |
+| 고정금리 Note·Bond | 나머지 | `highYield` | 최고 낙찰수익률 | 07-27 5Y Note `4.4080`, 07-22 20Y Bond 재발행 `5.1630` |
+
+- 이 매핑은 코드가 아니라 **`config.treasurydirect.yield_rules`** 에 있다. 종목 유형이 늘면 config만 고친다.
+- **규칙은 위에서부터 첫 일치로 평가되고 마지막 항목이 `when={}`(전부 일치)여야 한다.** FRN·TIPS도
+  `securityType=Note`라서, 명목 규칙이 앞에 오면 둘 다 명목으로 잘못 잡힌다.
+  `validate_auction_config()`가 순서를 강제한다(중간에 `when={}`가 있으면 예외).
+- 할인율(`highDiscountRate`)과 투자환산수익률(`highInvestmentRate`)은 **서로 다른 값**이다.
+  채권 등가 비교용으로 괄호에 병기하되 같은 숫자로 취급하지 않는다.
+- 재발행분은 `securityTerm`이 잔존만기, `originalSecurityTerm`이 원발행만기다
+  (4-Week 입찰의 실체는 17-Week 재발행). 시장 호칭인 잔존만기를 표제로 쓰고 원발행만기를 괄호에 병기한다.
+
+### ② 교차검증을 못 한다 — 그 자리를 무엇으로 메웠나
+
+**TreasuryDirect는 단일 원천이라 FRED처럼 두 경로(csv↔xls) 대조가 불가능하다.** 대신:
+
+- **스키마 엄격 검증** — `securityType`·`securityTerm`·`auctionDate`·`bidToCoverRatio` + 유형별 낙찰 필드가
+  하나라도 비면 **그 행을 표에 싣지 않고** `표에서 제외한 행`에 결측 필드명과 함께 남긴다. 추정·보간하지 않는다.
+- **본문에 명시** — '단일 원천이라 교차검증을 하지 못했다'가 데이터 주의 첫 줄에 매번 들어간다.
+  부록 실패가 아니라 **정상 동작일 때도** 들어간다.
+
+### ③ 부록은 본체를 인질로 잡지 않는다
+
+| 상황 | 동작 |
+|---|---|
+| 입찰 API 실패(네트워크·5xx·JSON 깨짐) | **FRED 본체는 정상 적재.** 부록 자리에 '수집 실패 — {원인}' 문장. `mismatches`를 오염시키지 않는다 |
+| 해당 주 입찰 0건 | 빈 표를 만들지 않고 **'해당 주 입찰 없음'을 명시**. 데이터 주의는 그대로 붙는다 |
+| 일부 행 필드 결측 | 그 행만 빠지고 사유가 남는다. 나머지 행은 정상 |
+| FRED 교차검증 불일치(데이터 이상 페이지) | **부록도 싣지 않는다.** 그 페이지의 원칙은 '값을 싣지 않는다'이므로 예외를 두지 않았다 |
+
+격리 지점은 `fetch_liquidity.collect()`의 `try/except`다. 입찰 결측은 `mismatches`에 절대 넣지 않는다 —
+`mismatches`는 'FRED 값을 싣지 말라'는 신호라, 입찰 한 건 결측이 전체 브리핑을 '데이터 이상'으로 만들면 안 된다.
 
 ## 안전장치
 
@@ -74,8 +125,11 @@ gh secret set NOTION_TOKEN -R zzeonso1-ssonim/econ-cockpit
 ## 수동 실행
 
 ```bash
-# 수집만 — 사람이 읽는 표
+# 수집만 — 사람이 읽는 표 (부록 입찰 포함)
 python3 scripts/liquidity/fetch_liquidity.py
+
+# 입찰 부록만 따로 (FRED를 타지 않아 빠르다)
+python3 scripts/liquidity/fetch_auctions.py
 
 # 수집 → JSON
 python3 scripts/liquidity/fetch_liquidity.py --json --out /tmp/liquidity.json
@@ -93,7 +147,32 @@ python3 scripts/liquidity/fetch_liquidity.py --json --cache-dir ./fred_cache --o
 
 Actions에서 수동 실행: 저장소 → Actions → "유동성 워치 (주간)" → Run workflow.
 
-## 확인한 것 / 확인 못 한 것 (2026-08-01)
+## 확인한 것 / 확인 못 한 것 — 입찰 부록 (2026-08-02)
+
+확인함 (전부 실데이터·실행)
+
+- **필드 매핑을 실호출로 확정.** 응답 필드 120종 전수 확인 후 유형별 낙찰 필드를 위 표대로 결정.
+  추정한 것 없음. TIPS·Bond·FRN 경로는 창을 07-19~07-25로 옮겨 4개 규칙 전부 태워 확인.
+- **`fetch_auctions.py` 실행** — 창 2026-07-27~2026-08-02, 원천 15건 중 기간내 10건, 표 10행, 제외 0건, 1.2초.
+- **독립 재계산 대조** — 스크립트를 거치지 않고 API를 다시 받아 별도 코드로 계산한 값이 일치.
+  총 낙찰액 합계 **818.7십억 달러**, 응찰배수 **2.28**(5Y Note, 07-27) ~ **3.37**(2Y FRN, 07-29),
+  10행 전부 낙찰값·응찰배수·낙찰액 일치(불일치 0건).
+- **`post_briefing --dry-run`** — 블록 33개, 표 2개(FRED 7열×7행 + 입찰 6열×11행) payload 생성.
+- **격리 4경로** — ①입찰 실패 시 FRED 본체 존치(블록 25개, FRED 표 정상, `mismatches` 오염 0)
+  ②입찰 0건 주 '해당 주 입찰 없음' 문장 ③필수 필드 결측 행 제외 + 사유 기록
+  ④'데이터 이상' 페이지에는 부록 미포함(표 블록 0개).
+- **규칙 순서 가드** — 기본규칙(`when={}`)을 앞으로 옮기면 `validate_auction_config`가 예외로 막는 것 확인.
+
+확인 못 함
+
+- **노션 실제 적재.** 이번 주 페이지(`260729_미국 유동성 워치`)는 이미 존재해 멱등 스킵이 정상 동작이라
+  실쓰기를 하지 않았다. **입찰 부록이 노션에 렌더된 모습은 아직 본 적이 없다** —
+  **다음 금요일(2026-08-07 07:00 KST) 정기 run이 첫 실전**이고, 그때 표가 실제로 붙는지 확인해야 한다.
+- 입찰 0건인 주의 실제 발생. 미 재무부는 매주 Bill을 발행하므로 현실에서는 거의 없다.
+  코드 경로는 날짜를 밀어 확인했지만 실제 그런 주가 온 적은 없다.
+- 연휴·특별 입찰(CMB 등)에서의 필드 형태. `securityType=CMB` 라벨은 config에 넣어뒀으나 실물을 보지 못했다.
+
+## 확인한 것 / 확인 못 한 것 — FRED 본체 (2026-08-01)
 
 확인함
 - `fetch_liquidity.py` 실제 네트워크 실행 — 5시리즈 + 파생 1개 수집, **교차검증 불일치 0건**, 기준일 `2026-07-29`(WRESBAL), 소요 약 1~6초.

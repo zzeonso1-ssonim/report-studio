@@ -15,6 +15,10 @@
   - **'승인'을 쓰지 않는다**: 검토 상태의 '승인'은 디렉터 전용이다(config._forbidden_values).
   - **없는 select 옵션을 만들지 않는다**: 값은 config에만 있고, 스키마는 2026-08-01 실측 확인.
   - **모든 수치에 관측일 병기**: 표의 비교값에는 비교 기준일이 함께 들어간다.
+  - **부록이 본체를 인질로 잡지 않는다**: 국채 입찰 부록(TreasuryDirect)이 실패하거나 0건이어도
+    FRED 본체는 그대로 실린다. 대신 부록 자리에 '수집 실패'·'해당 주 입찰 없음'을 문장으로 남긴다
+    (빈 표·침묵 금지). 입찰은 단일 원천이라 교차검증이 불가능해 그 사실을 본문에 명시한다.
+    단, **'데이터 이상' 페이지에는 부록도 싣지 않는다** — 그 페이지의 원칙은 '값을 싣지 않는다'다.
 
 환경변수
   NOTION_TOKEN  (필수. --dry-run에서는 불필요 — 네트워크를 아예 타지 않는다)
@@ -192,6 +196,99 @@ def snapshot_rows(result, cfg):
     return rows
 
 
+# ------------------------------------------------- 부록: 국채 입찰 (단일 원천)
+
+def dec(value, places):
+    """자릿수 고정 표시. None은 '미수집' — 추정으로 채우지 않는다."""
+    return "미수집" if value is None else "{:,.{d}f}".format(value, d=places)
+
+
+def auction_metric_text(row):
+    """낙찰 지표 값. Bill은 투자환산수익률을 괄호에 병기한다(할인율과 다른 값이다)."""
+    txt = dec(row["metric_value"], row["metric_decimals"]) + row["metric_suffix"]
+    if row.get("extra_value") is not None:
+        txt += " (%s %s%s)" % (row["extra_label"],
+                               dec(row["extra_value"], row["extra_decimals"]),
+                               row["metric_suffix"])
+    return txt
+
+
+def auction_rows(a, cfg):
+    """입찰 표 행. 모든 수치가 같은 행의 입찰일에 묶인다(기준일 없는 숫자 금지)."""
+    t = cfg["treasurydirect"]
+    out = []
+    for r in a["rows"]:
+        acc = (None if r.get("accepted") is None
+               else r["accepted"] / t["accepted_divide_by"])
+        out.append([r["item"], r["auction_date"], r["metric_label"], auction_metric_text(r),
+                    dec(r["btc"], t["btc_decimals"]),
+                    dec(acc, t["accepted_decimals"])])
+    return out
+
+
+def auction_claim_values(a, cfg):
+    """claim 자리표시자. 전부 수집된 행에서만 파생한다 — 추정·보간 없음."""
+    b, t = cfg["body"], cfg["treasurydirect"]
+    rows = a["rows"]
+    lo = min(rows, key=lambda r: r["btc"])
+    hi = max(rows, key=lambda r: r["btc"])
+    have = [r for r in rows if r.get("accepted") is not None]
+    total = sum(r["accepted"] for r in have) / t["accepted_divide_by"] if have else None
+    n_missing = len(rows) - len(have)
+    return {
+        "start": a["window"]["start"], "end": a["window"]["end"], "count": a["count"],
+        "breakdown": ", ".join(b["auction_breakdown_item_format"].format(**x)
+                               for x in a["breakdown"]),
+        "btc_min": dec(lo["btc"], t["btc_decimals"]),
+        "btc_min_item": lo["item"], "btc_min_date": lo["auction_date"],
+        "btc_max": dec(hi["btc"], t["btc_decimals"]),
+        "btc_max_item": hi["item"], "btc_max_date": hi["auction_date"],
+        "accepted_total": dec(total, t["accepted_decimals"]),
+        "accepted_partial": ("" if not n_missing
+                             else b["auction_accepted_partial_format"].format(n=n_missing)),
+        "metric_kinds": a.get("metric_kinds", ""),
+    }
+
+
+def auction_caution_lines(a, cfg):
+    """입찰 표에만 붙는 주의. 단일 원천·유형별 정의 차이·발표 시차를 매번 명시한다."""
+    ctx = {"metric_kinds": a.get("metric_kinds", ""),
+           "window_days": (a.get("window") or {}).get("days",
+                          cfg["treasurydirect"]["window_days"])}
+    return [x.format(**ctx) for x in cfg["body"]["auction_cautions"]]
+
+
+def build_auction_blocks(result, cfg):
+    """부록 블록. **본체를 인질로 잡지 않는다** — 실패·0건도 문장으로 남기고 넘어간다."""
+    b, t = cfg["body"], cfg["treasurydirect"]
+    blocks = [heading(b["auction_heading"].format(window_days=t["window_days"]))]
+    a = result.get("auctions")
+
+    if not a:  # 구버전 fetch 산출물
+        return blocks + [paragraph(b["auction_failed_format"].format(
+            error="스냅샷에 auctions 항목이 없다(입찰 부록 이전 버전의 fetch 산출물이다)"))]
+    if a.get("status") == "failed":
+        return blocks + [paragraph(b["auction_failed_format"].format(
+            error=a.get("error") or "원인 미상"))]
+    if not a.get("rows"):  # 빈 표를 만들지 않고, 침묵하지도 않는다
+        blocks.append(paragraph(b["auction_empty_format"].format(
+            start=a["window"]["start"], end=a["window"]["end"],
+            raw_count=a.get("raw_count", 0))))
+        blocks.append(heading(b["caution_heading"], 3))
+        return blocks + [bullet(x) for x in auction_caution_lines(a, cfg)]
+
+    blocks.append(heading(b["auction_claim_heading"], 3))
+    blocks.append(paragraph(b["auction_claim_format"].format(**auction_claim_values(a, cfg))))
+    blocks.append(table(b["auction_table_headers"], auction_rows(a, cfg)))
+    if a.get("dropped"):
+        blocks.append(heading(b["auction_dropped_heading"], 3))
+        blocks.append(paragraph(b["auction_dropped_lead"].format(n=len(a["dropped"]))))
+        blocks += [bullet(d) for d in a["dropped"][:20]]
+    blocks.append(heading(b["caution_heading"], 3))
+    blocks += [bullet(x) for x in auction_caution_lines(a, cfg)]
+    return blocks
+
+
 def crosscheck_lines(result, cfg):
     cc = result["cross_check"]
     lines = [
@@ -206,12 +303,23 @@ def crosscheck_lines(result, cfg):
 def source_lines(result):
     updated = ["%s %s" % (sid, result["series"][sid]["meta"].get("data_updated") or "-")
                for sid in result["order"] if result["series"][sid]["meta"].get("data_updated")]
-    return [
+    lines = [
         "출처: %s" % result["source"],
         "수집 시각: %s" % result["generated_at_kst"],
         "FRED 최종갱신(시리즈별): %s" % ", ".join(updated),
-        "이 페이지는 GitHub Actions(econ-cockpit / liquidity-watch.yml)가 주 1회 자동 생성한 AI 초안이다.",
     ]
+    a = result.get("auctions") or {}
+    if a:
+        w = a.get("window") or {}
+        lines.append("부록 출처: %s%s" % (
+            a.get("source", "-"),
+            "" if a.get("status") == "failed" else
+            " / 입찰일 %s~%s 수집, %s" % (w.get("start", "-"), w.get("end", "-"),
+                                        a.get("fetched_at_kst", "-"))))
+        lines.append("부록 검증: %s" % (a.get("cross_check") or {}).get("method", "-"))
+    lines.append("이 페이지는 GitHub Actions(econ-cockpit / liquidity-watch.yml)가 "
+                 "주 1회 자동 생성한 AI 초안이다.")
+    return lines
 
 
 def caution_lines(result, cfg):
@@ -246,9 +354,13 @@ def build_body(result, cfg):
     blocks += [bullet(x) for x in crosscheck_lines(result, cfg)]
     blocks.append(heading(b["caution_heading"]))
     blocks += [bullet(x) for x in caution_lines(result, cfg)]
+    blocks += build_auction_blocks(result, cfg)  # 부록은 FRED 본체 뒤에 붙는다
     blocks.append(heading(b["source_heading"]))
     blocks += [bullet(x) for x in source_lines(result)]
     blocks.append(bookmark(result["source_url"]))
+    a = result.get("auctions") or {}
+    if a.get("source_url"):
+        blocks.append(bookmark(a["source_url"]))
     return blocks
 
 

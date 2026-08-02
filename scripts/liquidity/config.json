@@ -13,6 +13,97 @@
     "_ua_note": "FRED는 브라우저 User-Agent 위장 요청을 끊는다(HTTP/2 INTERNAL_ERROR·403 실측 2026-07-31). curl 기본 UA로만 요청한다 — 여기에 User-Agent를 추가하지 말 것."
   },
 
+  "treasurydirect": {
+    "_": "부록: 미 국채 입찰 결과. FRED와 달리 **단일 원천이라 이중 경로 대조가 불가능하다** — 교차검증 대신 스키마 엄격 검증(필수 필드 결측 행은 싣지 않고 사유를 남김)으로 대체하고, 본문에 '교차검증 불가'를 명시한다. 값 추정·보간 없음.",
+    "url": "https://www.treasurydirect.gov/TA_WS/securities/auctioned?format=json&days={days}",
+    "source_label": "TreasuryDirect 입찰결과 API(TA_WS/securities/auctioned) — API 키 불필요",
+    "source_url": "https://www.treasurydirect.gov/auctions/announcements-data-results/",
+    "timeout_seconds": 30,
+    "retries": 3,
+    "request_days": 10,
+    "window_days": 7,
+    "_window_note": "API에는 days=10으로 요청하고 코드가 입찰일 기준 최근 7일(양끝 포함)로 좁힌다. 경계일 입찰이 갱신 시차로 빠지는 것을 막는 여유분이다.",
+
+    "type_field": "securityType",
+    "term_field": "securityTerm",
+    "original_term_field": "originalSecurityTerm",
+    "date_field": "auctionDate",
+    "issue_date_field": "issueDate",
+    "cusip_field": "cusip",
+    "reopening_field": "reopening",
+    "btc_field": "bidToCoverRatio",
+    "accepted_field": "totalAccepted",
+
+    "required_fields": ["securityType", "securityTerm", "auctionDate", "bidToCoverRatio"],
+    "_required_note": "이 4개 + 유형별 낙찰 필드가 필수다. 하나라도 비면 그 행을 표에 싣지 않고 dropped에 사유를 남긴다(빈칸을 추정으로 채우지 않는다).",
+
+    "type_labels": {
+      "Bill": "재정증권(Bill)",
+      "Note": "중기채(Note)",
+      "Bond": "장기채(Bond)",
+      "CMB": "현금관리증권(CMB)"
+    },
+    "type_label_fallback": "{type}",
+    "flag_labels": {
+      "reopening": "재발행",
+      "tips": "TIPS",
+      "floatingRate": "FRN"
+    },
+    "reopening_origin_format": "원발행 {original}",
+    "_reopening_note": "재발행분은 securityTerm이 잔존만기(4-Week 등), originalSecurityTerm이 원발행만기(17-Week 등)다. 시장 호칭은 잔존만기 쪽이라 그것을 표제로 쓰고 원발행만기를 괄호에 병기한다(2026-08-02 실측).",
+
+    "yield_rules": [
+      {
+        "key": "frn",
+        "when": {"floatingRate": "Yes"},
+        "match_label": "변동금리채(FRN)",
+        "field": "highDiscountMargin",
+        "label": "최고 할인마진",
+        "decimals": 3,
+        "suffix": "%",
+        "note": "FRN은 낙찰 수익률이 아니라 지수금리 대비 할인마진으로 결정된다. highYield는 비어 있다(2026-07-29 2-Year FRN 실측)."
+      },
+      {
+        "key": "bill",
+        "when": {"securityType": "Bill"},
+        "match_label": "재정증권(Bill)",
+        "field": "highDiscountRate",
+        "label": "최고 할인율",
+        "decimals": 3,
+        "suffix": "%",
+        "extra_field": "highInvestmentRate",
+        "extra_label": "투자환산",
+        "extra_decimals": 3,
+        "note": "Bill은 할인 발행이라 highYield가 비어 있고 highDiscountRate가 낙찰 지표다(2026-08-02 실측). 채권 등가 비교용으로 highInvestmentRate(투자환산수익률)를 괄호에 병기한다 — 할인율과 투자환산수익률은 서로 다른 값이다."
+      },
+      {
+        "key": "tips",
+        "when": {"tips": "Yes"},
+        "match_label": "물가연동채(TIPS)",
+        "field": "highYield",
+        "label": "최고 실질수익률",
+        "decimals": 3,
+        "suffix": "%",
+        "note": "TIPS의 highYield는 명목이 아니라 실질수익률이다. 같은 열의 명목채 수익률과 직접 비교하면 안 된다."
+      },
+      {
+        "key": "nominal",
+        "when": {},
+        "match_label": "고정금리 Note·Bond",
+        "field": "highYield",
+        "label": "최고 낙찰수익률",
+        "decimals": 3,
+        "suffix": "%",
+        "note": "고정금리 Note·Bond는 highYield가 낙찰 수익률(stop-out yield)이다. 규칙이 위에서부터 순서대로 평가되므로 이 항목이 마지막(when={} = 전부 일치)이어야 한다."
+      }
+    ],
+
+    "btc_decimals": 2,
+    "accepted_divide_by": 1000000000,
+    "accepted_decimals": 1,
+    "accepted_unit": "십억 USD"
+  },
+
   "lookbacks": [
     {"key": "prev", "label": "직전 대비", "days": null,
      "basis": "직전 관측치. 주간계열은 1주 전, 일간계열은 1영업일 전이다."},
@@ -127,6 +218,26 @@
     ],
     "caution_future_obs": "관측일이 수집일보다 뒤인 시리즈가 있다 ({items}) — 정책금리(IORB)는 FRED가 앞선 날짜까지 값을 실어 준다. 비교 기준일이 모두 그 관측일에서 역산되므로 다른 시리즈와 시점이 어긋난다.",
     "anomaly_lead": "교차검증에서 불일치가 나왔다. 값을 싣지 않는다 — 아래는 불일치 내역뿐이다.",
-    "anomaly_heading": "교차검증 불일치 내역"
+    "anomaly_heading": "교차검증 불일치 내역",
+
+    "auction_heading": "국채 입찰 (지난 {window_days}일)",
+    "auction_claim_heading": "이 표의 주장",
+    "auction_table_headers": ["종목 (유형·만기)", "입찰일", "낙찰 지표", "값",
+                             "응찰배수 (bid-to-cover)", "총 낙찰액 (십억 USD)"],
+    "auction_claim_format": "입찰일 기준 {start}~{end}에 미 재무부가 발표한 입찰 결과는 {count}건이다 — {breakdown}. 응찰배수는 {btc_min}({btc_min_item}, {btc_min_date})에서 {btc_max}({btc_max_item}, {btc_max_date}) 사이였고, 총 낙찰액 합계는 {accepted_total}십억 달러다{accepted_partial}. 낙찰 지표는 종목 유형별로 정의가 달라 한 열에 있어도 같은 금리가 아니다({metric_kinds}). 이 표는 재무부가 발표한 입찰 결과값만 기술한다 — 수요 강약·시장 해석은 담지 않는다.",
+    "auction_accepted_partial_format": " (총 낙찰액이 비어 있는 {n}건은 합계에서 제외)",
+    "auction_empty_format": "입찰일 기준 {start}~{end}에 발표된 입찰 결과가 0건이다. 해당 주 입찰 없음 — 표를 만들지 않는다. (원천 응답은 정상 수신했고 {raw_count}건 중 이 기간에 해당하는 건이 없었다.)",
+    "auction_failed_format": "입찰 결과 수집에 실패했다 — {error}. 위 FRED 지표는 정상 수집·검증된 값이고, 이 부록만 비어 있다. 다음 실행에서 재수집한다.",
+    "auction_dropped_heading": "표에서 제외한 행",
+    "auction_dropped_lead": "스키마 검증에서 {n}건을 제외했다 — 필수 필드가 비어 값을 만들 수 없었다(추정·보간하지 않는다).",
+    "auction_metric_kind_format": "{match_label}={label}({field})",
+    "auction_breakdown_item_format": "{type_label} {n}건",
+    "auction_cautions": [
+      "단일 원천이라 교차검증을 하지 못했다 — TreasuryDirect API 한 곳에서만 받았고, FRED 계열처럼 별도 엔드포인트와 값을 대조하는 이중 경로가 없다. 대신 필수 필드가 빠진 행은 표에 싣지 않고 제외 사유를 남기는 스키마 검증으로 갈음했다.",
+      "낙찰 지표의 정의가 종목 유형별로 다르다 — {metric_kinds}. 한 열에 놓였다고 같은 정의의 금리가 아니며, 유형이 다른 행끼리 값을 직접 빼거나 평균하면 안 된다.",
+      "발표 시차가 있다 — 입찰 결과는 입찰 당일 미 동부시간 오후에 확정 발표된다. 수집 시각(KST) 기준 당일·전일 입찰분은 아직 반영되지 않았을 수 있다. 수집 창은 입찰일 기준 최근 {window_days}일(양끝 포함)이다.",
+      "발행일(issueDate)이 아니라 입찰일(auctionDate) 기준으로 묶었다. 결제는 며칠 뒤라 위 FRED 주간 유동성 지표(H.4.1 수요일 마감)와 같은 시점이 아니다.",
+      "총 낙찰액은 경쟁·비경쟁 입찰을 합한 낙찰 총액(totalAccepted)이며 발행예정액(offeringAmount)과 다르다."
+    ]
   }
 }

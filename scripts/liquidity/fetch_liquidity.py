@@ -11,6 +11,9 @@ Phase 0 시드(team-soyoung/scripts/fetch_liquidity_seed.py)를 econ-cockpit으�
   3. FRED 메타의 단위·주기 문자열을 config의 expected 값과 대조한다
      (원자료 단위가 백만↔십억으로 바뀌면 1,000배 오차가 조용히 난다 — 여기서 잡는다)
   4. 직전·4주·1년 전 대비 변동을 as-of 조회로 계산한다. 전방 참조·보간 없음
+  5. 부록으로 미 국채 입찰 결과(TreasuryDirect)를 붙인다 → result["auctions"].
+     **격리돼 있다** — 입찰 수집이 실패해도 위 1~4는 그대로 나가고 부록만 'failed'로 남는다.
+     입찰은 단일 원천이라 교차검증이 불가능해 스키마 엄격 검증으로 갈음한다(fetch_auctions.py)
 
 함정 (Phase 0에서 실측으로 확정)
   ① 1년 전은 365일이 아니라 **364일(=52주)**. 주간계열이 같은 요일에 착지해야
@@ -56,7 +59,8 @@ _MEM: dict[str, bytes] = {}
 
 # ---------------------------------------------------------------- 설정
 
-REQUIRED_TOP = ["fred", "lookbacks", "range_window_days", "series", "derived", "notion", "body"]
+REQUIRED_TOP = ["fred", "treasurydirect", "lookbacks", "range_window_days", "series",
+                "derived", "notion", "body"]
 REQUIRED_SERIES = ["id", "label", "expected_units", "expected_frequency", "display"]
 REQUIRED_DISPLAY = ["unit", "divide_by", "decimals"]
 
@@ -313,6 +317,19 @@ def collect(cfg, cache_dir=None):
     basis = cfg["notion"]["title_basis_series"]
     result["basis_series"] = basis
     result["basis_date"] = result["series"][basis].get("latest_date")
+
+    # 부록: 미 국채 입찰 결과(TreasuryDirect).
+    # **격리한다** — 입찰 수집이 실패해도 위 FRED 본체는 그대로 나간다.
+    # 부록이 본체를 인질로 잡지 않는다. 대신 조용히 비우지도 않는다:
+    # 실패 사실을 auctions.status='failed'로 남겨 본문에 문장으로 찍히게 한다.
+    # 스키마 검증에서 제외한 행도 mismatches에는 넣지 않는다 —
+    # mismatches는 'FRED 값을 싣지 말라'는 신호라 입찰 결측이 본체를 데이터 이상으로 만들면 안 된다.
+    from fetch_auctions import collect_auctions, failed_auctions  # 순환 import 회피(지연 로드)
+    try:
+        result["auctions"] = collect_auctions(cfg, cache_dir)
+    except Exception as exc:  # noqa: BLE001 — 어떤 실패도 본체를 죽이지 않는다
+        result["auctions"] = failed_auctions(cfg, exc)
+        print("입찰 부록 수집 실패(본체는 계속): %s" % exc, file=sys.stderr)
     return result
 
 
@@ -340,6 +357,10 @@ def print_table(result, cfg):
         if rg:
             print("  최근 %d일 레인지: %s ~ %s (%d관측, 기준 %s)"
                   % (rg["days"], fmt(rg["min"], d), fmt(rg["max"], d), rg["n"], rg["date"]))
+    if result.get("auctions"):
+        from fetch_auctions import print_auctions  # 지연 로드
+        print("\n[부록] 미 국채 입찰 — 단일 원천, 교차검증 불가")
+        print_auctions(result["auctions"])
 
 
 def main():
