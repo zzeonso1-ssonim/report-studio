@@ -29,7 +29,7 @@ export const models: ModelLink[] = [
     id: "gdp-nowcast",
     name: "GDP 나우캐스트",
     description: "분기 실질 GDP 나우캐스팅",
-    url: "https://gdp-nowcast.vercel.app",
+    url: "https://gdp-nowcast-web.vercel.app",
     kind: "web",
   },
   {
