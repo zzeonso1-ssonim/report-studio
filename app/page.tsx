@@ -26,6 +26,8 @@ interface IndicatorMeta {
   origin: string;
   source: string;
   verified: boolean;
+  /** false면 주요지표 체크리스트에 상시 노출하지 않는 지표 (챗 전용) */
+  featured: boolean;
 }
 
 interface SeriesResponse {
@@ -822,7 +824,7 @@ export default function Home() {
           주요 지표
         </h3>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {meta.map((m) => (
+          {meta.filter((m) => m.featured).map((m) => (
             <label
               key={m.id}
               className="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm"
@@ -919,6 +921,38 @@ export default function Home() {
             ECOS · KOSIS · FRED 조회 중 ({searchElapsed}초) — 최대{" "}
             {seconds(CLIENT_TIMEOUT_MS)}초까지 기다립니다
           </p>
+        )}
+
+        {/* 챗 질의가 선택한 비노출 지표 — 보이지 않는 채로 다음 조회에 끼지 않도록
+            반드시 여기서 드러내고 제거할 수 있게 한다 */}
+        {selected.some((id) => meta.find((m) => m.id === id)?.featured === false) && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {selected
+              .filter((id) => meta.find((m) => m.id === id)?.featured === false)
+              .map((id) => (
+                <span
+                  key={id}
+                  className="flex items-center gap-1.5 rounded-lg border border-dashed px-2.5 py-1.5 text-xs"
+                  style={{ borderColor: "var(--primary)", background: "var(--primary-soft)" }}
+                >
+                  <span
+                    className="rounded px-1 py-0.5 font-semibold"
+                    style={{ background: "var(--surface)", color: "var(--primary)" }}
+                  >
+                    질의 선택
+                  </span>
+                  <span>{meta.find((m) => m.id === id)?.name ?? id}</span>
+                  <button
+                    onClick={() => setSelected((prev) => prev.filter((x) => x !== id))}
+                    aria-label={`${meta.find((m) => m.id === id)?.name ?? id} 제거`}
+                    className="ml-0.5 font-bold"
+                    style={{ color: "var(--muted)" }}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+          </div>
         )}
 
         {/* 검색 추가분 (선택됨) */}
