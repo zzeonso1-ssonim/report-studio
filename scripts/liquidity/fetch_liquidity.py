@@ -10,14 +10,25 @@ Phase 0 시드(team-soyoung/scripts/fetch_liquidity_seed.py)를 econ-cockpit으�
   2. 같은 시리즈를 fredgraph.xls(별도 엔드포인트)로 한 번 더 받아 최근 N개 관측치를 대조한다
   3. FRED 메타의 단위·주기 문자열을 config의 expected 값과 대조한다
      (원자료 단위가 백만↔십억으로 바뀌면 1,000배 오차가 조용히 난다 — 여기서 잡는다)
-  4. 직전·4주·1년 전 대비 변동을 as-of 조회로 계산한다. 전방 참조·보간 없음
-  5. 부록으로 미 국채 입찰 결과(TreasuryDirect)를 붙인다 → result["auctions"].
-     **격리돼 있다** — 입찰 수집이 실패해도 위 1~4는 그대로 나가고 부록만 'failed'로 남는다.
+  4. 1주·4주·13주·52주 전 대비 변동을 as-of 조회로 계산한다. 전방 참조·보간 없음
+  5. **요인 분해(v2)**: Δ지준 ≈ Δ연준 신용자산 − ΔTGA − Δ역RP − Δ유통통화 − Δ기타.
+     H.4.1 주간평균 계열로 계산하고 **항등식 잔차를 3차 교차검증으로 쓴다** →
+     result["factors"]. '기타'는 잔차 흡수 항목이 아니라 실제 FRED 계열의 합이고,
+     잔차는 별도 항목으로 값을 그대로 남긴다(은폐 금지)
+  6. **헤드라인 기계 판정(v2)**: 지준 주간 증감의 부호·임계로 공급/흡수/중립을 분류하고
+     주도 요인을 요인 분해에서 |Δ| 최대 항목으로 고른다 → result["headline"].
+     시장 함의·금리 방향은 담지 않는다(규칙 문장도 config에 있다)
+  7. 부록으로 미 국채 입찰 결과(TreasuryDirect)를 붙인다 → result["auctions"].
+     **격리돼 있다** — 입찰 수집이 실패해도 위 1~6은 그대로 나가고 부록만 'failed'로 남는다.
      입찰은 단일 원천이라 교차검증이 불가능해 스키마 엄격 검증으로 갈음한다(fetch_auctions.py)
 
 함정 (Phase 0에서 실측으로 확정)
-  ① 1년 전은 365일이 아니라 **364일(=52주)**. 주간계열이 같은 요일에 착지해야
-     연준 H.4.1의 'Change from year ago'와 일치한다 (config.lookbacks에 기록)
+  ① 52주 전은 365일이 아니라 **364일(=52주)**. 주간계열이 같은 요일에 착지해야
+     연준 H.4.1의 'Change from year ago'와 일치한다. 13주도 90일이 아니라 91일
+     (같은 정렬 원칙) — config.lookbacks에 기록
+  ①-b **시점 정의가 두 가지 섞여 있다.** WRESBAL·WTREGEN·WCURCIR은 수요일 마감 주평균,
+     WALCL·TREAST·WSHOMCB·WLCFLL은 수요일 잔액이다. 요인 분해는 **주평균 계열로만**
+     구성했다 — 잔액 계열을 섞으면 항등식이 닫히지 않는다(2026-08-02 실측)
   ② WRESBAL·WTREGEN은 **주 평균이지 잔액이 아니다**. 일간 계열과 직접 가감 금지
      (계산하지 않고, 노션 본문 '데이터 주의'에 매번 명시한다)
   ③ FRED는 **브라우저 UA 위장 요청을 끊는다**(HTTP/2 INTERNAL_ERROR·403 실측).
@@ -60,9 +71,10 @@ _MEM: dict[str, bytes] = {}
 # ---------------------------------------------------------------- 설정
 
 REQUIRED_TOP = ["fred", "treasurydirect", "lookbacks", "range_window_days", "series",
-                "derived", "notion", "body"]
-REQUIRED_SERIES = ["id", "label", "expected_units", "expected_frequency", "display"]
+                "derived", "headline", "signal_board", "factors", "charts", "notion", "body"]
+REQUIRED_SERIES = ["id", "label", "gloss", "expected_units", "expected_frequency", "display"]
 REQUIRED_DISPLAY = ["unit", "divide_by", "decimals"]
+REQUIRED_DERIVED = ["id", "label", "gloss", "minuend", "subtrahend", "multiplier", "display"]
 
 
 def load_config(path=None):
@@ -100,16 +112,136 @@ def validate_config(cfg, path="<config>"):
         if not isinstance(lb["days"], int) or lb["days"] <= 0:
             raise RuntimeError("config.lookbacks[%s].days는 양의 정수여야 한다: %r"
                                % (lb["key"], lb["days"]))
-    der = cfg["derived"]
-    for k in ("id", "label", "minuend", "subtrahend", "multiplier", "display"):
-        if k not in der:
-            raise RuntimeError("config.derived에 %r가 없다" % k)
-    for k in ("minuend", "subtrahend"):
-        if der[k] not in ids:
-            raise RuntimeError("config.derived.%s=%r가 config.series에 없다" % (k, der[k]))
+    if not isinstance(cfg["derived"], list) or not cfg["derived"]:
+        raise RuntimeError("config.derived는 비어 있지 않은 리스트여야 한다 (v2에서 단일 객체 → 리스트로 바뀌었다)")
+    derived_ids = set()
+    for der in cfg["derived"]:
+        for k in REQUIRED_DERIVED:
+            if k not in der:
+                raise RuntimeError("config.derived[%s]에 %r가 없다" % (der.get("id", "?"), k))
+        if der["id"] in ids or der["id"] in derived_ids:
+            raise RuntimeError("config.derived에 id가 중복된다: %r" % der["id"])
+        derived_ids.add(der["id"])
+        for k in ("minuend", "subtrahend"):
+            if der[k] not in ids:
+                raise RuntimeError("config.derived[%s].%s=%r가 config.series에 없다"
+                                   % (der["id"], k, der[k]))
     if cfg["notion"]["title_basis_series"] not in ids:
         raise RuntimeError("config.notion.title_basis_series=%r가 config.series에 없다"
                            % cfg["notion"]["title_basis_series"])
+
+    # 표 헤더와 lookback 개수가 어긋나면 열이 밀린다. 조용히 밀리는 대신 여기서 터뜨린다.
+    want_cols = 4 + len(cfg["lookbacks"])
+    got_cols = len(cfg["body"]["table_headers"])
+    if got_cols != want_cols:
+        raise RuntimeError("config.body.table_headers가 %d열인데 lookbacks %d개면 %d열이어야 한다"
+                           % (got_cols, len(cfg["lookbacks"]), want_cols))
+
+    lb_keys = {lb["key"] for lb in cfg["lookbacks"]}
+    validate_factors(cfg, ids, lb_keys, path)
+    validate_headline(cfg, ids, lb_keys, path)
+    validate_signal_board(cfg, ids | derived_ids, path)
+    validate_charts(cfg, ids | derived_ids, path)
+    return cfg
+
+
+def validate_factors(cfg, ids, lb_keys, path="<config>"):
+    """요인 분해 설정. **구성 계열이 실재하는지**와 부호가 ±1인지 강제한다."""
+    fc = cfg["factors"]
+    for k in ("heading", "target", "lookback", "divide_by", "decimals", "items",
+              "residual_threshold", "history_weeks", "claim_format", "headers"):
+        if k not in fc:
+            raise RuntimeError("config.factors에 %r가 없다 (%s)" % (k, path))
+    if fc["target"] not in ids:
+        raise RuntimeError("config.factors.target=%r가 config.series에 없다" % fc["target"])
+    if fc["lookback"] not in lb_keys:
+        raise RuntimeError("config.factors.lookback=%r가 config.lookbacks에 없다" % fc["lookback"])
+    if not fc["items"]:
+        raise RuntimeError("config.factors.items가 비었다 — 분해할 요인이 없다")
+    seen = set()
+    for it in fc["items"]:
+        for k in ("key", "label", "components", "sign_kind", "gloss"):
+            if k not in it:
+                raise RuntimeError("config.factors.items[%s]에 %r가 없다" % (it.get("key", "?"), k))
+        if it["key"] in seen:
+            raise RuntimeError("config.factors.items에 key가 중복된다: %r" % it["key"])
+        seen.add(it["key"])
+        if it["sign_kind"] not in fc.get("sign_kinds", {}):
+            raise RuntimeError("config.factors.items[%s].sign_kind=%r가 sign_kinds에 없다"
+                               % (it["key"], it["sign_kind"]))
+        if not it["components"]:
+            raise RuntimeError("config.factors.items[%s].components가 비었다" % it["key"])
+        for c in it["components"]:
+            if c.get("id") not in ids:
+                raise RuntimeError("config.factors.items[%s]의 계열 %r이 config.series에 없다 "
+                                   "— 요인은 실제 계열이어야 한다(잔차 흡수 금지)"
+                                   % (it["key"], c.get("id")))
+            if c.get("sign") not in (1, -1):
+                raise RuntimeError("config.factors.items[%s].components[%s].sign은 1 또는 -1이어야 한다: %r"
+                                   % (it["key"], c.get("id"), c.get("sign")))
+    return cfg
+
+
+def validate_headline(cfg, ids, lb_keys, path="<config>"):
+    h = cfg["headline"]
+    for k in ("series", "lookback", "divide_by", "decimals", "neutral_threshold",
+              "verdicts", "format", "rule_line", "unavailable"):
+        if k not in h:
+            raise RuntimeError("config.headline에 %r가 없다 (%s)" % (k, path))
+    if h["series"] not in ids:
+        raise RuntimeError("config.headline.series=%r가 config.series에 없다" % h["series"])
+    if h["lookback"] not in lb_keys:
+        raise RuntimeError("config.headline.lookback=%r가 config.lookbacks에 없다" % h["lookback"])
+    for k in ("supply", "absorb", "neutral"):
+        if k not in h["verdicts"]:
+            raise RuntimeError("config.headline.verdicts에 %r가 없다" % k)
+    if h["neutral_threshold"] < 0:
+        raise RuntimeError("config.headline.neutral_threshold는 음수가 될 수 없다: %r"
+                           % h["neutral_threshold"])
+    return cfg
+
+
+def validate_signal_board(cfg, all_ids, path="<config>"):
+    sb = cfg["signal_board"]
+    for k in ("heading", "headers", "pending", "rows", "cautions", "claim_format"):
+        if k not in sb:
+            raise RuntimeError("config.signal_board에 %r가 없다 (%s)" % (k, path))
+    if not sb["rows"]:
+        raise RuntimeError("config.signal_board.rows가 비었다")
+    for r in sb["rows"]:
+        if r.get("id") not in all_ids:
+            raise RuntimeError("config.signal_board.rows의 %r가 series에도 derived에도 없다"
+                               % r.get("id"))
+        if not r.get("read_rule"):
+            raise RuntimeError("config.signal_board.rows[%s].read_rule이 비었다" % r["id"])
+    return cfg
+
+
+def validate_charts(cfg, all_ids, path="<config>"):
+    """차트는 실패해도 본문을 막지 않지만, **설정 오타는 여기서 잡는다**(런타임에 조용히 죽지 않게)."""
+    ch = cfg["charts"]
+    for k in ("enabled", "items", "dpi", "figsize", "failure_format", "caption_format"):
+        if k not in ch:
+            raise RuntimeError("config.charts에 %r가 없다 (%s)" % (k, path))
+    factor_keys = {it["key"] for it in cfg["factors"]["items"]}
+    for it in ch["items"]:
+        for k in ("key", "kind", "title_en", "ylabel_en", "claim", "note"):
+            if k not in it:
+                raise RuntimeError("config.charts.items[%s]에 %r가 없다" % (it.get("key", "?"), k))
+        if it["kind"] == "levels":
+            for s in it["series"]:
+                if s["id"] not in all_ids:
+                    raise RuntimeError("charts[%s]의 계열 %r이 없다" % (it["key"], s["id"]))
+        elif it["kind"] == "spread":
+            if it.get("id") not in all_ids:
+                raise RuntimeError("charts[%s].id=%r가 없다" % (it["key"], it.get("id")))
+        elif it["kind"] == "factor_stack":
+            missing = (factor_keys | {"residual", "target"}) - set(it.get("labels_en") or {})
+            if missing:
+                raise RuntimeError("charts[%s].labels_en에 %s가 없다 — 범례가 비면 그림이 읽히지 않는다"
+                                   % (it["key"], ", ".join(sorted(missing))))
+        elif it["kind"] != "auction_btc":
+            raise RuntimeError("charts[%s].kind를 모른다: %r" % (it["key"], it["kind"]))
     return cfg
 
 
@@ -248,6 +380,110 @@ def build_derived(data, der):
     return [(d, round((v - sub[d]) * mul, nd)) for d, v in data[der["minuend"]] if d in sub]
 
 
+# ------------------------------------------------- 요인 분해 (v2)
+
+def compute_factors(data, cfg):
+    """Δ지준을 H.4.1 주간평균 요인으로 분해한다.
+
+    설계 원칙 셋 — 어기면 숫자가 조용히 틀린다.
+      ① **공통 관측일에서만** 계산한다. 한 계열이라도 그 주를 빠뜨리면 그 주는 통째로 건너뛴다
+         (없는 주를 앞 값으로 메우면 변동이 0으로 위조된다)
+      ② **'기타'는 실제 계열의 합이다.** 잔차를 여기에 흡수시키지 않는다
+      ③ **잔차는 별도로 남긴다.** 임계를 넘어도 값을 숨기지 않고, 넘었다는 사실을 함께 싣는다
+         (잔차 = 실제 Δ지준 − 요인 합. 항등식이 닫히는지가 3차 교차검증이다)
+
+    반환: {"status": "ok", "items": [...], "residual": ..., "history": [...]} 또는
+          {"status": "unavailable", "reason": ...}
+    """
+    fc = cfg["factors"]
+    div, nd = fc["divide_by"], fc["decimals"]
+    target = fc["target"]
+    ids = sorted({c["id"] for it in fc["items"] for c in it["components"]} | {target})
+
+    maps = {}
+    for sid in ids:
+        if sid not in data or not data[sid]:
+            return {"status": "unavailable",
+                    "reason": "요인 계열 %s를 수집하지 못했다" % sid, "items": [], "history": []}
+        maps[sid] = dict(data[sid])
+    common = sorted(set.intersection(*(set(m) for m in maps.values())))
+    if len(common) < 2:
+        return {"status": "unavailable",
+                "reason": "요인 계열들의 공통 관측일이 %d개뿐이라 주간 변동을 만들 수 없다" % len(common),
+                "items": [], "history": []}
+
+    def week(cur, prev):
+        """한 주치 분해. 값은 표시 단위(십억 달러)로 환산해 담는다."""
+        out, total = [], 0.0
+        for it in fc["items"]:
+            comps, delta = [], 0.0
+            for c in it["components"]:
+                d = c["sign"] * (maps[c["id"]][cur] - maps[c["id"]][prev]) / div
+                comps.append({"id": c["id"], "sign": c["sign"], "delta": round(d, nd)})
+                delta += d
+            total += delta
+            out.append({"key": it["key"], "label": it["label"], "gloss": it["gloss"],
+                        "sign_kind": it["sign_kind"], "delta": round(delta, nd),
+                        "components": comps})
+        tgt = (maps[target][cur] - maps[target][prev]) / div
+        return {"date": cur.isoformat(), "prev_date": prev.isoformat(),
+                "items": out, "sum": round(total, nd), "target_delta": round(tgt, nd),
+                "residual": round(tgt - total, nd)}
+
+    hist = [week(common[i], common[i - 1])
+            for i in range(max(1, len(common) - fc["history_weeks"]), len(common))]
+    last = hist[-1]
+    thr = fc["residual_threshold"]
+    driver = max(last["items"], key=lambda x: abs(x["delta"]))
+    return {
+        "status": "ok",
+        "target": target, "unit": fc["unit"], "decimals": nd,
+        "basis_date": last["date"], "prev_date": last["prev_date"],
+        "items": last["items"], "sum": last["sum"], "target_delta": last["target_delta"],
+        "residual": last["residual"],
+        "residual_threshold": thr,
+        "residual_ok": abs(last["residual"]) <= thr,
+        "driver": {"key": driver["key"], "label": driver["label"], "delta": driver["delta"]},
+        "history": hist,
+        "identity_note": "잔차 = 실제 Δ지준 − 요인 합. 이 값이 임계 이내인지가 3차 교차검증이다.",
+    }
+
+
+def compute_headline(result, cfg):
+    """구획① 기계 판정. **분류만 한다** — 시장 함의·금리 방향은 만들지 않는다."""
+    h = cfg["headline"]
+    ser = result["series"].get(h["series"]) or {}
+    ref = ser.get(h["lookback"])
+    if not ref or ref.get("delta") is None:
+        return {"status": "unavailable", "text": h["unavailable"],
+                "rule": h["rule_line"].format(threshold=h["neutral_threshold"],
+                                              threshold_unit=h["threshold_unit"])}
+    delta = ref["delta"] / h["divide_by"]
+    thr = h["neutral_threshold"]
+    key = "supply" if delta > thr else "absorb" if delta < -thr else "neutral"
+    verdict = h["verdicts"][key]
+
+    fac = result.get("factors") or {}
+    if fac.get("status") == "ok" and fac.get("driver"):
+        d = fac["driver"]
+        text = h["format"].format(verdict=verdict, driver=d["label"],
+                                  driver_delta="{:+,.{n}f}".format(d["delta"], n=h["decimals"]))
+    else:
+        text = h["format_no_driver"].format(
+            verdict=verdict, reason=fac.get("reason") or "요인 분해 미산출")
+    return {
+        "status": "ok", "verdict_key": key, "verdict": verdict,
+        "delta": round(delta, h["decimals"]),
+        "basis_date": ser.get("latest_date"), "prev_date": ref.get("date"),
+        "threshold": thr,
+        "text": text,
+        "rule": h["rule_line"].format(threshold=thr, threshold_unit=h["threshold_unit"]),
+        "detail": h["detail_format"].format(
+            delta="{:+,.{n}f}".format(delta, n=h["decimals"]),
+            prev_date=ref.get("date"), basis_date=ser.get("latest_date")),
+    }
+
+
 # ---------------------------------------------------------------- 표시
 
 def fmt(value, display, signed=False):
@@ -297,26 +533,48 @@ def collect(cfg, cache_dir=None):
         "lookbacks": cfg["lookbacks"],
         "mismatches": mismatches,
         "series": {},
-        "order": [s["id"] for s in cfg["series"]] + [cfg["derived"]["id"]],
+        "order": [s["id"] for s in cfg["series"]] + [d["id"] for d in cfg["derived"]],
+        # in_table=false인 요인 전용 계열은 잔액 표에서 뺀다(표가 20행이 되면 읽히지 않는다).
+        "table_order": [s["id"] for s in cfg["series"] if s.get("in_table", True)]
+                       + [d["id"] for d in cfg["derived"]],
     }
     for s in cfg["series"]:
         result["series"][s["id"]] = {
-            "label": s["label"], "display": s["display"], "note": s.get("note", ""),
+            "label": s["label"], "gloss": s.get("gloss", ""), "display": s["display"],
+            "note": s.get("note", ""), "in_table": s.get("in_table", True),
             "meta": meta[s["id"]], **summarize(data[s["id"]], cfg),
         }
-    der = cfg["derived"]
-    spread = build_derived(data, der)
-    result["series"][der["id"]] = {
-        "label": der["label"], "display": der["display"], "note": der.get("note", ""),
-        "meta": {"units": der["display"]["unit"], "frequency": "Daily",
-                 "description": "%s - %s, 두 시리즈 공통 관측일에서만 계산"
-                                % (der["minuend"], der["subtrahend"]),
-                 "data_updated": ""},
-        **summarize(spread, cfg),
-    }
+    for der in cfg["derived"]:
+        spread = build_derived(data, der)
+        data[der["id"]] = spread  # 차트가 파생 계열도 그린다
+        result["series"][der["id"]] = {
+            "label": der["label"], "gloss": der.get("gloss", ""), "display": der["display"],
+            "note": der.get("note", ""), "in_table": True,
+            "meta": {"units": der["display"]["unit"], "frequency": "Daily",
+                     "description": "%s - %s, 두 시리즈 공통 관측일에서만 계산"
+                                    % (der["minuend"], der["subtrahend"]),
+                     "data_updated": ""},
+            **summarize(spread, cfg),
+        }
     basis = cfg["notion"]["title_basis_series"]
     result["basis_series"] = basis
     result["basis_date"] = result["series"][basis].get("latest_date")
+
+    # 요인 분해 → 헤드라인 순서다(헤드라인의 '주도 요인'이 분해 결과를 참조한다).
+    result["factors"] = compute_factors(data, cfg)
+    result["headline"] = compute_headline(result, cfg)
+
+    # 차트 원자료: 노션 적재 단계(post_briefing)가 그림을 그릴 수 있게 관측치를 실어 보낸다.
+    # 여기서 그리지 않는 이유 — matplotlib을 수집 경로에 끌어들이면 라이브러리가 없는 환경에서
+    # 표까지 못 만든다. 수집은 표준 라이브러리만으로 끝난다.
+    # **필요한 기간만 잘라 담는다.** 전체 이력(일간 6,500관측 × 20계열)을 실으면 스냅샷이
+    # 수 MB로 불어나 아티팩트·로그가 무거워진다. 자르는 기준은 차트 설정에서 파생한다.
+    span = max([int(round(it.get("years", 0) * 366)) for it in cfg["charts"]["items"]] + [0])
+    cutoff = date.today() - timedelta(days=span + 30) if span else None
+    result["observations_window_days"] = span
+    result["observations"] = {
+        sid: [[d.isoformat(), v] for d, v in obs if cutoff is None or d >= cutoff]
+        for sid, obs in data.items()}
 
     # 부록: 미 국채 입찰 결과(TreasuryDirect).
     # **격리한다** — 입찰 수집이 실패해도 위 FRED 본체는 그대로 나간다.
@@ -324,12 +582,20 @@ def collect(cfg, cache_dir=None):
     # 실패 사실을 auctions.status='failed'로 남겨 본문에 문장으로 찍히게 한다.
     # 스키마 검증에서 제외한 행도 mismatches에는 넣지 않는다 —
     # mismatches는 'FRED 값을 싣지 말라'는 신호라 입찰 결측이 본체를 데이터 이상으로 만들면 안 된다.
-    from fetch_auctions import collect_auctions, failed_auctions  # 순환 import 회피(지연 로드)
+    from fetch_auctions import (collect_auction_history, collect_auctions,  # 지연 로드
+                                failed_auctions)
     try:
         result["auctions"] = collect_auctions(cfg, cache_dir)
     except Exception as exc:  # noqa: BLE001 — 어떤 실패도 본체를 죽이지 않는다
         result["auctions"] = failed_auctions(cfg, exc)
         print("입찰 부록 수집 실패(본체는 계속): %s" % exc, file=sys.stderr)
+
+    # 차트④ 전용 장기 이력. 이것 역시 격리한다 — 실패하면 차트 한 장만 빠진다.
+    try:
+        result["auction_history"] = collect_auction_history(cfg, cache_dir)
+    except Exception as exc:  # noqa: BLE001
+        result["auction_history"] = {"status": "failed", "error": str(exc)[:400], "rows": []}
+        print("입찰 이력(차트용) 수집 실패(본체는 계속): %s" % exc, file=sys.stderr)
     return result
 
 
@@ -340,7 +606,31 @@ def print_table(result, cfg):
             print("   ", m, file=sys.stderr)
     print("수집: %s / 기준(%s 최신 관측일): %s"
           % (result["generated_at_kst"], result["basis_series"], result["basis_date"]))
-    for sid in result["order"]:
+
+    h = result.get("headline") or {}
+    if h:
+        print("\n=== %s ===" % h.get("text", "-"))
+        print("  %s" % h.get("rule", ""))
+        if h.get("detail"):
+            print("  %s" % h["detail"])
+
+    f = result.get("factors") or {}
+    if f.get("status") == "ok":
+        print("\n[요인 분해] %s → %s (%s)" % (f["prev_date"], f["basis_date"], f["unit"]))
+        for it in f["items"]:
+            print("  %-16s %+8.1f   [%s]" % (
+                it["label"], it["delta"],
+                ", ".join("%s%s" % (c["id"], "+" if c["sign"] > 0 else "-")
+                          for c in it["components"])))
+        print("  %-16s %+8.1f" % ("요인 합", f["sum"]))
+        print("  %-16s %+8.1f" % ("실제 Δ지준", f["target_delta"]))
+        print("  %-16s %+8.2f  (임계 ±%.1f, %s)" % (
+            "항등식 잔차", f["residual"], f["residual_threshold"],
+            "이내" if f["residual_ok"] else "!! 초과 — 분해 검증 실패"))
+    elif f:
+        print("\n[요인 분해] 산출 불가 — %s" % f.get("reason"))
+
+    for sid in result["table_order"]:
         r = result["series"][sid]
         if r.get("latest") is None:
             print("%s: 미수집" % sid)

@@ -268,6 +268,55 @@ def collect_auctions(cfg, cache_dir=None, today=None):
     }
 
 
+def collect_auction_history(cfg, cache_dir=None, today=None):
+    """차트④ 전용 — 더 긴 창(chart_request_days)의 입찰 이력.
+
+    **본문 부록과 별개의 호출이다.** 부록(window_days=7)의 값을 건드리지 않는다 —
+    같은 표를 두 기준으로 만들면 어느 쪽이 맞는지 알 수 없게 된다.
+    여기서는 차트에 필요한 최소 필드(입찰일·유형·응찰배수)만 검증한다:
+    낙찰 지표는 그리지 않으므로 유형별 낙찰 필드 결측을 이유로 행을 버리지 않는다.
+    """
+    validate_auction_config(cfg)
+    t = cfg["treasurydirect"]
+    kst = timezone(timedelta(hours=cfg["notion"]["timezone_offset_hours"]))
+    now = datetime.now(timezone.utc)
+    end = today or now.astimezone(kst).date()
+    start = end - timedelta(weeks=t["chart_weeks"])
+
+    raw = _get(t["url"].format(days=t["chart_request_days"]), t, cache_dir)
+    records = json.loads(raw.decode("utf-8"))
+    if not isinstance(records, list):
+        raise RuntimeError("TreasuryDirect 이력 응답이 배열이 아니다: %s" % type(records).__name__)
+
+    rows, dropped = [], []
+    for rec in records:
+        if not isinstance(rec, dict):
+            continue
+        adate = _date(rec, t["date_field"])
+        btc = _num(rec, t["btc_field"])
+        stype = _s(rec, t["type_field"])
+        if adate is None or btc is None or not stype:
+            dropped.append("%s / %s — 차트 필수 필드(입찰일·유형·응찰배수) 결측"
+                           % (_s(rec, t["cusip_field"]) or "CUSIP 결측",
+                              _s(rec, t["date_field"])[:10] or "입찰일 결측"))
+            continue
+        if not (start <= adate <= end):
+            continue
+        rows.append({"auction_date": adate.isoformat(), "type": stype,
+                     "term": _s(rec, t["term_field"]), "btc": btc})
+    rows.sort(key=lambda r: (r["auction_date"], r["type"], r["term"]))
+    return {
+        "status": "ok" if rows else "empty",
+        "window": {"start": start.isoformat(), "end": end.isoformat(),
+                   "weeks": t["chart_weeks"], "requested_days": t["chart_request_days"]},
+        "raw_count": len(records), "count": len(rows),
+        "rows": rows, "dropped": dropped,
+        "_note": "차트 전용. 본문 부록(입찰일 최근 %d일)과 별개 호출이며 부록 값을 바꾸지 않는다."
+                 % t["window_days"],
+        "error": None,
+    }
+
+
 def failed_auctions(cfg, error):
     """수집 실패 자리표시자. 조용히 비우지 않고 실패 사실을 데이터로 남긴다."""
     t = cfg.get("treasurydirect") or {}

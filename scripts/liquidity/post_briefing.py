@@ -45,6 +45,7 @@ from datetime import datetime, timedelta, timezone
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from fetch_liquidity import fmt, load_config  # noqa: E402
+from notion_upload import image_block, upload_image  # noqa: E402
 
 NOTION_API = "https://api.notion.com/v1"
 RICH_TEXT_CHUNK = 1900
@@ -99,12 +100,58 @@ class Notion:
                 return out
             payload["start_cursor"] = res["next_cursor"]
 
+    def request_absolute(self, method, url, body, content_type, timeout=120):
+        """절대 URL + 미리 만든 본문. 파일 업로드(multipart)용 — JSON 직렬화를 타지 않는다."""
+        req = urllib.request.Request(url, data=body, method=method, headers={
+            "Authorization": "Bearer " + self.token,
+            "Notion-Version": self.version,
+            "Content-Type": content_type,
+        })
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                raw = resp.read().decode("utf-8")
+                return json.loads(raw) if raw else {}
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", "replace")
+            raise NotionError("Notion HTTP %s %s %s: %s" % (exc.code, method, url, detail[:1200]))
+
     def create_page(self, ds_id, properties, children=None):
         payload = {"parent": {"type": "data_source_id", "data_source_id": ds_id},
                    "properties": properties}
         if children:
             payload["children"] = children[:100]
         return self.request("POST", "/pages", payload)
+
+    def append_blocks(self, page_id, children):
+        """블록 append. 노션은 한 번에 100개까지만 받으므로 나눠 보낸다."""
+        out = []
+        for i in range(0, len(children), 100):
+            out.append(self.request("PATCH", "/blocks/%s/children" % page_id,
+                                    {"children": children[i:i + 100]}))
+        return out
+
+    def list_children(self, page_id):
+        blocks, cursor = [], None
+        while True:
+            path = "/blocks/%s/children?page_size=100" % page_id
+            if cursor:
+                path += "&start_cursor=" + cursor
+            res = self.request("GET", path)
+            blocks += res.get("results", [])
+            if not res.get("has_more") or not res.get("next_cursor"):
+                return blocks
+            cursor = res["next_cursor"]
+
+    def has_heading(self, page_id, text):
+        """같은 제목의 heading이 이미 있나 — 프로브 멱등성의 근거다."""
+        for b in self.list_children(page_id):
+            t = b.get("type", "")
+            if not t.startswith("heading_"):
+                continue
+            got = "".join(seg.get("plain_text", "") for seg in b[t].get("rich_text", []))
+            if got.strip() == text.strip():
+                return True
+        return False
 
 
 # ---------------------------------------------------------------- 블록 헬퍼
@@ -177,23 +224,151 @@ def claim_values(result, cfg):
 
 
 def snapshot_rows(result, cfg):
-    """스냅샷 표 행. 비교값에는 반드시 비교 기준일을 병기한다(기준일 없는 숫자 금지)."""
+    """잔액 표 행. 비교값에는 반드시 비교 기준일을 병기한다(기준일 없는 숫자 금지).
+
+    지표명 칸에는 괄호 해설(gloss)을 붙인다 — 이 페이지는 사외까지 나갈 수 있고,
+    'WRESBAL'만 적혀 있으면 읽는 사람이 무엇인지 알 수 없다. 해설 문구는 전부 config에 있다.
+    """
+    b = cfg["body"]
     rows = []
-    for sid in result["order"]:
+    for sid in result.get("table_order") or result["order"]:
         r = result["series"][sid]
         d = r["display"]
+        name = (b["gloss_format"].format(label=r["label"], gloss=r["gloss"])
+                if r.get("gloss") else r["label"])
+        name = b["series_label_format"].format(label=name, id=sid)
         if r.get("latest") is None:
-            rows.append(["%s (%s)" % (r["label"], sid), d["unit"], "미수집", "-"]
-                        + ["미수집"] * len(cfg["lookbacks"]))
+            rows.append([name, d["unit"], "미수집", "-"] + ["미수집"] * len(cfg["lookbacks"]))
             continue
-        cells = ["%s (%s)" % (r["label"], sid), d["unit"],
-                 fmt(r["latest"], d), r["latest_date"]]
+        cells = [name, d["unit"], fmt(r["latest"], d), r["latest_date"]]
         for lb in cfg["lookbacks"]:
             x = r.get(lb["key"])
             cells.append("미수집" if not x else
                          "%s (%s = %s)" % (fmt(x["delta"], d, True), x["date"], fmt(x["value"], d)))
         rows.append(cells)
     return rows
+
+
+# ------------------------------------------------- 구획① 헤드라인 기계 판정
+
+def build_headline_blocks(result, cfg):
+    """판정 문장 + **판정 규칙 1줄을 바로 아래 병기한다.**
+
+    규칙을 붙이는 이유: '흡수'라는 한 단어만 남으면 읽는 사람이 시장 판단으로 받아들인다.
+    무엇을 어떤 임계로 분류했는지가 같은 화면에 있어야 한다.
+    """
+    h = result.get("headline") or {}
+    hc = cfg["headline"]
+    blocks = [heading(hc["heading"]),
+              heading(h.get("text") or hc["unavailable"], 3),
+              paragraph(h.get("rule") or "")]
+    if h.get("detail"):
+        blocks.append(paragraph(h["detail"]))
+    return blocks
+
+
+# ------------------------------------------------- 구획② 신호 보드
+
+def signal_board_rows(result, cfg):
+    """[현재값·관측일 | 판독 규칙 | 이상 신호 조건]. **임계값 칸은 자동화가 채우지 않는다.**"""
+    sb = cfg["signal_board"]
+    rows = []
+    for spec in sb["rows"]:
+        r = result["series"].get(spec["id"]) or {}
+        d = r.get("display") or {}
+        label = r.get("label", spec["id"])
+        value = "미수집" if r.get("latest") is None else "%s %s" % (
+            fmt(r["latest"], d), d.get("unit", ""))
+        rows.append(["%s (%s)" % (label, spec["id"]), value,
+                     r.get("latest_date") or "미수집", spec["read_rule"], sb["pending"]])
+    return rows
+
+
+def signal_board_claim(result, cfg):
+    sb = cfg["signal_board"]
+    parts = []
+    for spec in sb["rows"]:
+        r = result["series"].get(spec["id"]) or {}
+        d = r.get("display") or {}
+        parts.append(sb["claim_line_format"].format(
+            label=r.get("label", spec["id"]),
+            value="미수집" if r.get("latest") is None else "%s%s" % (
+                fmt(r["latest"], d), (" " + d["unit"]) if d.get("unit") else ""),
+            date=r.get("latest_date") or "미수집"))
+    return sb["claim_format"].format(lines=", ".join(parts))
+
+
+def build_signal_board_blocks(result, cfg):
+    sb = cfg["signal_board"]
+    return ([heading(sb["heading"]),
+             heading(sb["claim_heading"], 3),
+             paragraph(signal_board_claim(result, cfg)),
+             table(sb["headers"], signal_board_rows(result, cfg))]
+            + [bullet(x) for x in sb["cautions"]])
+
+
+# ------------------------------------------------- 구획④ 요인 분해
+
+def factor_rows(f, cfg):
+    """요인별 행 + 항등식 검산 3행(요인 합 / 실제 증감 / 잔차). 잔차를 표에서 숨기지 않는다."""
+    fc = cfg["factors"]
+    nd = f["decimals"]
+    kinds = fc["sign_kinds"]
+
+    def num(v):
+        return "{:+,.{d}f}".format(v, d=nd)
+
+    rows = []
+    for it in f["items"]:
+        comps = ", ".join(fc["component_format"].format(
+            id=c["id"], sign="+" if c["sign"] > 0 else "−") for c in it["components"])
+        rows.append(["%s — %s" % (it["label"], it["gloss"]), num(it["delta"]), comps,
+                     kinds[it["sign_kind"]]])
+    rows.append([fc["sum_label"], num(f["sum"]), "위 다섯 요인의 합", kinds["identity"]])
+    rows.append([fc["target_label"], num(f["target_delta"]), f["target"], kinds["identity"]])
+    rows.append([fc["residual_label"], num(f["residual"]),
+                 "%s − (요인 합)" % f["target"],
+                 "임계 ±%s%s — %s" % (f["residual_threshold"], fc["residual_threshold_unit"],
+                                     "이내" if f["residual_ok"] else "**초과: 검증 실패**")])
+    return rows
+
+
+def factor_claim(f, cfg):
+    fc = cfg["factors"]
+    nd = f["decimals"]
+    breakdown = ", ".join(fc["claim_item_format"].format(
+        label=it["label"], delta="{:+,.{d}f}".format(it["delta"], d=nd)) for it in f["items"])
+    verdict_fmt = fc["residual_ok_format"] if f["residual_ok"] else fc["residual_warn_format"]
+    return fc["claim_format"].format(
+        basis_date=f["basis_date"],
+        target_delta="{:+,.{d}f}".format(f["target_delta"], d=nd),
+        breakdown=breakdown,
+        sum="{:+,.{d}f}".format(f["sum"], d=nd),
+        residual="{:+,.{d}f}".format(f["residual"], d=nd),
+        residual_verdict=verdict_fmt.format(threshold=f["residual_threshold"],
+                                            unit=fc["residual_threshold_unit"]))
+
+
+def build_factor_blocks(result, cfg):
+    """요인 분해 블록. **잔차가 임계를 넘으면 값을 숨기지 않고 경고를 함께 싣는다.**"""
+    fc = cfg["factors"]
+    f = result.get("factors") or {}
+    blocks = [heading(fc["heading"])]
+    if f.get("status") != "ok":
+        return blocks + [paragraph(fc["unavailable_format"].format(
+            reason=f.get("reason") or "요인 분해 결과가 스냅샷에 없다"))]
+    blocks.append(heading(fc["claim_heading"], 3))
+    blocks.append(paragraph(factor_claim(f, cfg)))
+    blocks.append(table(fc["headers"], factor_rows(f, cfg)))
+    if not f["residual_ok"]:
+        blocks.append(heading(fc["residual_warning_heading"], 3))
+        blocks.append(paragraph(fc["residual_warning_format"].format(
+            residual="{:+,.{d}f}".format(f["residual"], d=f["decimals"]),
+            threshold=f["residual_threshold"])))
+    blocks.append(paragraph("분해 기간: %s → %s (%s). %s"
+                            % (f["prev_date"], f["basis_date"], f["unit"],
+                               f.get("identity_note", ""))))
+    return blocks
 
 
 # ------------------------------------------------- 부록: 국채 입찰 (단일 원천)
@@ -340,28 +515,103 @@ def caution_lines(result, cfg):
     return lines
 
 
-def build_body(result, cfg):
+def build_body(result, cfg, charts=None):
+    """v2 본문 — 5구획.
+
+      ① 헤드라인 기계 판정   ② 신호 보드   ③ 잔액 표   ④ 요인 분해   ⑤ 입찰 부록
+    그 뒤로 교차검증·데이터 주의·출처, 마지막에 인터랙티브 드릴다운 링크가 붙는다.
+    charts가 오면 각 구획 흐름 뒤 '차트' 섹션으로 이미지 블록을 붙인다 — **없어도 본문은 완성된다.**
+    """
     b = cfg["body"]
-    blocks = [
-        heading(b["claim_heading"]),
-        paragraph(b["claim_format"].format(**claim_values(result, cfg))),
-        heading(b["table_heading"]),
-        table(b["table_headers"], snapshot_rows(result, cfg)),
-    ]
+    blocks = build_headline_blocks(result, cfg)                       # ①
+    blocks += build_signal_board_blocks(result, cfg)                  # ②
+
+    blocks.append(heading(b["table_heading"]))                        # ③
+    blocks.append(heading(b["claim_heading"], 3))
+    blocks.append(paragraph(b["claim_format"].format(**claim_values(result, cfg))))
+    blocks.append(table(b["table_headers"], snapshot_rows(result, cfg)))
     blocks.append(paragraph("비교 기준: " + " / ".join(
         "%s = %s" % (lb["label"], lb["basis"]) for lb in cfg["lookbacks"])))
+
+    blocks += build_factor_blocks(result, cfg)                        # ④
+    blocks += build_auction_blocks(result, cfg)                       # ⑤
+    blocks += build_chart_blocks(charts, cfg)                         # 차트(격리)
+
     blocks.append(heading(b["crosscheck_heading"]))
     blocks += [bullet(x) for x in crosscheck_lines(result, cfg)]
     blocks.append(heading(b["caution_heading"]))
     blocks += [bullet(x) for x in caution_lines(result, cfg)]
-    blocks += build_auction_blocks(result, cfg)  # 부록은 FRED 본체 뒤에 붙는다
     blocks.append(heading(b["source_heading"]))
     blocks += [bullet(x) for x in source_lines(result)]
     blocks.append(bookmark(result["source_url"]))
     a = result.get("auctions") or {}
     if a.get("source_url"):
         blocks.append(bookmark(a["source_url"]))
+    blocks.append(paragraph(b["cockpit_link_format"].format(url=b["cockpit_url"])))
     return blocks
+
+
+# ------------------------------------------------- 차트 (격리)
+
+def build_chart_blocks(charts, cfg, heading_text=None, lead=None):
+    """차트 섹션. **차트 실패가 본문을 막지 않는다** — 실패하면 사유 한 줄만 남는다.
+
+    charts는 charts.build_charts() 결과에 각 항목의 upload_id가 채워진 형태다.
+    upload_id가 없는 항목(생성 실패·업로드 실패)은 이미지 대신 사유 문장으로 들어간다:
+    조용히 사라지면 '차트가 원래 없는 것'과 구분되지 않는다.
+    """
+    ch = cfg["charts"]
+    if not charts:
+        return []
+    blocks = [heading(heading_text or ch["heading"])]
+    if lead:
+        blocks.append(paragraph(lead))
+    if charts.get("status") in ("skipped", "disabled"):
+        return blocks + [paragraph(charts.get("reason") or ch["skipped_format"].format(
+            reason="사유 미상"))]
+    for item in charts.get("items", []):
+        if item.get("upload_id"):
+            blocks.append(image_block(item["upload_id"], rich_text(item["caption"])))
+        elif item.get("upload_error"):
+            blocks.append(paragraph(ch["upload_failure_format"].format(
+                error="%s — %s" % (item["key"], item["upload_error"]))))
+        elif item.get("status") == "ok":
+            # dry-run: 그림은 만들었지만 업로드를 타지 않았다. 실패로 오인하지 않게 구분해 둔다.
+            blocks.append(paragraph(ch["not_uploaded_format"].format(
+                key=item["key"], path=item.get("path") or "-", caption=item["caption"])))
+        else:
+            blocks.append(paragraph(item.get("error") or ch["failure_format"].format(
+                error="%s: 사유 미상" % item["key"])))
+    return blocks
+
+
+def make_charts(result, cfg, outdir):
+    """차트 생성. **어떤 실패도 예외로 올리지 않는다** — 표 적재를 막으면 안 되기 때문이다."""
+    if not cfg["charts"].get("enabled"):
+        return None
+    try:
+        from charts import build_charts  # matplotlib은 이 안에서만 import된다
+        return build_charts(result, cfg, outdir)
+    except Exception as exc:  # noqa: BLE001
+        print("차트 생성 단계 실패(본문은 계속): %s" % exc, file=sys.stderr)
+        return {"status": "skipped", "items": [],
+                "reason": cfg["charts"]["skipped_format"].format(error=str(exc)[:300],
+                                                                 reason=str(exc)[:300])}
+
+
+def upload_charts(notion, cfg, charts):
+    """각 PNG를 노션에 올려 upload_id를 채운다. **한 장의 실패가 나머지를 죽이지 않는다.**"""
+    if not charts or charts.get("status") in ("skipped", "disabled"):
+        return charts
+    for item in charts.get("items", []):
+        if item.get("status") != "ok" or not item.get("path"):
+            continue
+        try:
+            item["upload_id"] = upload_image(notion, cfg, item["path"])
+        except Exception as exc:  # noqa: BLE001
+            item["upload_error"] = str(exc)[:400]
+            print("차트 업로드 실패(계속): %s — %s" % (item["key"], exc), file=sys.stderr)
+    return charts
 
 
 def build_anomaly_body(result, cfg):
@@ -437,6 +687,9 @@ def blocks_to_markdown(title, props, blocks):
             out.append("- " + txt(blk["bulleted_list_item"]["rich_text"]))
         elif t == "bookmark":
             out += ["", "출처 링크: " + blk["bookmark"]["url"]]
+        elif t == "image":
+            img = blk["image"]
+            out += ["", "[이미지 %s] %s" % (img.get("type"), txt(img.get("caption") or [])), ""]
         elif t == "table":
             rows = blk["table"]["children"]
             for i, row in enumerate(rows):
@@ -458,6 +711,11 @@ def main():
                     help="노션에 쓰지 않고 payload만 출력한다(네트워크·토큰 불필요)")
     ap.add_argument("--payload-out", help="payload(properties+children) JSON 저장 경로")
     ap.add_argument("--markdown-out", help="본문 마크다운 저장 경로(검수용)")
+    ap.add_argument("--charts-dir", default=os.environ.get("LIQUIDITY_CHARTS_DIR") or None,
+                    help="차트 PNG 출력 디렉터리. 없으면 차트를 만들지 않는다")
+    ap.add_argument("--probe-charts", action="store_true",
+                    help="**프로브 모드**: 새 페이지를 만들지 않고, 이번 기준일의 기존 페이지 하단에 "
+                         "차트 섹션만 append한다. 같은 제목의 섹션이 이미 있으면 아무것도 하지 않는다(멱등)")
     args = ap.parse_args()
 
     cfg = load_config(args.config)
@@ -473,8 +731,19 @@ def main():
     ncfg = cfg["notion"]
     title_fmt = ncfg["anomaly_title_format"] if anomaly else ncfg["title_format"]
     title = title_fmt.format(yymmdd=yymmdd(basis))
+
+    # ---- 프로브 모드: 기존 페이지에 차트 섹션만 붙인다(본문을 다시 쓰지 않는다) ----
+    if args.probe_charts:
+        return run_probe(result, cfg, title, args)
+
+    # 차트는 '데이터 이상' 페이지에는 붙이지 않는다 — 그 페이지의 원칙은 '값을 싣지 않는다'다.
+    charts = None
+    if args.charts_dir and not anomaly:
+        charts = make_charts(result, cfg, args.charts_dir)
+
     props = build_properties(title, cfg)
-    blocks = build_anomaly_body(result, cfg) if anomaly else build_body(result, cfg)
+    blocks = (build_anomaly_body(result, cfg) if anomaly
+              else build_body(result, cfg, charts))
 
     payload = {"parent": {"type": "data_source_id", "data_source_id": ncfg["data_source_id"]},
                "properties": props, "children": blocks}
@@ -504,9 +773,63 @@ def main():
         print("이미 있음 — 생성하지 않는다: %r (%d건, %s)"
               % (title, len(existing), existing[0].get("url", "")))
         return 0
-    page = notion.create_page(ncfg["data_source_id"], props, blocks)
-    print("생성: %r → %s" % (title, page.get("url", page.get("id", ""))))
+
+    # 업로드는 페이지를 만들기 직전에 한다 — 실패해도 blocks를 다시 조립해 본문은 그대로 낸다.
+    if charts:
+        charts = upload_charts(notion, cfg, charts)
+        blocks = build_body(result, cfg, charts)
+
+    # 노션 create_page는 children을 100개까지만 받는다. v2 본문은 그보다 길 수 있어
+    # **나머지를 append로 이어 붙인다** — 예전처럼 조용히 잘리면 표 뒤가 통째로 사라진다.
+    page = notion.create_page(ncfg["data_source_id"], props, blocks[:100])
+    page_id = page["id"]
+    if len(blocks) > 100:
+        notion.append_blocks(page_id, blocks[100:])
+    print("생성: %r → %s (블록 %d개)"
+          % (title, page.get("url", page_id), len(blocks)))
     return 0
+
+
+def run_probe(result, cfg, title, args):
+    """차트 업로드 경로 E2E 실증. 기존 주간 페이지 하단에 '차트(v2 프로브)' 섹션을 붙인다.
+
+    **멱등하다** — 같은 제목의 heading이 이미 있으면 아무것도 하지 않는다.
+    **본문을 건드리지 않는다** — append만 하고 기존 블록·속성은 수정하지 않는다.
+    """
+    ch, ncfg = cfg["charts"], cfg["notion"]
+    notion = Notion(token_from_env(), ncfg["api_version"])
+    pages = notion.find_pages_by_title(ncfg["data_source_id"], ncfg["title_property"], title)
+    if not pages:
+        print("프로브 대상 페이지가 없다: %r — 정기 실행이 먼저 만들어야 한다" % title,
+              file=sys.stderr)
+        return 1
+    if len(pages) > 1:
+        print("!! 같은 제목의 페이지가 %d건이다. 첫 번째에만 붙인다: %r"
+              % (len(pages), title), file=sys.stderr)
+    page = pages[0]
+    page_id, page_url = page["id"], page.get("url", "")
+
+    if notion.has_heading(page_id, ch["probe_heading"]):
+        print("이미 있음 — 붙이지 않는다: %r 섹션 (%s)" % (ch["probe_heading"], page_url))
+        return 0
+
+    outdir = args.charts_dir or os.path.join(os.environ.get("RUNNER_TEMP", "."), "charts")
+    charts = make_charts(result, cfg, outdir)
+    if not charts:
+        print("차트가 비활성화돼 있다(config.charts.enabled=false) — 붙일 것이 없다", file=sys.stderr)
+        return 1
+    charts = upload_charts(notion, cfg, charts)
+    blocks = build_chart_blocks(charts, cfg, ch["probe_heading"], ch["probe_lead"])
+    notion.append_blocks(page_id, blocks)
+
+    ok = sum(1 for i in charts.get("items", []) if i.get("upload_id"))
+    print("프로브 완료: %r 에 '%s' 섹션 append — 이미지 %d/%d장 (%s)"
+          % (title, ch["probe_heading"], ok, len(charts.get("items", [])), page_url))
+    for i in charts.get("items", []):
+        print("  %-10s %s%s" % (i["key"], i.get("status"),
+                                "" if i.get("upload_id") else
+                                " / 업로드 실패: %s" % i.get("upload_error", i.get("error", "-"))))
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":

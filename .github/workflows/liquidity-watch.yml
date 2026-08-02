@@ -7,6 +7,13 @@ on:
   schedule:
     - cron: "0 22 * * 4"
   workflow_dispatch:
+    inputs:
+      probe_charts:
+        description: "1이면 새 페이지를 만들지 않고 이번 기준일의 기존 페이지 하단에 '차트(v2 프로브)' 섹션만 붙인다(멱등). 차트 업로드 경로 실증용."
+        required: false
+        default: "0"
+        type: choice
+        options: ["0", "1"]
 
 permissions:
   contents: read
@@ -18,14 +25,20 @@ concurrency:
 jobs:
   briefing:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      # 의존성 설치 없음 — 두 스크립트 모두 표준 라이브러리 + curl만 쓴다.
+
+      # 수집·적재 자체는 표준 라이브러리 + curl만 쓴다.
+      # matplotlib은 **차트 전용**이고 charts.py 안에서만 import된다 —
+      # 이 단계가 실패해도 표는 그대로 적재된다(차트만 '건너뜀'으로 본문에 남는다).
+      - name: matplotlib 설치 (차트 전용)
+        continue-on-error: true
+        run: python3 -m pip install --quiet "matplotlib==3.9.4" "numpy==2.0.2"
 
       # 토큰이 없으면 조용히 넘어가지 않고 여기서 죽는다.
       # (수집만 성공하고 적재가 스킵되면 '성공'으로 찍힌 채 노션이 비는 사고가 난다)
@@ -42,13 +55,26 @@ jobs:
         run: |
           python3 scripts/liquidity/fetch_liquidity.py \
             --json --out "${RUNNER_TEMP}/liquidity.json" > /dev/null
-          python3 -c "import json,sys;d=json.load(open(sys.argv[1]));print('기준일',d['basis_date'],'불일치',len(d['mismatches']))" "${RUNNER_TEMP}/liquidity.json"
+          python3 - "${RUNNER_TEMP}/liquidity.json" <<'PY'
+          import json, sys
+          d = json.load(open(sys.argv[1]))
+          f = d.get("factors") or {}
+          print("기준일", d["basis_date"], "불일치", len(d["mismatches"]))
+          print("요인분해", f.get("status"),
+                "잔차", f.get("residual"), "임계이내" if f.get("residual_ok") else "임계초과!!")
+          print("판정", (d.get("headline") or {}).get("text"))
+          PY
 
       # 불일치가 있으면 post_briefing이 값 대신 '데이터 이상' 페이지를 만든다(침묵 실패 없음).
+      # 차트는 격리돼 있다 — 생성·업로드가 실패해도 표는 그대로 실린다.
       - name: 노션 적재
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-        run: python3 scripts/liquidity/post_briefing.py --input "${RUNNER_TEMP}/liquidity.json"
+        run: |
+          python3 scripts/liquidity/post_briefing.py \
+            --input "${RUNNER_TEMP}/liquidity.json" \
+            --charts-dir "${RUNNER_TEMP}/charts" \
+            ${{ github.event.inputs.probe_charts == '1' && '--probe-charts' || '' }}
 
       # H.4.1 주간계열은 소급 수정된다. 재현용으로 회차 원본을 남긴다.
       - name: 스냅샷 보관
@@ -59,3 +85,14 @@ jobs:
           path: ${{ runner.temp }}/liquidity.json
           if-no-files-found: warn
           retention-days: 90
+
+      # 러너에서 실제로 그려진 PNG를 눈으로 확인할 수 있게 남긴다
+      # (한글 폰트가 없어 그림 안 텍스트가 깨지지 않았는지 확인하는 근거다).
+      - name: 차트 보관
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: liquidity-charts-${{ github.run_id }}
+          path: ${{ runner.temp }}/charts
+          if-no-files-found: warn
+          retention-days: 30

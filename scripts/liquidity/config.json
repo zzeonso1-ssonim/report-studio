@@ -1,6 +1,8 @@
 {
-  "_": "유동성 워치 단일 설정 소스. 시리즈·표시명·단위·비교기준·노션 좌표는 전부 여기서만 정의한다. 코드에 상수를 두지 않는다.",
-  "as_of": "2026-08-01",
+  "_": "유동성 워치 단일 설정 소스. 시리즈·표시명·단위·비교기준·판정 규칙·해설 문구·차트·노션 좌표는 전부 여기서만 정의한다. 코드에 상수를 두지 않는다.",
+  "as_of": "2026-08-02",
+  "version": "v2",
+  "_v2_note": "v2 개편(2026-08-02): 헤드라인 기계 판정 / 신호 보드 / 잔액 표 확장(1·4·13·52주) / 요인 분해(항등식 잔차 교차검증) / 입찰 부록 — 5구획. 차트 4장은 노션 파일 업로드 API로 붙인다.",
 
   "fred": {
     "csv_url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}",
@@ -10,7 +12,8 @@
     "timeout_seconds": 60,
     "retries": 3,
     "cross_check_last_n": 10,
-    "_ua_note": "FRED는 브라우저 User-Agent 위장 요청을 끊는다(HTTP/2 INTERNAL_ERROR·403 실측 2026-07-31). curl 기본 UA로만 요청한다 — 여기에 User-Agent를 추가하지 말 것."
+    "_ua_note": "FRED는 브라우저 User-Agent 위장 요청을 끊는다(HTTP/2 INTERNAL_ERROR·403 실측 2026-07-31). curl 기본 UA로만 요청한다 — 여기에 User-Agent를 추가하지 말 것.",
+    "_id_provenance": "v2 신규 계열의 FRED ID는 추측하지 않았다. 2026-08-02에 fredgraph.xls 메타(description 문자열)를 실호출로 읽어 정체를 확정했고, 각 series의 _fred_desc에 그 원문을 그대로 남겼다. 검색은 https://fred.stlouisfed.org/searchresults/ 로 했다."
   },
 
   "treasurydirect": {
@@ -23,6 +26,10 @@
     "request_days": 10,
     "window_days": 7,
     "_window_note": "API에는 days=10으로 요청하고 코드가 입찰일 기준 최근 7일(양끝 포함)로 좁힌다. 경계일 입찰이 갱신 시차로 빠지는 것을 막는 여유분이다.",
+
+    "chart_request_days": 90,
+    "chart_weeks": 10,
+    "_chart_note": "차트④(응찰배수 추이)는 본문 부록보다 긴 이력이 필요하다. 같은 엔드포인트에 days=90으로 한 번 더 요청해 최근 10주를 그린다(2026-08-02 실측: days=90 → 89건, 입찰일 2026-05-04~2026-07-30). **본문 부록(7일 창)과는 별도 호출이며 부록 값을 바꾸지 않는다.**",
 
     "type_field": "securityType",
     "term_field": "securityTerm",
@@ -43,6 +50,13 @@
       "Bond": "장기채(Bond)",
       "CMB": "현금관리증권(CMB)"
     },
+    "type_labels_en": {
+      "Bill": "Bill",
+      "Note": "Note",
+      "Bond": "Bond",
+      "CMB": "CMB"
+    },
+    "_type_labels_en_note": "차트 범례용. 러너에 한글 폰트가 없어 그림 안 텍스트는 전부 영문이어야 한다(두부 글자 방지).",
     "type_label_fallback": "{type}",
     "flag_labels": {
       "reopening": "재발행",
@@ -105,11 +119,13 @@
   },
 
   "lookbacks": [
-    {"key": "prev", "label": "직전 대비", "days": null,
-     "basis": "직전 관측치. 주간계열은 1주 전, 일간계열은 1영업일 전이다."},
-    {"key": "4w", "label": "4주 전 대비", "days": 28,
+    {"key": "prev", "label": "1주 대비", "days": null,
+     "basis": "직전 관측치. 주간계열은 1주 전, 일간계열은 1영업일 전이다 — 같은 열이라도 계열별로 간격이 다르다."},
+    {"key": "4w", "label": "4주 대비", "days": 28,
      "basis": "최신 관측일 -28일 이하 최신 관측치(as-of)."},
-    {"key": "1y", "label": "1년 전 대비", "days": 364,
+    {"key": "13w", "label": "13주 대비", "days": 91,
+     "basis": "최신 관측일 -91일(=13주) 이하 최신 관측치(as-of). 90일이 아니라 91일 — 주간계열이 같은 요일에 착지해야 H.4.1 주간 격자와 어긋나지 않는다(364일 정렬 원칙을 13주에 동일 적용)."},
+    {"key": "52w", "label": "52주 대비", "days": 364,
      "basis": "365일이 아니라 364일(=52주). 주간계열(H.4.1)이 같은 요일에 착지해야 연준 H.4.1의 'Change from year ago'와 직접 대조된다. 365일이면 지준 연간 변동이 -362,844 대신 -377,707로 어긋난다(2026-07-31 실측)."}
   ],
   "range_window_days": 182,
@@ -118,54 +134,431 @@
     {
       "id": "WRESBAL",
       "label": "지급준비금",
+      "gloss": "은행이 연준에 맡겨 둔 돈 — 시중 유동성의 최종 잔고",
       "expected_units": "Millions of U.S. Dollars",
       "expected_frequency": "Weekly",
       "display": {"unit": "십억 USD, 주평균", "divide_by": 1000, "decimals": 1},
+      "_fred_desc": "Liabilities and Capital: Other Factors Draining Reserve Balances: Reserve Balances with Federal Reserve Banks: Week Average, Millions of U.S. Dollars, Weekly, Not Seasonally Adjusted",
       "note": "H.4.1 Wednesday-ending week average. 잔액이 아니다."
     },
     {
       "id": "RRPONTSYD",
       "label": "ON RRP 사용액",
+      "gloss": "금융기관이 연준에 하루 맡기는 돈 — 남는 현금의 주차장",
       "expected_units": "Billions of US Dollars",
       "expected_frequency": "Daily",
       "display": {"unit": "십억 USD, 일간", "divide_by": 1, "decimals": 3},
-      "note": "TOMO 국채담보 오버나이트 역RP만 집계. 연준 총 역RP 부채와 다르다."
+      "_fred_desc": "Overnight Reverse Repurchase Agreements: Treasury Securities Sold by the Federal Reserve in the Temporary Open Market Operations, Billions of US Dollars, Daily, Not Seasonally Adjusted",
+      "note": "TOMO 국채담보 오버나이트 역RP만 집계. 연준 총 역RP 부채(WLRRAA)와 다르다."
     },
     {
       "id": "WTREGEN",
       "label": "재무부 일반계정 TGA",
+      "gloss": "미 재무부가 연준에 둔 예금 — 늘면 시중 돈이 그만큼 빠진다",
       "expected_units": "Millions of U.S. Dollars",
       "expected_frequency": "Weekly",
       "display": {"unit": "십억 USD, 주평균", "divide_by": 1000, "decimals": 1},
+      "_fred_desc": "Liabilities and Capital: Liabilities: Deposits with F.R. Banks, Other Than Reserve Balances: U.S. Treasury, General Account: Week Average, Millions of U.S. Dollars, Weekly, Not Seasonally Adjusted",
       "note": "H.4.1 Wednesday-ending week average. 잔액이 아니다."
+    },
+    {
+      "id": "WALCL",
+      "label": "연준 전체 자산",
+      "gloss": "연준 대차대조표 총자산 — 양적긴축이 진행되면 줄어든다",
+      "expected_units": "Millions of U.S. Dollars",
+      "expected_frequency": "Weekly",
+      "display": {"unit": "십억 USD, 수요일 잔액", "divide_by": 1000, "decimals": 1},
+      "_fred_desc": "Assets: Total Assets: Total Assets (Less Eliminations from Consolidation): Wednesday Level, Millions of U.S. Dollars, Weekly, Not Seasonally Adjusted",
+      "note": "**수요일 잔액(Wednesday Level)이다 — 주평균이 아니다.** 같은 표의 주평균 계열(WRESBAL·WTREGEN·WCURCIR)과 시점 정의가 다르므로 직접 가감하면 안 된다."
+    },
+    {
+      "id": "TREAST",
+      "label": "SOMA 미 국채 보유",
+      "gloss": "연준이 직접 들고 있는 미 국채 — 만기 상환분만큼 줄어든다",
+      "expected_units": "Millions of U.S. Dollars",
+      "expected_frequency": "Weekly",
+      "display": {"unit": "십억 USD, 수요일 잔액", "divide_by": 1000, "decimals": 1},
+      "_fred_desc": "Assets: Securities Held Outright: U.S. Treasury Securities: All: Wednesday Level, Millions of U.S. Dollars, Weekly, Not Seasonally Adjusted",
+      "note": "수요일 잔액."
+    },
+    {
+      "id": "WSHOMCB",
+      "label": "SOMA MBS 보유",
+      "gloss": "연준이 들고 있는 주택저당증권 — 조기상환 속도에 따라 감소",
+      "expected_units": "Millions of U.S. Dollars",
+      "expected_frequency": "Weekly",
+      "display": {"unit": "십억 USD, 수요일 잔액", "divide_by": 1000, "decimals": 1},
+      "_fred_desc": "Assets: Securities Held Outright: Mortgage-Backed Securities: Wednesday Level, Millions of U.S. Dollars, Weekly, Not Seasonally Adjusted",
+      "note": "수요일 잔액. 미결제(TBA) 약정분이 포함돼 결제 시점에 계단식으로 움직인다."
+    },
+    {
+      "id": "WLCFLL",
+      "label": "연준 대출 합계",
+      "gloss": "재할인창구 등 연준이 은행에 직접 빌려준 돈 — 급증하면 자금 압박 방향의 신호로 통용",
+      "expected_units": "Millions of U.S. Dollars",
+      "expected_frequency": "Weekly",
+      "display": {"unit": "십억 USD, 수요일 잔액", "divide_by": 1000, "decimals": 1},
+      "_fred_desc": "Assets: Liquidity and Credit Facilities: Loans: Wednesday Level, Millions of U.S. Dollars, Weekly, Not Seasonally Adjusted",
+      "note": "수요일 잔액. 평시 잔액이 작아 절대 변동폭보다 배수 변화가 크게 보인다."
+    },
+    {
+      "id": "WCURCIR",
+      "label": "유통통화",
+      "gloss": "시중에 나가 있는 현금 — 늘면 지준에서 그만큼 빠져나간다",
+      "expected_units": "Millions of U.S. Dollars",
+      "expected_frequency": "Weekly",
+      "display": {"unit": "십억 USD, 주평균", "divide_by": 1000, "decimals": 1},
+      "_fred_desc": "Liabilities and Capital: Other Factors Draining Reserve Balances: Currency in Circulation: Week Average, Millions of U.S. Dollars, Weekly, Not Seasonally Adjusted",
+      "note": "H.4.1 주평균. 연말·연휴에 계절적으로 늘어난다."
+    },
+    {
+      "id": "RPONTSYD",
+      "label": "SRF 사용액",
+      "gloss": "은행이 국채를 맡기고 연준에서 하루 빌려가는 돈 — 상비 대출창구 사용량",
+      "expected_units": "Billions of US Dollars",
+      "expected_frequency": "Daily",
+      "display": {"unit": "십억 USD, 일간", "divide_by": 1, "decimals": 3},
+      "_fred_desc": "Overnight Repurchase Agreements: Treasury Securities Purchased by the Federal Reserve in the Temporary Open Market Operations, Billions of US Dollars, Daily, Not Seasonally Adjusted",
+      "note": "**FRED에 'SRF'라는 이름의 사용액 계열은 없다.** 현 제도에서 연준의 오버나이트 국채담보 매입(TOMO Repo)이 상비 레포 창구(SRF) 운영분이라 이 계열을 사용액으로 쓴다. 같은 값을 H.4.1 주평균으로 다시 보는 계열은 WREPO(Assets: Other: Repurchase Agreements: Week Average)이며 2026-07-29 주 기준 6백만 달러로 이 일간 계열(0.001~0.010십억 달러)과 자릿수가 맞는다 — 이름만 보고 고르지 않았다는 근거다. 이름이 'Standing Repo'인 SRFTSYD는 **금리**이고 2026-06-12 이후 갱신이 멈춰 사용액으로 쓸 수 없다(2026-08-02 실측)."
     },
     {
       "id": "SOFR",
       "label": "SOFR",
+      "gloss": "국채담보 하루짜리 자금조달 금리 — 시장 실제 조달비용",
       "expected_units": "Percent",
       "expected_frequency": "Daily",
       "display": {"unit": "%, 일간", "divide_by": 1, "decimals": 2},
+      "_fred_desc": "Secured Overnight Financing Rate, Percent, Daily, Not Seasonally Adjusted",
       "note": "영업일만 관측된다."
+    },
+    {
+      "id": "EFFR",
+      "label": "EFFR",
+      "gloss": "은행 간 무담보 하루짜리 자금 금리 — 연준 정책금리 목표의 실제 착지점",
+      "expected_units": "Percent",
+      "expected_frequency": "Daily",
+      "display": {"unit": "%, 일간", "divide_by": 1, "decimals": 2},
+      "_fred_desc": "Effective Federal Funds Rate, Percent, Daily, Not Seasonally Adjusted",
+      "note": "영업일만 관측되고 SOFR보다 하루 늦게 실리는 날이 있다(2026-08-02 수집 시 SOFR 07-31 / EFFR 07-30 실측)."
     },
     {
       "id": "IORB",
       "label": "IORB",
+      "gloss": "연준이 지준에 주는 이자 — 시장금리의 바닥 기준선",
       "expected_units": "Percent",
       "expected_frequency": "Daily",
       "display": {"unit": "%, 일간", "divide_by": 1, "decimals": 2},
+      "_fred_desc": "Interest Rate on Reserve Balances, Percent, Daily, Not Seasonally Adjusted",
       "note": "정책금리라 주말·휴일에도 값이 있고, 관측일이 수집일보다 뒤일 수 있다(2026-08-01 수집 시 최신 관측일 2026-08-03 실측)."
+    },
+
+    {
+      "id": "WRESCRT",
+      "in_table": false,
+      "label": "연준 신용자산",
+      "gloss": "연준이 공급한 신용 총량(보유증권+대출+레포) — 요인 분해의 공급 항목",
+      "expected_units": "Millions of U.S. Dollars",
+      "expected_frequency": "Weekly",
+      "display": {"unit": "십억 USD, 주평균", "divide_by": 1000, "decimals": 1},
+      "_fred_desc": "Assets: Other Factors Supplying Reserve Balances: Reserve Bank Credit: Week Average, Millions of U.S. Dollars, Weekly, Not Seasonally Adjusted",
+      "note": "요인 분해 전용(잔액 표에는 싣지 않는다). WALCL(수요일 잔액 총자산)과 다른 개념·다른 시점이다."
+    },
+    {
+      "id": "WLRRAA",
+      "in_table": false,
+      "label": "역RP 총액",
+      "gloss": "ON RRP + 외국 공적기관 역RP를 합한 연준 역RP 부채 총액",
+      "expected_units": "Millions of U.S. Dollars",
+      "expected_frequency": "Weekly",
+      "display": {"unit": "십억 USD, 주평균", "divide_by": 1000, "decimals": 1},
+      "_fred_desc": "Liabilities and Capital: Liabilities: Reverse Repurchase Agreements: Week Average, Millions of U.S. Dollars, Weekly, Not Seasonally Adjusted",
+      "note": "요인 분해 전용. 잔액 표의 RRPONTSYD(일간 ON RRP만)와 **다른 계열이다** — 여기에는 외국 공적기관분이 포함된다."
+    },
+    {
+      "id": "WOFSRBGSA",
+      "in_table": false,
+      "label": "금 보유",
+      "gloss": "요인 분해 '기타'의 공급 구성요소",
+      "expected_units": "Millions of U.S. Dollars",
+      "expected_frequency": "Weekly",
+      "display": {"unit": "십억 USD, 주평균", "divide_by": 1000, "decimals": 1},
+      "_fred_desc": "Assets: Other Factors Supplying Reserve Balances: Gold Stock: Week Average, Millions of U.S. Dollars, Weekly, Not Seasonally Adjusted",
+      "note": "요인 분해 전용."
+    },
+    {
+      "id": "WTCOA",
+      "in_table": false,
+      "label": "재무부 발행통화",
+      "gloss": "요인 분해 '기타'의 공급 구성요소",
+      "expected_units": "Millions of U.S. Dollars",
+      "expected_frequency": "Weekly",
+      "display": {"unit": "십억 USD, 주평균", "divide_by": 1000, "decimals": 1},
+      "_fred_desc": "Assets: Other Factors Supplying Reserve Balances: Treasury Currency Outstanding: Week Average, Millions of U.S. Dollars, Weekly, Not Seasonally Adjusted",
+      "note": "요인 분해 전용."
+    },
+    {
+      "id": "WDFOA",
+      "in_table": false,
+      "label": "외국 공적기관 예치금",
+      "gloss": "요인 분해 '기타'의 흡수 구성요소",
+      "expected_units": "Millions of U.S. Dollars",
+      "expected_frequency": "Weekly",
+      "display": {"unit": "십억 USD, 주평균", "divide_by": 1000, "decimals": 1},
+      "_fred_desc": "Liabilities and Capital: Liabilities: Deposits with F.R. Banks, Other Than Reserve Balances: Foreign Official: Week Average, Millions of U.S. Dollars, Weekly, Not Seasonally Adjusted",
+      "note": "요인 분해 전용."
+    },
+    {
+      "id": "WOTHLB",
+      "in_table": false,
+      "label": "기타 예치금",
+      "gloss": "요인 분해 '기타'의 흡수 구성요소",
+      "expected_units": "Millions of U.S. Dollars",
+      "expected_frequency": "Weekly",
+      "display": {"unit": "십억 USD, 주평균", "divide_by": 1000, "decimals": 1},
+      "_fred_desc": "Liabilities and Capital: Liabilities: Deposits: Other: Week Average, Millions of U.S. Dollars, Weekly, Not Seasonally Adjusted",
+      "note": "요인 분해 전용. 지정금융기관 예치금 등이 들어가 주 단위로 수십억 달러씩 움직인다."
+    },
+    {
+      "id": "WOFDRBTHA",
+      "in_table": false,
+      "label": "재무부 현금보유",
+      "gloss": "요인 분해 '기타'의 흡수 구성요소",
+      "expected_units": "Millions of U.S. Dollars",
+      "expected_frequency": "Weekly",
+      "display": {"unit": "십억 USD, 주평균", "divide_by": 1000, "decimals": 1},
+      "_fred_desc": "Liabilities and Capital: Other Factors Draining Reserve Balances: Treasury Cash Holdings: Week Average, Millions of U.S. Dollars, Weekly, Not Seasonally Adjusted",
+      "note": "요인 분해 전용."
+    },
+    {
+      "id": "WOTHLIAB",
+      "in_table": false,
+      "label": "기타 부채·자본",
+      "gloss": "요인 분해 '기타'의 흡수 구성요소(수준이 음수일 수 있다)",
+      "expected_units": "Millions of U.S. Dollars",
+      "expected_frequency": "Weekly",
+      "display": {"unit": "십억 USD, 주평균", "divide_by": 1000, "decimals": 1},
+      "_fred_desc": "Liabilities and Capital: Other Factors Draining Reserve Balances: Other Liabilities and Capital: Week Average, Millions of U.S. Dollars, Weekly, Not Seasonally Adjusted",
+      "note": "요인 분해 전용. **수준이 음수다**(2026-07-29 -179,225백만 달러 실측) — 부호를 오타로 보지 말 것."
     }
   ],
 
-  "derived": {
-    "id": "SOFR_IORB_SPREAD",
-    "label": "SOFR-IORB 스프레드",
-    "minuend": "SOFR",
-    "subtrahend": "IORB",
-    "multiplier": 100,
-    "round_to": 2,
-    "display": {"unit": "bp, 일간", "divide_by": 1, "decimals": 0},
-    "note": "두 시리즈가 모두 관측된 날짜에서만 계산한다(전방 채움 없음). FRED가 소수 2자리까지만 주므로 해상도는 1bp — '0bp'는 ±0.5bp 구간이다."
+  "_in_table_note": "in_table=false인 계열은 수집·교차검증은 똑같이 받되 잔액 표에는 싣지 않는다. 요인 분해에서만 쓰인다 — 표가 20행이 되면 읽히지 않는다.",
+
+  "derived": [
+    {
+      "id": "SOFR_IORB_SPREAD",
+      "label": "SOFR-IORB 스프레드",
+      "gloss": "담보부 조달금리가 연준 지급이자보다 얼마나 높은가",
+      "minuend": "SOFR",
+      "subtrahend": "IORB",
+      "multiplier": 100,
+      "round_to": 2,
+      "display": {"unit": "bp, 일간", "divide_by": 1, "decimals": 0},
+      "note": "두 시리즈가 모두 관측된 날짜에서만 계산한다(전방 채움 없음). FRED가 소수 2자리까지만 주므로 해상도는 1bp — '0bp'는 ±0.5bp 구간이다."
+    },
+    {
+      "id": "EFFR_IORB_SPREAD",
+      "label": "EFFR-IORB 스프레드",
+      "gloss": "무담보 은행 간 금리가 연준 지급이자보다 얼마나 높은가",
+      "minuend": "EFFR",
+      "subtrahend": "IORB",
+      "multiplier": 100,
+      "round_to": 2,
+      "display": {"unit": "bp, 일간", "divide_by": 1, "decimals": 0},
+      "note": "두 시리즈가 모두 관측된 날짜에서만 계산한다. EFFR이 SOFR보다 하루 늦게 실리는 날이 있어 두 스프레드의 최신 관측일이 다를 수 있다."
+    }
+  ],
+
+  "headline": {
+    "_": "구획①. **기계 판정이다** — 관측된 지준 주간 증감의 방향 분류일 뿐 시장 함의·금리 방향을 담지 않는다.",
+    "heading": "이번 주 판정",
+    "series": "WRESBAL",
+    "lookback": "prev",
+    "divide_by": 1000,
+    "decimals": 1,
+    "neutral_threshold": 5.0,
+    "threshold_unit": "십억 달러",
+    "verdicts": {"supply": "공급", "absorb": "흡수", "neutral": "중립"},
+    "format": "이번 주 유동성: {verdict} (주도: {driver} {driver_delta}십억 달러)",
+    "format_no_driver": "이번 주 유동성: {verdict} (주도 요인 산출 불가 — {reason})",
+    "unavailable": "이번 주 유동성: 판정 불가 — 지급준비금 주간 증감을 구하지 못했다. 값을 추정해 채우지 않는다.",
+    "rule_line": "판정 규칙: 지급준비금(WRESBAL) 주간 증감이 +{threshold}{threshold_unit} 초과면 '공급', -{threshold}{threshold_unit} 미만이면 '흡수', 그 사이면 '중립'. 주도 요인은 아래 '요인 분해'에서 |주간 변동|이 가장 큰 항목이다. 이 문장은 관측된 잔액 변동의 방향 분류이며 금리 방향·시장 함의를 담지 않는다.",
+    "detail_format": "지급준비금 주간 증감 {delta}십억 달러 ({prev_date} → {basis_date}, H.4.1 주평균)."
+  },
+
+  "signal_board": {
+    "_": "구획②. 판독 규칙은 기계적 서술만 쓴다. **이상 신호 임계값은 디렉터가 확정한다 — 자동화가 채우지 않는다.**",
+    "heading": "신호 보드",
+    "headers": ["지표", "현재값", "관측일", "판독 규칙", "이상 신호 조건"],
+    "pending": "디렉터 확정 대기",
+    "claim_heading": "이 표의 주장",
+    "claim_format": "{lines}. 세 지표는 관측일이 서로 다를 수 있고 이상 신호 임계값이 아직 확정되지 않아, 이 표는 현재 수준과 판독 규칙만 제시한다 — 이상 여부를 판정하지 않는다.",
+    "claim_line_format": "{label} {value}({date})",
+    "rows": [
+      {
+        "id": "SOFR_IORB_SPREAD",
+        "read_rule": "양(+)으로 전환·확대는 담보부 조달금리가 연준 지급이자를 넘어선 상태로, 지준 희소화 방향의 신호로 통용된다. 음(-)이면 그 반대다."
+      },
+      {
+        "id": "EFFR_IORB_SPREAD",
+        "read_rule": "무담보 은행 간 금리와 지준 이자의 격차다. 확대는 준비금 분포의 쏠림이 커진 상태로 통용되며, SOFR 스프레드보다 늦게 반응하는 것이 통상이다."
+      },
+      {
+        "id": "RPONTSYD",
+        "read_rule": "상비 레포 창구(SRF) 사용액이다. 평시에는 0에 가깝고, 잔액이 붙기 시작하면 담보부 시장에서 국채를 현금화하려는 수요가 창구까지 왔다는 뜻으로 통용된다."
+      }
+    ],
+    "cautions": [
+      "이상 신호 임계값은 비워 뒀다 — 디렉터가 확정하기 전까지 자동화가 값을 넣지 않는다. 판독 규칙만으로 이상 여부를 단정하지 말 것.",
+      "세 지표의 관측일이 서로 다를 수 있다. 전부 일간이지만 FRED 반영 시점이 하루씩 어긋난다(2026-08-02 수집 시 SOFR 07-31 / EFFR 07-30 실측)."
+    ]
+  },
+
+  "factors": {
+    "_": "구획④. Δ지준 ≈ Δ연준 신용자산 − ΔTGA − Δ역RP − Δ유통통화 − Δ기타. **'기타'는 잔차 흡수 항목이 아니라 실제 FRED 계열의 합이고, 항등식 잔차는 별도 행으로 명시한다.**",
+    "heading": "요인 분해",
+    "target": "WRESBAL",
+    "lookback": "prev",
+    "divide_by": 1000,
+    "decimals": 1,
+    "unit": "십억 USD, 주간 변동",
+    "target_label": "실제 지준 증감 (항등식 좌변)",
+    "sum_label": "다섯 요인 합 (항등식 우변)",
+    "history_weeks": 60,
+    "_history_note": "차트②와 잔차 이력용으로 최근 60주치 분해를 계산해 둔다. 차트가 몇 주를 그릴지는 charts에서 정하고, 여기서는 그보다 넉넉히 만든다.",
+    "residual_label": "항등식 잔차 (교차검증)",
+    "residual_threshold": 5.0,
+    "residual_threshold_unit": "십억 달러",
+    "_residual_note": "임계 5십억 달러는 2026-08-02 실측 근거로 정했다. **최근 60주 잔차 실측 범위는 -0.30 ~ +0.90십억 달러**이고 |잔차|가 1십억 달러를 넘은 주는 0건이었다(2026-08-02 fetch_liquidity 실행 기준). 임계 5는 그 실측 최대치의 5배 이상 여유다. 잔차의 정체는 SDR 증서계정 등 items에 없는 소액 항목으로 본다. 임계를 넘으면 값을 숨기지 않고 경고를 함께 싣는다(값 은폐 금지).",
+    "headers": ["요인", "주간 변동 (십억 USD)", "구성 FRED 계열 (부호)", "성격"],
+    "sign_kinds": {
+      "supply": "공급(+): 늘면 지준이 는다",
+      "drain": "흡수(−): 늘면 지준이 준다",
+      "mixed": "혼합: 계열별 부호는 왼쪽 열 참조",
+      "identity": "항등식 검산 행"
+    },
+    "component_format": "{id}({sign})",
+    "claim_heading": "이 표의 주장",
+    "claim_format": "{basis_date} 주간 지급준비금은 {target_delta}십억 달러 변동했고, H.4.1 주간평균 요인으로 나누면 {breakdown}이다. 다섯 요인의 합 {sum}십억 달러와 실제 증감의 차이(항등식 잔차)는 {residual}십억 달러다{residual_verdict}. 이 표는 회계 항등식에 따른 분해이며 어느 요인이 시장에 중요한지는 판단하지 않는다.",
+    "claim_item_format": "{label} {delta}",
+    "residual_ok_format": " — 임계 {threshold}{unit} 이내라 분해가 원자료와 일치한다",
+    "residual_warn_format": " — **임계 {threshold}{unit}를 초과했다. 분해에 빠진 요인이 있다는 뜻이므로 아래 표의 개별 값을 그대로 인용하지 말 것**",
+    "residual_warning_heading": "요인 분해 경고",
+    "residual_warning_format": "항등식 잔차가 {residual}십억 달러로 임계 {threshold}십억 달러를 넘었다. 값을 숨기지 않고 그대로 싣되, 이번 주 요인 분해는 검증 실패로 본다. 원인 후보: (1) FRED가 H.4.1 계열 구성을 바꿈 (2) 소급 수정 반영 시차 (3) config.factors.items에 빠진 계열.",
+    "unavailable_format": "요인 분해를 만들지 못했다 — {reason}. 값을 추정해 채우지 않는다.",
+    "items": [
+      {
+        "key": "credit", "label": "연준 신용자산",
+        "components": [{"id": "WRESCRT", "sign": 1}],
+        "sign_kind": "supply",
+        "gloss": "연준이 보유증권·대출·레포로 공급한 신용 총량"
+      },
+      {
+        "key": "tga", "label": "재무부 일반계정 TGA",
+        "components": [{"id": "WTREGEN", "sign": -1}],
+        "sign_kind": "drain",
+        "gloss": "재무부 잔고가 늘면 시중 지준이 그만큼 빠진다"
+      },
+      {
+        "key": "rrp", "label": "역RP 총액",
+        "components": [{"id": "WLRRAA", "sign": -1}],
+        "sign_kind": "drain",
+        "gloss": "ON RRP + 외국 공적기관 역RP"
+      },
+      {
+        "key": "currency", "label": "유통통화",
+        "components": [{"id": "WCURCIR", "sign": -1}],
+        "sign_kind": "drain",
+        "gloss": "현금 인출이 늘면 지준이 준다"
+      },
+      {
+        "key": "other", "label": "기타",
+        "components": [
+          {"id": "WOFSRBGSA", "sign": 1},
+          {"id": "WTCOA", "sign": 1},
+          {"id": "WDFOA", "sign": -1},
+          {"id": "WOTHLB", "sign": -1},
+          {"id": "WOFDRBTHA", "sign": -1},
+          {"id": "WOTHLIAB", "sign": -1}
+        ],
+        "sign_kind": "mixed",
+        "gloss": "금·재무부 발행통화(공급) + 외국 공적기관·기타 예치금·재무부 현금·기타 부채자본(흡수). **전부 실제 FRED 계열이며 잔차를 여기에 흡수시키지 않는다**"
+      }
+    ]
+  },
+
+  "charts": {
+    "_": "그림 4장. **차트 실패가 본문 적재를 막지 않는다** — 실패하면 '차트 생성 실패: {사유}' 한 줄만 남고 표는 그대로 나간다.",
+    "enabled": true,
+    "heading": "차트",
+    "probe_heading": "차트(v2 프로브)",
+    "_probe_note": "workflow_dispatch input probe_charts=1로 돌리면 이 제목의 섹션을 기존 주간 페이지 하단에 append한다. 같은 제목의 heading이 이미 있으면 아무것도 하지 않는다(멱등).",
+    "probe_lead": "v2 차트 업로드 경로 실증. 이 섹션은 프로브 실행이 붙인 것이고, 다음 주 정기 실행부터는 본문에 같은 차트가 들어간다.",
+    "dpi": 130,
+    "figsize": [9.0, 4.6],
+    "font_note": "그림 안 텍스트는 전부 영문이다 — GitHub 러너에 한글 폰트가 없어 한글을 그리면 두부(□)로 나온다. 한글 설명은 노션 본문 캡션으로 단다.",
+    "failure_format": "차트 생성 실패: {error} (표는 정상 적재됐다)",
+    "skipped_format": "차트를 건너뛴다: {reason}",
+    "matplotlib_missing": "matplotlib이 설치돼 있지 않다 — 차트만 건너뛰고 표는 그대로 싣는다",
+    "upload_failure_format": "차트 업로드 실패: {error} — 표는 정상 적재됐다",
+    "not_uploaded_format": "[DRY-RUN] {key}: 그림은 생성됐고 업로드는 타지 않았다 ({path}) — 캡션: {caption}",
+    "caption_format": "{claim} / {note} (기준일 {as_of}, 출처 {source})",
+    "source_label": "FRED(세인트루이스 연준)",
+    "auction_source_label": "TreasuryDirect 입찰결과 API — 단일 원천, 교차검증 불가",
+    "items": [
+      {
+        "key": "levels",
+        "kind": "levels",
+        "title_en": "Reserves, ON RRP, TGA - levels",
+        "ylabel_en": "USD bn",
+        "years": 3,
+        "series": [
+          {"id": "WRESBAL", "label_en": "Reserves (WRESBAL, wk avg)"},
+          {"id": "RRPONTSYD", "label_en": "ON RRP (RRPONTSYD, daily)"},
+          {"id": "WTREGEN", "label_en": "TGA (WTREGEN, wk avg)"}
+        ],
+        "claim": "지준·ON RRP·TGA의 3년 수준 추이 — ON RRP가 소진된 뒤 TGA 변동이 지준으로 직접 넘어가는 구간을 보여준다.",
+        "note": "세 계열의 주기가 다르다(주평균 2개 + 일간 1개). 같은 축에 그렸을 뿐 같은 시점의 값이 아니다."
+      },
+      {
+        "key": "factors",
+        "kind": "factor_stack",
+        "title_en": "Weekly change in reserves - factor decomposition",
+        "ylabel_en": "USD bn, weekly change",
+        "weeks": 12,
+        "labels_en": {
+          "credit": "Fed credit",
+          "tga": "TGA",
+          "rrp": "Reverse repos",
+          "currency": "Currency",
+          "other": "Other",
+          "residual": "Residual",
+          "target": "Actual change in reserves"
+        },
+        "claim": "최근 12주 주간 지준 변동을 요인별로 쌓은 것 — 검은 점이 실제 증감이고 막대 합과의 차이가 항등식 잔차다.",
+        "note": "막대는 config.factors.items의 부호 규칙대로 부호가 붙은 기여분이다."
+      },
+      {
+        "key": "sofr_iorb",
+        "kind": "spread",
+        "id": "SOFR_IORB_SPREAD",
+        "title_en": "SOFR minus IORB",
+        "ylabel_en": "basis points",
+        "years": 1,
+        "zero_line": true,
+        "claim": "SOFR−IORB 1년 추이 — 0선 위로 올라선 기간과 그 폭을 보여준다.",
+        "note": "FRED가 두 금리를 소수 2자리까지만 주므로 해상도는 1bp다."
+      },
+      {
+        "key": "btc",
+        "kind": "auction_btc",
+        "title_en": "Treasury auction bid-to-cover by security type",
+        "ylabel_en": "bid-to-cover (x)",
+        "weeks": 10,
+        "claim": "최근 10주 미 국채 입찰 응찰배수를 유형별로 나눈 것 — 유형마다 수준대가 달라 유형 간 직접 비교는 하지 않는다.",
+        "note": "단일 원천(TreasuryDirect)이라 교차검증하지 못한 값이다."
+      }
+    ]
   },
 
   "notion": {
@@ -178,6 +571,14 @@
     "title_format": "{yymmdd}_미국 유동성 워치",
     "anomaly_title_format": "{yymmdd}_미국 유동성 워치 (데이터 이상)",
     "title_property": "이름",
+    "file_upload": {
+      "_": "노션 파일 업로드 3단계. 로컬에 NOTION_TOKEN이 없어 러너에서만 검증한다(probe_charts=1).",
+      "create_path": "/file_uploads",
+      "content_type": "image/png",
+      "form_field": "file",
+      "max_bytes": 20971520,
+      "_steps": "① POST /v1/file_uploads {filename, content_type} → {id, upload_url} ② POST upload_url 에 multipart/form-data, 필드명 'file' ③ 블록 append 시 {type:'image', image:{type:'file_upload', file_upload:{id}}}"
+    },
     "properties": {
       "검토 상태": {"type": "select", "value": "검토대기"},
       "작성방식": {"type": "select", "value": "AI 초안"},
@@ -195,9 +596,13 @@
 
   "body": {
     "table_headers": ["지표 (FRED ID)", "단위", "최신값", "관측일",
-                      "직전 대비", "4주 전 대비", "1년 전 대비"],
+                      "1주 대비", "4주 대비", "13주 대비", "52주 대비"],
+    "_table_headers_note": "대비 열은 config.lookbacks에서 파생된다. 열 개수가 lookbacks와 어긋나면 수집 단계에서 터진다.",
+    "series_label_format": "{label} · {id}",
+    "gloss_format": "{label}({gloss})",
+    "_label_note": "gloss_format을 먼저 적용해 '지급준비금(은행이 연준에 맡겨 둔 돈…)'을 만들고, 그 뒤에 series_label_format으로 FRED ID를 붙인다. 순서를 뒤집으면 괄호가 두 번 겹친다.",
     "claim_heading": "이 표의 주장",
-    "claim_format": "{basis_date} 주간 기준 지급준비금은 {WRESBAL_latest}십억 달러로 직전 주({WRESBAL_prev_date}) 대비 {WRESBAL_prev_delta}, 같은 주 재무부 TGA는 {WTREGEN_latest}십억 달러로 {WTREGEN_prev_delta} 변동해 두 계정은 {pair_direction}. 1년 전({WRESBAL_1y_date}) 대비로는 지준 {WRESBAL_1y_delta}, TGA {WTREGEN_1y_delta}다. 일간 계열인 ON RRP {RRPONTSYD_latest}십억 달러({RRPONTSYD_latest_date})와 SOFR-IORB {SOFR_IORB_SPREAD_latest}bp({SOFR_IORB_SPREAD_latest_date})는 관측일이 달라 위 주간 값과 같은 시점이 아니다. 이 표는 관측값과 그 변동만 기술한다 — 금리 방향·투자 판단은 담지 않는다.",
+    "claim_format": "{basis_date} 주간 기준 지급준비금은 {WRESBAL_latest}십억 달러로 1주 전({WRESBAL_prev_date}) 대비 {WRESBAL_prev_delta}, 같은 주 재무부 TGA는 {WTREGEN_latest}십억 달러로 {WTREGEN_prev_delta} 변동해 두 계정은 {pair_direction}. 52주 전({WRESBAL_52w_date}) 대비로는 지준 {WRESBAL_52w_delta}, TGA {WTREGEN_52w_delta}다. 연준 전체 자산은 {WALCL_latest}십억 달러({WALCL_latest_date} 수요일 잔액)로 52주 대비 {WALCL_52w_delta}이고, 그 안에서 SOMA 국채 {TREAST_52w_delta}·MBS {WSHOMCB_52w_delta}다. 일간 계열인 ON RRP {RRPONTSYD_latest}십억 달러({RRPONTSYD_latest_date})와 SOFR-IORB {SOFR_IORB_SPREAD_latest}bp({SOFR_IORB_SPREAD_latest_date})는 관측일이 달라 위 주간 값과 같은 시점이 아니다. 이 표는 관측값과 그 변동만 기술한다 — 금리 방향·투자 판단은 담지 않는다.",
     "claim_pair": {
       "a": "WRESBAL", "b": "WTREGEN",
       "opposite": "서로 반대 방향으로 움직였다",
@@ -205,16 +610,21 @@
       "flat": "한쪽이 변동 없다"
     },
     "crosscheck_notes": [
-      "IORB는 3차 검증을 하지 않았다 — 연준 사이트 표가 JS 렌더링이라 자동 대조에 실패했다(2026-07-31 실측). FRED CSV·XLS 두 경로 일치까지만 확인한 값이다."
+      "IORB는 3차 검증을 하지 않았다 — 연준 사이트 표가 JS 렌더링이라 자동 대조에 실패했다(2026-07-31 실측). FRED CSV·XLS 두 경로 일치까지만 확인한 값이다.",
+      "요인 분해의 항등식 잔차를 3차 교차검증으로 쓴다 — 서로 다른 계열들이 H.4.1 회계 항등식을 만족하는지 매주 계산하고, 임계를 넘으면 본문에 경고가 실린다."
     ],
-    "table_heading": "스냅샷",
+    "table_heading": "잔액 표",
     "crosscheck_heading": "교차검증",
     "caution_heading": "데이터 주의",
     "source_heading": "출처·수집",
+    "cockpit_link_format": "인터랙티브 드릴다운: {url}",
+    "cockpit_url": "https://econ-cockpit.vercel.app",
     "cautions": [
-      "발표 시차가 시리즈마다 다르다 — 주간계열(WRESBAL·WTREGEN)은 H.4.1(목 16:30 ET 발표, 전주 수요일 마감)이라 조회 시점 기준 최대 8일 시차가 난다. 한 행에 놓였다고 같은 날 값이 아니다.",
-      "WRESBAL·WTREGEN은 주 평균이지 잔액이 아니다 — Wednesday-ending week average다. 같은 H.4.1의 수요일 잔액과 수십억 달러 단위로 다르며, 일간 계열(ON RRP)과 직접 더하거나 빼면 주기가 어긋난다.",
-      "단위가 혼재한다 — 원자료는 WRESBAL·WTREGEN이 백만 달러, RRPONTSYD가 십억 달러다. 표는 전부 십억 달러로 환산했고, 매 실행마다 FRED 메타의 단위 문자열을 대조해 원자료 단위가 바뀌면 값을 싣지 않는다."
+      "발표 시차가 시리즈마다 다르다 — 주간계열(H.4.1)은 목 16:30 ET 발표에 전주 수요일 마감이라 조회 시점 기준 최대 8일 시차가 난다. 한 행에 놓였다고 같은 날 값이 아니다.",
+      "**같은 표 안에 시점 정의가 두 가지 섞여 있다** — WRESBAL·WTREGEN·WCURCIR은 수요일 마감 주평균(week average)이고 WALCL·TREAST·WSHOMCB·WLCFLL은 수요일 잔액(Wednesday level)이다. 단위 열에 어느 쪽인지 적어 뒀다. 두 정의는 같은 주라도 값이 다르므로 직접 가감하면 안 된다.",
+      "역RP가 두 계열로 나온다 — 잔액 표의 RRPONTSYD는 일간 TOMO 국채담보 ON RRP만이고, 요인 분해의 WLRRAA는 외국 공적기관분까지 포함한 주평균 총액이다. 같은 '역RP'라는 이름이지만 값이 다르다.",
+      "단위가 혼재한다 — 원자료는 대부분 백만 달러, RRPONTSYD·RPONTSYD가 십억 달러다. 표는 전부 십억 달러로 환산했고, 매 실행마다 FRED 메타의 단위 문자열을 대조해 원자료 단위가 바뀌면 값을 싣지 않는다.",
+      "SRF 사용액(RPONTSYD)은 이름이 'SRF'인 계열이 아니다 — FRED에 SRF 사용액 계열이 없어 TOMO 오버나이트 레포 매입액을 쓴다. 고른 근거는 config.series[RPONTSYD].note에 적어 뒀다."
     ],
     "caution_future_obs": "관측일이 수집일보다 뒤인 시리즈가 있다 ({items}) — 정책금리(IORB)는 FRED가 앞선 날짜까지 값을 실어 준다. 비교 기준일이 모두 그 관측일에서 역산되므로 다른 시리즈와 시점이 어긋난다.",
     "anomaly_lead": "교차검증에서 불일치가 나왔다. 값을 싣지 않는다 — 아래는 불일치 내역뿐이다.",
