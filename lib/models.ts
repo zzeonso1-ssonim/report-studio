@@ -40,6 +40,13 @@ export const models: ModelLink[] = [
     kind: "web",
   },
   {
+    id: "fomc-dissent-lab",
+    name: "FOMC 소수의견 대시보드",
+    description: "소수의견·문서 톤·문구 diff·유사 사례 (2000~현재)",
+    url: "https://fomc-dissent-lab.vercel.app",
+    kind: "web",
+  },
+  {
     id: "bond-monitor",
     name: "채권 모니터",
     description: "채권 시장 모니터링",
