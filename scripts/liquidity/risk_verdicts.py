@@ -584,7 +584,10 @@ def selftest(cfg):
 
     changed = dict(same)
     tga_id = by_key["TGA"]["page_id"]
-    changed[tga_id] = changed[tga_id].replace("+150", "+120")  # 디렉터가 임계를 고친 상황
+    # 디렉터가 노션에서 임계를 고친 상황. **config 내용에 의존하는 치환을 쓰지 않는다** —
+    # 사본이 마침 그 문자열을 담고 있지 않으면 치환이 무동작이 돼 테스트가 조용히 통과한다
+    # (2026-08-02 실측: '+150'→'+120' 치환본을 config에 넣고 돌리자 이 검사가 무력해졌다).
+    changed[tga_id] = changed[tga_id] + " [셀프테스트 변조]"
     items = evaluate_all(obs, cfg, FakeNotion(changed), run)
     drifted = [i for i in items if i["drift"] == "drift"]
     check("임계 변경 → 드리프트 1건 검출", [i["key"] for i in drifted], ["TGA"])
