@@ -61,23 +61,13 @@ export const models: ModelLink[] = [
     kind: "web",
     note: "팀 공유 · 로그인 필요",
   },
-  {
-    id: "naesu-demand-model",
-    name: "내수 체감경기 검증 모델",
-    description: "내수 체감지표 기반 경기 검증",
-    url: "https://github.com/zzeonso1-ssonim/naesu-demand-model",
-    kind: "repo",
-  },
-  {
-    id: "csi-lead-test",
-    name: "CSI 문항 선행성 테스트",
-    description: "소비자동향조사 문항의 선행성 검정",
-    url: "https://github.com/zzeonso1-ssonim/csi-lead-test",
-    kind: "repo",
-  },
 ];
 
-/** 그룹 표기 — 페이지의 섹션 제목·설명·뱃지가 모두 여기서 파생된다 */
+/**
+ * 그룹 표기 — 페이지의 섹션 제목·설명·뱃지가 모두 여기서 파생된다.
+ * repo 그룹은 현재 항목이 0개다(비공개 저장소 링크 제거, 2026-08-03).
+ * 항목이 없는 그룹은 modelsByKind()가 걸러내므로 빈 섹션은 렌더되지 않는다.
+ */
 export const modelKindMeta: Record<
   ModelKind,
   { label: string; badge: string; hint: string }
