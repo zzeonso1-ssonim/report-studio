@@ -33,7 +33,6 @@ flowchart LR
     CACHE[("파일 캐시 lib/data-dir.ts<br/>DATA_DIR → /tmp(서버리스) → .data<br/>krx · fisis · dart corp_code")]
     SEED["캘린더 시드<br/>lib/calendar-kr.ts (금통위·CPI·GDP)<br/>lib/calendar-us.ts (FOMC)<br/>연 1회 수동 갱신"]
     MODREG["모델 레지스트리<br/>lib/models.ts"]
-    MODST["모델 상태 조회<br/>lib/model-status.ts<br/>health 선언 모델만 · 3.5초 제한 · 5분 캐시<br/>실패는 카드에 사유 표기"]
   end
 
   subgraph KR["한국"]
@@ -68,8 +67,6 @@ flowchart LR
   PX --> CALAPI
   PX --> DISCAPI
   PX --> MODREG
-  MODREG --> MODST
-  MODST -. "GET /api/health (가벼운 상태만)" .-> BONDDESK["bond-desk<br/>bond-desk.vercel.app<br/>매일 07:40 KST 갱신 · 무인증"]
 
   CHAT <--> OPENAI
   CHAT --> REG
@@ -114,7 +111,7 @@ flowchart LR
 | `/calendar` | 한·미 발표 캘린더 |
 | `/disclosures` | DART 공시검색 |
 | `/liquidity` | 미 유동성 프리셋 — ①지준·ON RRP·TGA 수준(기본 3년) ②지준 주간 증감(기본 1년) ③SOFR−IORB 스프레드(기본 1년). 구성·문안은 `scripts/liquidity/config.json`에서 파생 |
-| `/models` | 내가 만든 모델·앱 바로가기 (`health` 선언 모델은 카드에 실시간 상태·기준일 표기) |
+| `/models` | 내가 만든 모델·앱 바로가기 |
 | `/login` | 비밀번호 게이트 진입점 (게이트 예외) |
 | `/api/indicators` · `/api/series/[id]` · `/api/series/adhoc` · `/api/search` · `/api/chat` · `/api/calendar` · `/api/disclosures` | 데이터 API (게이트 적용) |
 | `/api/login` · `/api/logout` | 세션 쿠키 발급·삭제 (게이트 예외 — 자체 검증) |
