@@ -1,6 +1,6 @@
 import { getIndicator } from "@/lib/indicators";
 import { lookbackStart, normalizeDate, normalizePointDates } from "@/lib/dates";
-import { applyTransform, REQUEST_TRANSFORMS, Transform } from "@/lib/transforms";
+import { applyTransform, REQUEST_TRANSFORMS, resolveTransform, Transform } from "@/lib/transforms";
 import { sources, SeriesPoint } from "@/lib/sources";
 
 export async function GET(
@@ -21,15 +21,15 @@ export async function GET(
     return Response.json({ error: `지원하지 않는 변환: ${requested}` }, { status: 400 });
   }
 
-  // 지표 성격(kind) 기반 변환 대체 — 금리형에 비율 yoy를 걸면 "+130%" 같은
-  // 무의미한 값이 나오므로 차(%p)로 바꾼다. 질의별 수리가 아니라 레지스트리
-  // 메타데이터 하나로 전 지표에 일괄 적용되는 규칙.
-  let transform = requested;
-  let note: string | undefined;
-  if (indicator.kind === "rate" && (requested === "yoy" || requested === "pop")) {
-    transform = requested === "yoy" ? "yoy_diff" : "pop_diff";
-    note = `"${indicator.name}"은(는) 금리형 지표라 ${requested === "yoy" ? "전년동기대비" : "전기대비"}를 %p 차이로 계산했어요`;
-  }
+  // 지표 성격 기반 변환 대체 — 금리형에 비율 yoy를 걸면 "+130%" 같은 무의미한
+  // 값이 나오므로 차(%p)로 바꾼다. 판정·안내문은 lib/transforms.ts의
+  // resolveTransform 하나로 모아, 임의 시계열 경로와 같은 규칙을 쓴다.
+  // 등록 지표는 단위 표기가 아니라 레지스트리 kind로 판정한다(표기 요동에 면역).
+  const { transform, note } = resolveTransform(requested, {
+    name: indicator.name,
+    unit: indicator.unit,
+    isRateLevel: indicator.kind === "rate",
+  });
 
   // yoy·pop 계열은 구간 앞 1년을 선행 조회해야 구간 첫 시점부터 값이 나온다
   const needsLookback = transform !== "raw" && transform !== "rebase";

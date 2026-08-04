@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { REQUEST_TRANSFORMS, transformLabels } from "@/lib/transforms";
 import { LOGIN_PATH, LOGOUT_API_PATH } from "@/lib/auth-config";
 import { CLIENT_TIMEOUT_MS, seconds } from "@/lib/search-config";
+import { MAX_SERIES, seriesStyle } from "@/lib/chart-config";
 import {
   Area,
   Bar,
@@ -73,8 +74,19 @@ const TRANSFORMS = Object.entries(transformLabels)
   .map(([value, label]) => ({ value, label }));
 
 const YEAR_PRESETS = [1, 3, 5, 10] as const;
-const MAX_SERIES = 4;
-const SERIES_VARS = ["--series-1", "--series-2", "--series-3", "--series-4"];
+
+/**
+ * 표시 단위 정규화 — 같은 뜻의 다른 표기가 서로 다른 축으로 갈라지는 것을 막는다.
+ * (레지스트리 "십억 달러" vs 유동성 config 파생 "십억 USD"가 실제로 그랬다)
+ */
+function normalizeUnit(u: string): string {
+  return u
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .replace(/usd/g, "달러")
+    .replace(/percent|퍼센트/g, "%");
+}
 
 const CHART_TYPES = [
   { value: "line", label: "꺾은선" },
@@ -621,8 +633,12 @@ export default function Home() {
   }, []);
 
   /**
-   * 축 자동 분리 — 계획이 축을 명시하지 않았고 표시 단위가 정확히 2종이면
-   * 두 번째 단위 그룹을 우축으로 보낸다. 단위 충돌 경고 대신 시스템이 해결.
+   * 축 자동 분리 — 계획이 축을 명시하지 않았으면 표시 단위로 좌·우를 나눈다.
+   * 가장 많은 시리즈가 쓰는 단위를 좌축에 두고 나머지를 우축으로 보낸다.
+   *
+   * 종전에는 단위가 정확히 2종일 때만 동작해서, 한·미·기관을 섞어 3종 이상이
+   * 되면 자동 분리가 통째로 꺼지고 %(0~5)와 억원(10^5)이 한 축에 눌렸다.
+   * 3종 이상도 우축으로 묶고, 그때는 재기준화를 권하는 안내를 함께 낸다.
    */
   const { effectiveAxes, autoAxisNote } = useMemo(() => {
     const hasExplicit = loadedIds.some((id) => axes[id]);
@@ -630,18 +646,33 @@ export default function Home() {
       return { effectiveAxes: axes, autoAxisNote: null as string | null };
     }
     const unitsSeen: string[] = [];
+    const count = new Map<string, number>();
     for (const id of loadedIds) {
-      const u = displayUnitOf(displaySeries[id]);
+      const u = normalizeUnit(displayUnitOf(displaySeries[id]));
       if (!unitsSeen.includes(u)) unitsSeen.push(u);
+      count.set(u, (count.get(u) ?? 0) + 1);
     }
-    if (unitsSeen.length !== 2) return { effectiveAxes: axes, autoAxisNote: null };
+    if (unitsSeen.length < 2) return { effectiveAxes: axes, autoAxisNote: null };
+    // 최다 사용 단위를 좌축으로 (동수면 먼저 등장한 쪽)
+    const leftUnit = unitsSeen.reduce((a, b) =>
+      (count.get(b) ?? 0) > (count.get(a) ?? 0) ? b : a
+    );
     const out: Record<string, Axis> = {};
     for (const id of loadedIds) {
-      out[id] = displayUnitOf(displaySeries[id]) === unitsSeen[0] ? "left" : "right";
+      out[id] = normalizeUnit(displayUnitOf(displaySeries[id])) === leftUnit ? "left" : "right";
     }
+    // 안내문에는 정규화 전 표기를 쓴다(사용자가 화면에서 보는 문자열)
+    const labelOf = (norm: string) =>
+      loadedIds
+        .map((id) => displayUnitOf(displaySeries[id]))
+        .find((u) => normalizeUnit(u) === norm) || "-";
+    const rightUnits = unitsSeen.filter((u) => u !== leftUnit).map(labelOf);
     return {
       effectiveAxes: out,
-      autoAxisNote: `단위가 달라 ${unitsSeen[1] || "두 번째"} 시리즈를 우축으로 분리했어요 (좌 ${unitsSeen[0] || "-"} · 우 ${unitsSeen[1] || "-"})`,
+      autoAxisNote:
+        rightUnits.length === 1
+          ? `단위가 달라 ${rightUnits[0]} 시리즈를 우축으로 분리했어요 (좌 ${labelOf(leftUnit)} · 우 ${rightUnits[0]})`
+          : `단위가 ${unitsSeen.length}종이라 ${labelOf(leftUnit)}만 좌축에 두고 나머지(${rightUnits.join(" · ")})를 우축에 함께 표시했어요 — 스케일이 크게 다르면 재기준화(시작=100)로 보세요`,
     };
   }, [loadedIds, axes, displaySeries, displayUnitOf]);
 
@@ -831,10 +862,16 @@ export default function Home() {
           주요 지표
         </h3>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {meta.filter((m) => m.featured).map((m) => (
+          {meta.filter((m) => m.featured).map((m) => {
+            // 상한을 넘으면 toggle이 조용히 무시했다 — 눌리지 않는 이유가 보이게 막는다
+            const full = !selected.includes(m.id) && totalSelected >= MAX_SERIES;
+            return (
             <label
               key={m.id}
-              className="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+              title={full ? `최대 ${MAX_SERIES}개까지 선택할 수 있어요` : undefined}
+              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
+                full ? "cursor-not-allowed opacity-40" : "cursor-pointer"
+              }`}
               style={{
                 borderColor: selected.includes(m.id) ? "var(--primary)" : "var(--border)",
                 background: selected.includes(m.id) ? "var(--primary-soft)" : "transparent",
@@ -843,6 +880,7 @@ export default function Home() {
               <input
                 type="checkbox"
                 checked={selected.includes(m.id)}
+                disabled={full}
                 onChange={() => toggle(m.id)}
                 className="accent-[var(--primary)]"
               />
@@ -861,7 +899,8 @@ export default function Home() {
                 </span>
               )}
             </label>
-          ))}
+            );
+          })}
           {meta.length === 0 && (
             <p className="text-sm" style={{ color: "var(--muted)" }}>
               지표 목록을 불러오는 중…
@@ -1284,7 +1323,9 @@ export default function Home() {
                       />
                     )}
                     {loadedIds.map((id, i) => {
-                      const color = `var(${SERIES_VARS[i % SERIES_VARS.length]})`;
+                      // 색만으로는 8~10계열을 구분하기 어렵다 — 5번째부터 파선을 함께 입힌다
+                      const { colorVar, dash } = seriesStyle(i);
+                      const color = `var(${colorVar})`;
                       const axis = axisOf(id);
                       const style = styleOf(id);
                       if (style === "bar") {
@@ -1322,6 +1363,7 @@ export default function Home() {
                           dataKey={id}
                           yAxisId={axis}
                           stroke={color}
+                          strokeDasharray={dash}
                           strokeWidth={2}
                           dot={false}
                           connectNulls

@@ -38,6 +38,64 @@ export function rateUnitNote(name: string, unit: string): string {
   return `"${name}"은(는) 이미 변화율 단위(${unit})라 변환 없이 원계열로 표시합니다`;
 }
 
+/**
+ * 수준 자체가 %인 지표(금리·비율) 판정 — 여기에 비율 yoy를 걸면 "3.5%가
+ * 3.0%로 내렸다"가 "-14.3%"가 되어 아무 의미가 없다. 맞는 계산은 차(%p)다.
+ *
+ * 등록 지표는 레지스트리의 kind="rate"로 판정하지만, 검색으로 찾은 임의
+ * 시계열은 메타데이터가 단위 문자열뿐이라 여기서 판정한다. 원천이 주는 표기가
+ * 제각각이라 전각·공백을 정규화한 뒤 본다. 실제 표기 예: ECOS 121Y006이 주는
+ * "연리%"·"연%"(2026-08-04 API 실응답), 전각 "％", FRED "Percent".
+ * 2026-08-04까지 "%"·"percent" 완전일치만 인정해 ECOS 금리 계열 전부가 누락됐다.
+ *
+ * 규칙: 짧은 접두어(연·연리·월 등 3자 이내) + "%"(+p) 이거나 percent 계열.
+ * 접두어를 3자로 제한해 긴 변화율 표기가 새어 들어오지 않게 한다
+ * (그 부류는 위 isRateUnit이 먼저 걸러낸다).
+ */
+export function isLevelRateUnit(unit: string | undefined): boolean {
+  if (!unit) return false;
+  if (isRateUnit(unit)) return false; // 이미 변화율인 단위는 이 판정 대상이 아니다
+  const u = unit.normalize("NFKC").trim().toLowerCase().replace(/\s/g, "");
+  return (
+    /^[가-힣a-z]{0,3}%(p|pt|포인트|point)?$/.test(u) ||
+    u === "percent" ||
+    u === "percentperannum" ||
+    u === "퍼센트"
+  );
+}
+
+/** 수준 %인 지표에 비율 변환을 요청했을 때 차(%p)로 바꿨음을 알리는 안내문 */
+export function levelRateNote(name: string, requested: "yoy" | "pop"): string {
+  return `"${name}"은(는) 수준이 %인 지표라 ${
+    requested === "yoy" ? "전년동기대비" : "전기대비"
+  }를 비율(%)이 아니라 차이(%p)로 계산했어요`;
+}
+
+/**
+ * 요청 변환 → 실제 적용할 변환. 지표 성격과 안 맞으면 대체하고 사유를 돌려준다.
+ * 등록 지표 경로와 임의 시계열 경로가 같은 규칙을 쓰도록 하는 단일 소스다.
+ *
+ * @param requested 사용자가 고른 변환
+ * @param meta.isRateLevel 레지스트리가 아는 경우(kind="rate")만 전달. 미전달이면 단위로 판정
+ */
+export function resolveTransform(
+  requested: Transform,
+  meta: { name: string; unit?: string; isRateLevel?: boolean }
+): { transform: Transform; note?: string } {
+  if (requested !== "yoy" && requested !== "pop") return { transform: requested };
+  if (isRateUnit(meta.unit)) {
+    return { transform: "raw", note: rateUnitNote(meta.name, meta.unit ?? "") };
+  }
+  const isLevel = meta.isRateLevel ?? isLevelRateUnit(meta.unit);
+  if (isLevel) {
+    return {
+      transform: requested === "yoy" ? "yoy_diff" : "pop_diff",
+      note: levelRateNote(meta.name, requested),
+    };
+  }
+  return { transform: requested };
+}
+
 export function applyTransform(
   points: SeriesPoint[],
   transform: Transform,

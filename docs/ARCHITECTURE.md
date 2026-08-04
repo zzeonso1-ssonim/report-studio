@@ -19,7 +19,7 @@ flowchart LR
   end
 
   subgraph SERVER["Next.js 서버 — API 키·캐시 (서버 전용)"]
-    CHAT["/api/chat<br/>OpenAI function calling 플래너<br/>gpt-4o-mini (OPENAI_MODEL)<br/>계획만 수립 · 숫자 생성 금지"]
+    CHAT["/api/chat<br/>OpenAI function calling 플래너<br/>gpt-4o (OPENAI_MODEL)<br/>계획만 수립 · 숫자 생성 금지<br/>도구: list_indicators · search_catalog<br/>list_table_items · finalize_plan"]
     SER["/api/series/[id]<br/>transform: raw · yoy · pop · rebase"]
     ADHOC["/api/series/adhoc<br/>미등록 시계열 직접 조회"]
     SRCH["/api/search<br/>카탈로그 통합검색"]
@@ -28,7 +28,8 @@ flowchart LR
     REG["지표 레지스트리<br/>lib/indicators.ts<br/>46개 · 원천기관 우선 + fallback"]
     LIQCFG[("유동성 계열 설정<br/>scripts/liquidity/config.json<br/>lib/liquidity.ts가 파생<br/>노션 브리핑과 공유")]
     TR["변환 계층<br/>lib/transforms.ts<br/>YoY · 전기대비 · 재기준화"]
-    SRCHLIB["카탈로그 검색<br/>lib/search.ts"]
+    SRCHLIB["카탈로그 검색<br/>lib/search.ts<br/>상한: lib/search-config.ts"]
+    SRCHLLM["검색 보조 LLM<br/>lib/search-llm.ts<br/>소스별 검색어 분해 · 후보 재정렬<br/>실패 시 문자열 매칭 폴백"]
     AD["어댑터 계층<br/>lib/sources/*<br/>(인증·포맷·날짜표기 흡수)"]
     CACHE[("파일 캐시 lib/data-dir.ts<br/>DATA_DIR → /tmp(서버리스) → .data<br/>krx · fisis · dart corp_code")]
     SEED["캘린더 시드<br/>lib/calendar-kr.ts (금통위·CPI·GDP)<br/>lib/calendar-us.ts (FOMC)<br/>연 1회 수동 갱신"]
@@ -82,6 +83,7 @@ flowchart LR
   SRCH --> SRCHLIB
   REG --> AD
   ADHOC --> AD
+  SRCHLIB --> SRCHLLM
   SRCHLIB --> ECOS
   SRCHLIB --> KOSIS
   SRCHLIB --> FRED
@@ -121,6 +123,13 @@ flowchart LR
 - **순수 소비자**: 계산·추정 로직 없음. 나우캐스팅 결과가 필요하면 기존 엔진(GDP/CPI) API만 호출.
 - **키는 서버에서만**: 모든 기관 키·OpenAI 키는 환경변수 → 서버 라우트/어댑터. 클라이언트에는 절대 미노출.
 - **모델은 계획만**: 챗봇은 조회 계획(JSON)을 만들 뿐, 수치는 반드시 어댑터가 조회한 실데이터를 쓴다.
+  검색 보조 LLM(`lib/search-llm.ts`)도 마찬가지로 **검색어와 후보 순서만** 다루고 값은 만들지 않으며,
+  실패하면 문자열 매칭으로 폴백해 LLM이 꺼져도 기능이 유지된다.
+- **상한은 한곳에, "무엇을 자르는지"와 함께**: 검색 상한은 `lib/search-config.ts`, 차트 계열 상한은
+  `lib/chart-config.ts`. 상한을 코드에 흩어 놓으면 무엇이 잘려 사라졌는지 아무도 모른다
+  (2026-08-04: ECOS 표의 86.1%에서 세부 항목이 잘리고 있었고 도달 경로도 없었다).
+- **잘린 것에는 도달 경로를 남긴다**: 상한이 있는 한 검색은 언제나 일부만 보여준다.
+  그래서 `list_table_items`로 통계표 안을 직접 여는 경로를 둔다 — 상한값을 올리는 것은 완화일 뿐 해결이 아니다.
 - **게이트는 화이트리스트 없이 전량 통과**: `proxy.ts`에 matcher를 두지 않고 예외를 코드 상수로 판정 — matcher 정규식 실수로 경로가 통째로 열리는 사고를 막기 위함.
 - **캐싱 2단**: 어댑터의 외부 fetch에 revalidate 10분(기관 한도 보호) + 확정치·저한도·대용량 카탈로그만 파일 캐시.
 - **저장 루트 단일 소스**: 파일 경로는 `lib/data-dir.ts`의 `dataPath()`만 사용. 캐시 읽기/쓰기 실패는 요청을 깨뜨리지 않는다.

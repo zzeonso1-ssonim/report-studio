@@ -13,7 +13,7 @@ import { FUNCTION_MAX_DURATION_S } from "@/lib/search-config";
  * 단일 소스는 lib/search-config.ts의 FUNCTION_MAX_DURATION_S이며,
  * 어긋나면 아래 대조에서 개발 중에 드러난다.
  */
-export const maxDuration = 20;
+export const maxDuration = 25;
 
 if (process.env.NODE_ENV !== "production" && maxDuration !== FUNCTION_MAX_DURATION_S) {
   throw new Error(

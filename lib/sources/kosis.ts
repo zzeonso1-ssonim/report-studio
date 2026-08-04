@@ -3,7 +3,11 @@ import { SeriesPoint, SourceAdapter, SourceError, requireKey } from "./types";
 /**
  * 통계청 KOSIS 공유서비스 OpenAPI
  * https://kosis.kr/openapi/
- * params: { orgId, tblId, itmId, objL1, objL2?, prdSe(M|Q|Y) }
+ * params: { orgId, tblId, itmId, objL1, objL2?, objL3?, prdSe(M|Q|Y) }
+ *
+ * 분류 차수(objL)는 표마다 다르다. 지원 차수를 늘리지 않으면 그보다 깊은 표는
+ * 조회 params를 만들 수 없어 검색 결과에서 통째로 빠진다
+ * (대응 상한: lib/search-config.ts의 KOSIS_OBJ_CAPS 배열 길이).
  */
 export const kosis: SourceAdapter = {
   id: "kosis",
@@ -15,7 +19,7 @@ export const kosis: SourceAdapter = {
     // err 11(유효하지 않은 인증KEY)이 나므로 길이가 4의 배수가 되도록 보정한다.
     const rawKey = requireKey("kosis", "KOSIS_API_KEY");
     const key = rawKey + "=".repeat((4 - (rawKey.length % 4)) % 4);
-    const { orgId, tblId, itmId, objL1, objL2 = "", prdSe = "M" } = params;
+    const { orgId, tblId, itmId, objL1, objL2 = "", objL3 = "", prdSe = "M" } = params;
     const start = toKosisPeriod(range.start, prdSe);
     const end = toKosisPeriod(range.end, prdSe);
 
@@ -27,6 +31,7 @@ export const kosis: SourceAdapter = {
       itmId,
       objL1,
       objL2,
+      objL3,
       format: "json",
       jsonVD: "Y",
       prdSe,

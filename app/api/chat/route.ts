@@ -1,5 +1,7 @@
 import { indicators, getIndicator, Cycle } from "@/lib/indicators";
-import { searchAll } from "@/lib/search";
+import { MAX_DERIVED, MAX_SERIES } from "@/lib/chart-config";
+import { capWithSourceFloor, listEcosTableItems, searchAll } from "@/lib/search";
+import { CHAT_RESULT_CAP } from "@/lib/search-config";
 import { REQUEST_TRANSFORMS, Transform } from "@/lib/transforms";
 import { sources } from "@/lib/sources";
 
@@ -23,9 +25,15 @@ import { sources } from "@/lib/sources";
  */
 const DEFAULT_OPENAI_MODEL = "gpt-4o";
 
-const MAX_TOOL_ROUNDS = 6;
-const MAX_SERIES = 4;
-const MAX_DERIVED = 2;
+/**
+ * 도구 호출 라운드 상한. list_indicators → search_catalog → list_table_items →
+ * finalize_plan이 최소 4라운드라, 검증 실패 재시도까지 감안해 여유를 둔다.
+ */
+const MAX_TOOL_ROUNDS = 8;
+
+/** 소스별 최소 노출 건수 — 한·미 비교에서 한쪽 소스가 0건이 되지 않게 한다 */
+const CHAT_SOURCE_FLOOR = 4;
+
 const TRANSFORMS: Transform[] = [...REQUEST_TRANSFORMS];
 const CYCLES: Cycle[] = ["D", "M", "Q", "A"];
 const AXES = ["left", "right"] as const;
@@ -103,8 +111,11 @@ function buildSystemPrompt(): string {
     `- 절대 경제 수치를 직접 창작하거나 답하지 마세요. 실제 데이터 조회는 시스템이 수행하며, 당신은 계획만 세웁니다.`,
     `- 먼저 list_indicators로 등록 지표를 확인하세요. 등록 지표로 충분하면 series 항목을 {"indicatorId": "..."}로 지정하세요. 질의의 표현이 등록 지표의 name 또는 aliases와 맞으면 반드시 그 등록 지표를 쓰고 카탈로그 검색으로 대체하지 마세요.`,
     `- 등록 지표에 없는 데이터만 search_catalog(ECOS·KOSIS·FRED 카탈로그 검색)로 찾으세요. 검색 결과를 쓸 때는 그 결과의 source·params·cycle·name·unit을 변형 없이 그대로 finalize_plan의 series 항목에 넣으세요.`,
+    `- **검색 결과에 원하는 세부 항목이 안 보이면 포기하거나 비슷한 것으로 대체하지 말고 list_table_items로 그 통계표 안을 직접 여세요.** 검색 결과는 표마다 일부 항목만 보여줍니다 — 예를 들어 "예금은행 대출금리"의 기업대출·가계대출·주택담보대출처럼 표 안에만 있는 항목은 검색 결과에 없을 수 있습니다. ECOS 결과의 params.statCode를 list_table_items에 넣고, 찾는 항목명을 filter에 넣으세요.`,
+    `- list_table_items로 항목을 찾았으면 series 항목을 직접 조립하세요: {"source":"ecos","params":{"statCode":<statCode>,"cycle":<cycle>,"itemCode1":<Group1 ITEM_CODE>,...},"cycle":<주기>,"name":"<표이름 · 항목이름>","unit":<항목 unit>}. itemCode 번호는 그룹 순서(Group1→itemCode1, Group2→itemCode2)를 따릅니다. 응답의 paramsHint가 그 표에 필요한 키를 알려줍니다.`,
+    `- 여러 나라·기관을 넘나드는 질의(한국 ECOS + 미국 FRED + 통계청 KOSIS)를 그대로 지원합니다. 필요한 소스마다 search_catalog를 따로 부르고, 각 소스의 결과를 series에 함께 담으세요.`,
     `- 질의가 언급하는 모든 시계열 대상을 빠짐없이 series에 넣으세요. 두 나라·두 지표를 비교하는 질의("A랑 B", "A vs B")면 반드시 각각 별도의 series 항목으로 모두 포함해야 합니다. 시리즈는 최대 ${MAX_SERIES}개.`,
-    `- transform: raw(원계열) | yoy(전년동기대비) | pop(전기대비) | rebase(구간 시작=100). 질의에 "전년동기대비"·"전년대비"·"YoY"·"상승률" 등이 있으면 yoy로 두세요 — 금리형 지표는 시스템이 자동으로 %p 차이로 계산하니 금리가 섞여 있어도 yoy를 피하지 마세요. 금리 수준(level) 비교("금리 보여줘")는 raw.`,
+    `- transform: raw(원계열) | yoy(전년동기대비) | pop(전기대비) | rebase(구간 시작=100). 질의에 "전년동기대비"·"전년대비"·"YoY"·"상승률" 등이 있으면 yoy로 두세요 — 수준이 %인 금리·비율 지표는 시스템이 자동으로 차이(%p)로 바꾸고 그 사실을 안내에 표시하니, 금리가 섞여 있어도 yoy를 피하지 마세요. 금리 수준(level) 비교("금리 보여줘")는 raw.`,
     `- 파생 계산(스프레드·비율): 질의가 차나 비율을 명시적으로 요구할 때만("A-B 스프레드", "장단기 금리차", "A 대비 B 비율") derived에 {op, a, b, name}을 넣으세요. 단순 비교·겹치기 질의("A랑 B 보여줘/겹쳐줘")에는 derived를 넣지 마세요. op은 spread(a−b) 또는 ratio(a÷b), a·b는 series 배열의 0-기준 인덱스입니다. "10년-3년 스프레드"면 a=10년 인덱스, b=3년 인덱스. 원본 두 시리즈도 series에 그대로 두세요(함께 그려집니다). 값 계산은 시스템이 합니다.`,
     `- 이축·표현: 단위가 다른 시리즈 조합은 시스템이 자동으로 좌·우축을 분리하므로, axis는 사용자가 축을 콕 집어 말할 때("우축으로", "오른쪽 축에")만 지정하세요. 스프레드(derived)는 원 시리즈와 스케일이 다르므로 axis:"right"를 권장합니다. "영역형"·"막대"처럼 특정 항목의 표현을 지정하면 style("line"|"bar"|"area")을 넣으세요. 예: "스프레드를 우축 영역형으로" → 해당 derived에 axis:"right", style:"area".`,
     `- 미국 데이터가 등록 지표에 없으면 search_catalog를 source:"fred"로 호출하되, FRED 카탈로그는 영문 전용이므로 검색어는 반드시 영어로 바꿔서 넣으세요 (예: "미국 실업률" → "unemployment rate").`,
@@ -145,6 +156,33 @@ const TOOLS = [
           },
         },
         required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "list_table_items",
+      description:
+        "ECOS 통계표 하나의 세부 항목(ITEM_CODE) 목록을 연다. search_catalog 결과에 질의가 요구하는 세부 항목이 없을 때 반드시 이 도구로 확인할 것 — 검색 결과는 표마다 일부 항목만 노출한다. 응답의 itemCode를 params.itemCode1/2/3에 넣어 series를 조립한다.",
+      parameters: {
+        type: "object",
+        properties: {
+          statCode: {
+            type: "string",
+            description: "ECOS 통계표 코드 (검색 결과 params.statCode, 예: 121Y006)",
+          },
+          filter: {
+            type: "string",
+            description:
+              "항목명 필터 (선택). 찾는 항목의 이름 일부를 넣으면 그 항목만 추린다. 예: \"기업대출 가계대출 주택담보대출\"",
+          },
+          cycle: {
+            type: "string",
+            description: "주기 지정 (선택, D·M·Q·A). 생략하면 표의 대표 주기",
+          },
+        },
+        required: ["statCode"],
       },
     },
   },
@@ -227,10 +265,30 @@ async function runSearchCatalog(args: { query?: unknown; source?: unknown }): Pr
     typeof args.source === "string"
       ? results.filter((r) => r.source === args.source)
       : results;
+  // 상한을 앞에서부터 자르면 배열 앞머리의 ECOS가 칸을 다 먹어 KOSIS·FRED가
+  // 모델 눈에 0건이 된다(한·미 비교의 치명상). 소스별 최소 몫을 먼저 확보한다.
   return JSON.stringify({
-    results: filtered.slice(0, 15),
+    results: capWithSourceFloor(filtered, CHAT_RESULT_CAP, CHAT_SOURCE_FLOOR),
     errors,
   });
+}
+
+async function runListTableItems(args: {
+  statCode?: unknown;
+  filter?: unknown;
+  cycle?: unknown;
+}): Promise<string> {
+  const statCode = typeof args.statCode === "string" ? args.statCode.trim() : "";
+  if (!statCode) return JSON.stringify({ error: "statCode가 필요합니다" });
+  try {
+    const result = await listEcosTableItems(statCode, {
+      filter: typeof args.filter === "string" ? args.filter : undefined,
+      cycle: typeof args.cycle === "string" ? args.cycle : undefined,
+    });
+    return JSON.stringify(result);
+  } catch (err) {
+    return JSON.stringify({ error: err instanceof Error ? err.message : String(err) });
+  }
 }
 
 /** finalize_plan 인자 검증 — 실패 시 오류 메시지 반환(모델 재시도용), 성공 시 정제된 Plan */
@@ -440,6 +498,11 @@ export async function POST(request: Request) {
         });
       }
 
+      // 어떤 도구를 거쳐 계획이 나왔는지 남긴다 — 검색만으로 못 찾아
+      // list_table_items까지 갔는지가 결손 진단의 핵심 단서다
+      console.log(
+        `[chat] round=${round + 1} tools=${msg.tool_calls.map((t) => t.function.name).join(",")}`
+      );
       for (const tc of msg.tool_calls) {
         let args: unknown = {};
         try {
@@ -476,6 +539,10 @@ export async function POST(request: Request) {
           result = runListIndicators();
         } else if (tc.function.name === "search_catalog") {
           result = await runSearchCatalog(args as { query?: unknown; source?: unknown });
+        } else if (tc.function.name === "list_table_items") {
+          result = await runListTableItems(
+            args as { statCode?: unknown; filter?: unknown; cycle?: unknown }
+          );
         } else {
           result = JSON.stringify({ error: `알 수 없는 도구: ${tc.function.name}` });
         }

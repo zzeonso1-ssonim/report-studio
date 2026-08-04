@@ -1,6 +1,6 @@
 import { Cycle } from "@/lib/indicators";
 import { lookbackStart, normalizeDate, normalizePointDates } from "@/lib/dates";
-import { applyTransform, isRateUnit, rateUnitNote, REQUEST_TRANSFORMS, Transform } from "@/lib/transforms";
+import { applyTransform, REQUEST_TRANSFORMS, resolveTransform, Transform } from "@/lib/transforms";
 import { sources } from "@/lib/sources";
 const CYCLES: Cycle[] = ["D", "M", "Q", "A"];
 
@@ -40,8 +40,8 @@ export async function POST(request: Request) {
   if (!CYCLES.includes(cycle)) {
     return Response.json({ error: `지원하지 않는 주기: ${String(b.cycle)}` }, { status: 400 });
   }
-  let transform = (b.transform ?? "raw") as Transform;
-  if (!(REQUEST_TRANSFORMS as readonly string[]).includes(transform)) {
+  const requested = (b.transform ?? "raw") as Transform;
+  if (!(REQUEST_TRANSFORMS as readonly string[]).includes(requested)) {
     return Response.json({ error: `지원하지 않는 변환: ${String(b.transform)}` }, { status: 400 });
   }
   const start = typeof b.start === "string" ? b.start : defaultStart();
@@ -50,19 +50,11 @@ export async function POST(request: Request) {
   const name = typeof b.name === "string" ? b.name : "임의 시계열";
   const unit = typeof b.unit === "string" ? b.unit : "";
 
-  // 검색 시리즈는 kind 메타데이터가 없어 단위로 성격을 판정한다.
+  // 검색 시리즈는 kind 메타데이터가 없어 단위 문자열로 성격을 판정한다.
   // ① 이미 변화율 단위("% Chg." 등) → 이중 변환 금지, 원계열로 강등
-  // ② 수준이 %인 금리형 → 비율 yoy 대신 차(%p)로 대체 (등록 지표와 동일 규칙)
-  let note: string | undefined;
-  if (transform === "yoy" || transform === "pop") {
-    if (isRateUnit(unit)) {
-      note = rateUnitNote(name, unit);
-      transform = "raw";
-    } else if (unit.trim() === "%" || unit.trim().toLowerCase() === "percent") {
-      note = `"${name}"은(는) 금리형(수준 %) 시리즈라 ${transform === "yoy" ? "전년동기대비" : "전기대비"}를 %p 차이로 계산했어요`;
-      transform = transform === "yoy" ? "yoy_diff" : "pop_diff";
-    }
-  }
+  // ② 수준이 %인 금리형("연%"·"％"·"Percent" 포함) → 비율 대신 차(%p)
+  // 판정·안내문은 등록 지표 경로와 같은 resolveTransform을 쓴다.
+  const { transform, note } = resolveTransform(requested, { name, unit });
 
   // yoy·pop 계열은 구간 앞 1년을 선행 조회해야 구간 첫 시점부터 값이 나온다
   const needsLookback = transform !== "raw" && transform !== "rebase";

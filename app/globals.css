@@ -17,6 +17,12 @@
   --series-2: #2a78d6;
   --series-3: #eb6834;
   --series-4: #6270b0;
+  /* 5~8: 한·미·기관 간 다계열 비교용 확장분. 색만으로 8개를 구분하기는 어려워
+     app/page.tsx가 5번째부터 파선(SERIES_DASH)을 함께 입힌다 */
+  --series-5: #9a3f9e;
+  --series-6: #a06a00;
+  --series-7: #0f8c8c;
+  --series-8: #5b6770;
   --grid: #e1e0d9;
   --axis: #898781;
 }
@@ -43,6 +49,10 @@
     --series-2: #3987e5;
     --series-3: #d95926;
     --series-4: #7b86cf;
+    --series-5: #b458b8;
+    --series-6: #c08419;
+    --series-7: #23a6a6;
+    --series-8: #8b95a1;
     --grid: #2c2c2a;
     --axis: #898781;
   }

@@ -27,39 +27,192 @@ export const SOURCE_TIMEOUT_MS = positiveInt(
   6000
 );
 
+/**
+ * LLM 보조(lib/search-llm.ts) 1단계에 허용하는 시간(ms).
+ * 넘기면 그 단계만 버리고 문자열 경로로 진행한다.
+ * 서버 상한 계산에 쓰이므로 SERVER_BUDGET_MS보다 먼저 선언한다.
+ */
+export const SEARCH_LLM_TIMEOUT_MS = positiveInt(
+  process.env.NEXT_PUBLIC_SEARCH_LLM_TIMEOUT_MS,
+  4000
+);
+
 /** 응답 조립·직렬화 등 소스 호출 밖에서 쓰는 여유(ms) */
 export const SERVER_OVERHEAD_MS = 2000;
 
-/** 서버가 스스로 지키기로 한 상한(ms) */
-export const SERVER_BUDGET_MS = SOURCE_TIMEOUT_MS + SERVER_OVERHEAD_MS;
+/**
+ * 서버가 스스로 지키기로 한 상한(ms).
+ * 소스 조회(병렬) + LLM 보조 2단계(분해·선별, 각각 순차)를 더한 최악값이다.
+ */
+export const SERVER_BUDGET_MS =
+  SOURCE_TIMEOUT_MS + 2 * SEARCH_LLM_TIMEOUT_MS + SERVER_OVERHEAD_MS;
 
 /** 클라이언트 abort 상한(ms) — 서버 상한 + 왕복 네트워크 여유 */
 export const CLIENT_TIMEOUT_MS = SERVER_BUDGET_MS + 5000;
 
 /**
  * 서버리스 함수 상한(초). vercel.json의 maxDuration과 같은 값이어야 한다.
+ * SERVER_BUDGET_MS(현재 16초)보다 커야 서버가 스스로 정한 상한이 의미를 갖는다.
  * Next는 route의 `export const maxDuration`을 빌드타임 정적 리터럴로만 받으므로
  * route.ts에는 리터럴을 쓰고, 어긋나면 개발 중에 드러나도록 여기서 대조한다.
  */
-export const FUNCTION_MAX_DURATION_S = 20;
-
-/** 소스별 확장(세부항목 조회) 대상 통계표 수 — 결과 건수를 결정하므로 함부로 줄이지 않는다 */
-export const ECOS_TABLE_FANOUT = 5;
-export const KOSIS_TABLE_FANOUT = 4;
-
-/** 소스 1곳이 반환하는 결과 상한 */
-export const PER_SOURCE_CAP = 20;
+export const FUNCTION_MAX_DURATION_S = 25;
 
 /**
- * FRED에 질의를 보낼지 판정한다.
+ * 검색 상한 — "무엇을 자르는가"를 상수마다 명시한다.
  *
- * FRED 카탈로그는 영문 전용이라 한글만으로 된 검색어는 항상 0건이다.
- * 그런데 무매칭 질의에서 응답이 15~17초까지 늘어져(2026-07-28 실측) 전체
- * 검색을 지연시키므로, 매칭 가능성이 없는 질의는 애초에 보내지 않는다.
- * ASCII 영숫자가 하나라도 있으면(예: "CPI 소비자물가") 그대로 조회한다.
+ * 2026-08-04 실측(ECOS 검색가능 609표 중 303표 계측): 표당 항목 상한과 조합
+ * 상한이 겹쳐 **86.1%의 표에서 항목이 잘렸고**, 전체 183,782계열 중 검색에
+ * 노출된 것은 1.3%뿐이었다. 잘린 항목은 앱 안에 도달 경로가 아예 없었다.
+ * 그래서 ① 상한을 여기로 모아 올리고 ② 표당 균등 배분·질의 관련도 정렬로
+ * 같은 칸 안에서 "필요한 항목"이 살아남게 하고 ③ 그래도 잘린 항목은
+ * chat의 list_table_items 도구로 표 안을 직접 열어 도달한다.
+ */
+
+/** 자르는 대상: 세부항목을 펼칠 통계표 수. 이 표들만 항목 확장 API를 호출한다 */
+export const ECOS_TABLE_FANOUT = 5;
+export const KOSIS_TABLE_FANOUT = 5;
+
+/** 자르는 대상: KOSIS 원격 통합검색이 돌려주는 통계표 수 (페이지네이션 없음) */
+export const KOSIS_TABLE_SEARCH_COUNT = 20;
+
+/**
+ * 자르는 대상: ECOS 표 하나에서 그룹(차원)별로 조합에 넣는 세부항목 수.
+ * 조합 생성량의 상한은 곱(=Group1×Group2×Group3)이므로 무한정 올리지 않는다.
+ * 항목은 질의 관련도 순으로 정렬한 뒤 자르므로, 찾는 항목은 앞쪽에 남는다.
+ */
+export const ECOS_GROUP_ITEM_CAPS: Record<string, number> = {
+  Group1: 20,
+  Group2: 6,
+  Group3: 3,
+};
+
+/** 자르는 대상: ECOS 표 하나가 만들어내는 항목 조합(=결과 행) 수. 관련도 순 정렬 후 절단 */
+export const ECOS_COMBOS_PER_TABLE = 24;
+
+/** 자르는 대상: KOSIS 표 하나의 ITEM(지표) 수 */
+export const KOSIS_ITEM_CAP = 6;
+
+/**
+ * 자르는 대상: KOSIS 분류차수별 항목 수 (objL1, objL2, objL3 순).
+ * 배열 길이 = 어댑터(lib/sources/kosis.ts)가 지원하는 분류 차수. 이보다 깊은
+ * 표는 조회 params를 만들 수 없어 결과에서 제외되므로, 길이를 줄이면 그만큼
+ * 통계표가 통째로 검색에서 사라진다.
+ */
+export const KOSIS_OBJ_CAPS = [6, 2, 1];
+
+/** 자르는 대상: KOSIS 표 하나가 만들어내는 항목 조합 수 */
+export const KOSIS_COMBOS_PER_TABLE = 24;
+
+/**
+ * 자르는 대상: 소스 1곳이 반환하는 결과 총량.
+ * 표별 결과를 이어붙인 뒤 자르면 앞 표가 칸을 독식해 뒤 표가 통째로 사라지므로
+ * (예: 신규취급액 대출금리가 다 먹고 잔액 기준이 안 보임) 표 단위 라운드로빈으로 배분한다.
+ */
+export const PER_SOURCE_CAP = 48;
+
+/**
+ * 자르는 대상: 챗 플래너(모델)에게 넘기는 검색 결과 수.
+ * 소스 단위 라운드로빈으로 배분한다 — 소스 순서대로 이어붙여 자르면
+ * ECOS가 칸을 다 먹어 KOSIS·FRED 후보가 모델 눈에 들어오지 않는다.
+ */
+export const CHAT_RESULT_CAP = 30;
+
+/** 자르는 대상: list_table_items가 그룹당 나열하는 항목 수 (표 안을 열어볼 때) */
+export const TABLE_ITEMS_PER_GROUP = 40;
+
+// ── LLM 검색 보조 (lib/search-llm.ts) ──────────────────────────
+/**
+ * 문자열 대조만으로는 "한국 대출금리랑 미국 모기지금리 비교" 같은 다국가·문장형
+ * 질의가 구조적으로 안 잡힌다(한글이 FRED로 새고, 후보 정렬 기준이 없다).
+ * 그래서 ① 질의를 소스별 검색어로 분해하고 ② 후보 중 무엇이 질의에 맞는지
+ * 고르는 두 단계를 LLM에 맡긴다. 실패·미설정·시간초과면 전부 문자열 경로로
+ * 폴백하므로, LLM이 꺼져도 결과는 지금보다 나빠지지 않는다.
+ */
+
+/** 보조 호출용 모델 — 플래너(OPENAI_MODEL)와 별개. 값싸고 빠른 쪽을 쓴다 (서버 전용) */
+export const SEARCH_LLM_MODEL = process.env.OPENAI_SEARCH_MODEL || "gpt-4o-mini";
+
+/** 자르는 대상: 선별 단계에서 LLM에게 보여주는 후보 수 (토큰 비용 상한) */
+export const SEARCH_LLM_CANDIDATES = 60;
+
+/** 질의당 LLM 보조 호출 결과 캐시 건수 (프로세스 메모리, 같은 질의 반복 시 0회 호출) */
+export const SEARCH_LLM_CACHE_SIZE = 200;
+
+// ── 질의 토큰화 ────────────────────────────────────────────────
+// 문장형 질의("… 중 기업대출, 가계대출의 전년대비 증감률")를 통째로 부분문자열
+// 대조하면 어떤 통계표에도 걸리지 않는다. 조사·군더더기를 걷어낸 토큰 단위로
+// 대조해야 "예금은행"·"대출금리"·"1.3.3.2.1"이 각각 표 이름에 걸린다.
+
+/**
+ * 검색어에서 걷어내는 말 — 어느 통계표에나 걸리거나(변별력 0) 지표가 아닌 표현.
+ * 지표·기관을 가리키는 말은 절대 넣지 않는다(넣으면 그 지표를 못 찾게 된다).
+ */
+const QUERY_STOPWORDS = new Set([
+  // 소스 이름 — 어느 표 이름에도 안 들어 있고, FRED에 그대로 보내면 잡음이 된다
+  "ecos", "kosis", "fred", "api",
+  // 변환 지시어
+  "전년대비", "전년동기대비", "전년동월대비", "전기대비", "전월대비", "전분기대비",
+  "증감률", "증가율", "상승률", "변화율", "증감", "원계열", "재기준화", "yoy", "pop", "qoq", "mom",
+  // 요청 동사·군더더기
+  "보여줘", "알려줘", "찾아줘", "그려줘", "뽑아줘", "달라", "해줘", "주세요",
+  "비교", "비교해줘", "겹쳐", "겹쳐줘", "추이", "현황", "그래프", "차트", "데이터",
+  "자료", "최근", "각각", "모두", "전부", "관련", "정도",
+  // 연결어·형식어
+  "그리고", "그리구", "이랑", "하고", "또는", "중에", "중에서", "대비", "기준",
+]);
+
+/** 기간 표현 — "5년치"·"3개월간"처럼 조회 구간을 뜻할 뿐 지표가 아니다 */
+const PERIOD_TOKEN = /^\d+(년치|년간|개월치|개월간|일치|주치)$/;
+
+/** 목차번호 — "1.3.3.2.1" 형태. 점을 살려야 표 이름의 목차와 대조된다 */
+const TREE_TOKEN = /^\d+(\.\d+)+$/;
+
+/** 토큰 끝에서 떼는 조사 (긴 것부터). 어간이 2자 미만이 되면 떼지 않는다 */
+const PARTICLES = [
+  "에서는", "으로는", "이라는", "에서", "으로", "까지", "부터", "라는", "에게",
+  "의", "을", "를", "은", "는", "과", "와", "랑", "에", "로", "도", "만", "등", "중",
+].sort((a, b) => b.length - a.length);
+
+function stripParticle(t: string): string {
+  if (!/[가-힣]$/.test(t)) return t;
+  for (const p of PARTICLES) {
+    if (t.endsWith(p) && t.length - p.length >= 2) return t.slice(0, -p.length);
+  }
+  return t;
+}
+
+/**
+ * 질의 → 매칭용 토큰. 소문자화 → 구두점 분리 → 조사 제거 → 불용어·1자 토큰 제거.
+ * 순서는 원문 등장순을 유지하고 중복은 제거한다.
+ */
+export function queryTokens(q: string): string[] {
+  const out: string[] = [];
+  for (const raw of q.toLowerCase().replace(/[^0-9a-z가-힣.]+/g, " ").split(/\s+/)) {
+    let t = raw.replace(/^\.+|\.+$/g, "");
+    if (!t) continue;
+    if (!TREE_TOKEN.test(t)) t = t.replace(/\./g, "");
+    t = stripParticle(t);
+    if (t.length < 2) continue;
+    if (QUERY_STOPWORDS.has(t) || PERIOD_TOKEN.test(t)) continue;
+    if (!out.includes(t)) out.push(t);
+  }
+  return out;
+}
+
+/**
+ * FRED에 보낼 검색어를 도출한다.
+ *
+ * FRED 카탈로그는 영문 전용이다. 한글이 섞인 원문을 그대로 보내면 결과 0건에
+ * 응답만 15~17초까지 늘어져(2026-07-28 실측) 전체 검색을 지연시킨다. 그래서
+ * **한글은 절대 그대로 보내지 않고**, 영문 토큰 + 용어집 변환분만 조립한다.
+ * 조립 결과가 비면 null(FRED 건너뜀).
+ *
+ * 예) "ecos 1.3.3.2.1 예금은행 대출금리…" → ecos는 불용어, 목차번호는 숫자
+ *     → 영문 토큰 없음 → 용어집 매칭분만 남거나 null. 한글이 FRED로 새지 않는다.
  */
 export function isFredSearchable(q: string): boolean {
-  return /[a-z0-9]/i.test(q);
+  return fredSearchQuery(q) !== null;
 }
 
 /**
@@ -158,18 +311,16 @@ const FRED_KO_EN: [string, string][] = [
 const FRED_KO_EN_BY_LENGTH = [...FRED_KO_EN].sort((a, b) => b[0].length - a[0].length);
 
 /**
- * 질의에서 FRED에 실제로 보낼 검색어를 도출한다.
- * 영숫자가 있으면 원문 그대로, 한글뿐이면 용어집 매칭(긴 표현 우선,
- * 매칭 구간 소거)으로 영문 변환, 변환 불가면 null(FRED 건너뜀).
+ * 질의 → FRED 검색어. 영문 토큰(불용어 제외)과 한글 용어집 변환분을 합친다.
+ * 한글은 결과에 남기지 않는다 — 남기면 0건 + 장시간 지연이 된다.
  */
 export function fredSearchQuery(q: string): string | null {
-  if (isFredSearchable(q)) return q;
-  const terms: string[] = [];
+  const terms: string[] = queryTokens(q).filter((t) => /[a-z]/.test(t));
   let rest = q;
   for (const [ko, en] of FRED_KO_EN_BY_LENGTH) {
     if (!rest.includes(ko)) continue;
     if (!terms.includes(en)) terms.push(en);
-    rest = rest.split(ko).join(" ");
+    rest = rest.split(ko).join(" "); // 매칭 구간 소거 — 긴 표현 안의 짧은 표현 중복 방지
   }
   return terms.length > 0 ? terms.join(" ") : null;
 }
