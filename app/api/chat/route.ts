@@ -1,6 +1,11 @@
 import { indicators, getIndicator, Cycle } from "@/lib/indicators";
 import { MAX_DERIVED, MAX_SERIES } from "@/lib/chart-config";
-import { capWithSourceFloor, listEcosTableItems, searchAll } from "@/lib/search";
+import {
+  capWithSourceFloor,
+  listEcosTableItems,
+  listKosisTableItems,
+  searchAll,
+} from "@/lib/search";
 import { CHAT_RESULT_CAP } from "@/lib/search-config";
 import { REQUEST_TRANSFORMS, Transform } from "@/lib/transforms";
 import { sources } from "@/lib/sources";
@@ -111,8 +116,10 @@ function buildSystemPrompt(): string {
     `- 절대 경제 수치를 직접 창작하거나 답하지 마세요. 실제 데이터 조회는 시스템이 수행하며, 당신은 계획만 세웁니다.`,
     `- 먼저 list_indicators로 등록 지표를 확인하세요. 등록 지표로 충분하면 series 항목을 {"indicatorId": "..."}로 지정하세요. 질의의 표현이 등록 지표의 name 또는 aliases와 맞으면 반드시 그 등록 지표를 쓰고 카탈로그 검색으로 대체하지 마세요.`,
     `- 등록 지표에 없는 데이터만 search_catalog(ECOS·KOSIS·FRED 카탈로그 검색)로 찾으세요. 검색 결과를 쓸 때는 그 결과의 source·params·cycle·name·unit을 변형 없이 그대로 finalize_plan의 series 항목에 넣으세요.`,
-    `- **검색 결과에 원하는 세부 항목이 안 보이면 포기하거나 비슷한 것으로 대체하지 말고 list_table_items로 그 통계표 안을 직접 여세요.** 검색 결과는 표마다 일부 항목만 보여줍니다 — 예를 들어 "예금은행 대출금리"의 기업대출·가계대출·주택담보대출처럼 표 안에만 있는 항목은 검색 결과에 없을 수 있습니다. ECOS 결과의 params.statCode를 list_table_items에 넣고, 찾는 항목명을 filter에 넣으세요.`,
-    `- list_table_items로 항목을 찾았으면 series 항목을 직접 조립하세요: {"source":"ecos","params":{"statCode":<statCode>,"cycle":<cycle>,"itemCode1":<Group1 ITEM_CODE>,...},"cycle":<주기>,"name":"<표이름 · 항목이름>","unit":<항목 unit>}. itemCode 번호는 그룹 순서(Group1→itemCode1, Group2→itemCode2)를 따릅니다. 응답의 paramsHint가 그 표에 필요한 키를 알려줍니다.`,
+    `- **검색 결과는 표마다 항목의 일부만 보여줍니다. 이건 예외가 아니라 상시 조건입니다.** search_catalog 응답의 truncatedTables에 나온 표는 항목이 잘린 표입니다. 질의가 특정 세부 항목(품목·업종·만기·지역·유형 등)을 요구하는데 결과 이름에서 그 항목을 못 찾았다면, **비슷한 것으로 대체하거나 "없다"고 답하기 전에 반드시** 그 표를 열어보세요 — ECOS는 list_table_items(params.statCode), KOSIS는 list_kosis_table_items(params.orgId·tblId). 찾는 항목명을 filter에 넣으면 좁혀집니다.`,
+    `- 표를 열어봤는데도 없을 때만 없다고 답하세요. 검색 결과만 보고 "해당 통계가 없습니다"라고 답하는 것은 오답입니다.`,
+    `- list_table_items로 항목을 찾았으면 series 항목을 직접 조립하세요: {"source":"ecos","params":{"statCode":<statCode>,"cycle":<cycle>,"itemCode1":<Group1 ITEM_CODE>,...},"cycle":<주기>,"name":"<표이름 · 항목이름>","unit":<항목 unit>}. itemCode 번호는 그룹 순서(Group1→itemCode1, Group2→itemCode2)를 따릅니다. KOSIS는 {"source":"kosis","params":{"orgId","tblId","itmId","objL1",…,"prdSe"}} 형태입니다. 응답의 paramsHint가 그 표에 필요한 키를 알려줍니다.`,
+    `- search_catalog가 errors를 돌려주고 결과가 비었으면 소스가 일시적으로 느린 것입니다. 포기하지 말고 같은 검색어로 한 번 더 호출하세요.`,
     `- 여러 나라·기관을 넘나드는 질의(한국 ECOS + 미국 FRED + 통계청 KOSIS)를 그대로 지원합니다. 필요한 소스마다 search_catalog를 따로 부르고, 각 소스의 결과를 series에 함께 담으세요.`,
     `- 질의가 언급하는 모든 시계열 대상을 빠짐없이 series에 넣으세요. 두 나라·두 지표를 비교하는 질의("A랑 B", "A vs B")면 반드시 각각 별도의 series 항목으로 모두 포함해야 합니다. 시리즈는 최대 ${MAX_SERIES}개.`,
     `- transform: raw(원계열) | yoy(전년동기대비) | pop(전기대비) | rebase(구간 시작=100). 질의에 "전년동기대비"·"전년대비"·"YoY"·"상승률" 등이 있으면 yoy로 두세요 — 수준이 %인 금리·비율 지표는 시스템이 자동으로 차이(%p)로 바꾸고 그 사실을 안내에 표시하니, 금리가 섞여 있어도 yoy를 피하지 마세요. 금리 수준(level) 비교("금리 보여줘")는 raw.`,
@@ -181,8 +188,31 @@ const TOOLS = [
             type: "string",
             description: "주기 지정 (선택, D·M·Q·A). 생략하면 표의 대표 주기",
           },
+          offset: {
+            type: "integer",
+            description:
+              "항목이 많아 잘렸을 때 다음 구간을 받기 위한 시작 위치 (선택). 응답 notes가 다음 offset을 알려준다",
+          },
         },
         required: ["statCode"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "list_kosis_table_items",
+      description:
+        "KOSIS 통계표 하나의 항목·분류 목록을 연다. search_catalog 결과에 질의가 요구하는 세부 항목이 없을 때 사용. 검색 결과 params의 orgId·tblId를 넣는다. 응답의 itemCode를 params.itmId·objL1·objL2…에 넣어 series를 조립한다.",
+      parameters: {
+        type: "object",
+        properties: {
+          orgId: { type: "string", description: "기관 ID (검색 결과 params.orgId, 예: 101)" },
+          tblId: { type: "string", description: "통계표 ID (검색 결과 params.tblId)" },
+          filter: { type: "string", description: "항목명 필터 (선택)" },
+          offset: { type: "integer", description: "다음 구간 시작 위치 (선택)" },
+        },
+        required: ["orgId", "tblId"],
       },
     },
   },
@@ -260,16 +290,33 @@ function runListIndicators(): string {
 async function runSearchCatalog(args: { query?: unknown; source?: unknown }): Promise<string> {
   const q = typeof args.query === "string" ? args.query.trim() : "";
   if (q.length < 2) return JSON.stringify({ error: "검색어는 2자 이상이어야 합니다" });
-  const { results, errors } = await searchAll(q);
+  const { results, errors, truncated } = await searchAll(q);
   const filtered =
     typeof args.source === "string"
       ? results.filter((r) => r.source === args.source)
       : results;
   // 상한을 앞에서부터 자르면 배열 앞머리의 ECOS가 칸을 다 먹어 KOSIS·FRED가
   // 모델 눈에 0건이 된다(한·미 비교의 치명상). 소스별 최소 몫을 먼저 확보한다.
+  //
+  // truncatedTables를 함께 돌려주는 것이 핵심이다 — 검색 결과만 보면 모델은
+  // "이게 전부"라고 믿는다. 무엇이 잘렸는지 알려줘야 표를 열어볼 이유가 생긴다.
   return JSON.stringify({
     results: capWithSourceFloor(filtered, CHAT_RESULT_CAP, CHAT_SOURCE_FLOOR),
     errors,
+    truncatedTables: truncated.map((t) => ({
+      source: t.source,
+      code: t.statCode,
+      name: t.statName,
+      shownItems: t.shownItems,
+      totalItems: t.totalItems,
+    })),
+    ...(truncated.length > 0
+      ? {
+          hint:
+            "위 통계표들은 항목이 일부만 표시됐습니다. 질의가 요구하는 세부 항목이 결과에 없으면 " +
+            "list_table_items(ECOS) 또는 list_kosis_table_items(KOSIS)로 해당 표를 열어 확인하세요.",
+        }
+      : {}),
   });
 }
 
@@ -277,6 +324,7 @@ async function runListTableItems(args: {
   statCode?: unknown;
   filter?: unknown;
   cycle?: unknown;
+  offset?: unknown;
 }): Promise<string> {
   const statCode = typeof args.statCode === "string" ? args.statCode.trim() : "";
   if (!statCode) return JSON.stringify({ error: "statCode가 필요합니다" });
@@ -284,6 +332,27 @@ async function runListTableItems(args: {
     const result = await listEcosTableItems(statCode, {
       filter: typeof args.filter === "string" ? args.filter : undefined,
       cycle: typeof args.cycle === "string" ? args.cycle : undefined,
+      offset: typeof args.offset === "number" ? args.offset : undefined,
+    });
+    return JSON.stringify(result);
+  } catch (err) {
+    return JSON.stringify({ error: err instanceof Error ? err.message : String(err) });
+  }
+}
+
+async function runListKosisTableItems(args: {
+  orgId?: unknown;
+  tblId?: unknown;
+  filter?: unknown;
+  offset?: unknown;
+}): Promise<string> {
+  const orgId = typeof args.orgId === "string" ? args.orgId.trim() : "";
+  const tblId = typeof args.tblId === "string" ? args.tblId.trim() : "";
+  if (!orgId || !tblId) return JSON.stringify({ error: "orgId와 tblId가 모두 필요합니다" });
+  try {
+    const result = await listKosisTableItems(orgId, tblId, {
+      filter: typeof args.filter === "string" ? args.filter : undefined,
+      offset: typeof args.offset === "number" ? args.offset : undefined,
     });
     return JSON.stringify(result);
   } catch (err) {
@@ -541,7 +610,11 @@ export async function POST(request: Request) {
           result = await runSearchCatalog(args as { query?: unknown; source?: unknown });
         } else if (tc.function.name === "list_table_items") {
           result = await runListTableItems(
-            args as { statCode?: unknown; filter?: unknown; cycle?: unknown }
+            args as { statCode?: unknown; filter?: unknown; cycle?: unknown; offset?: unknown }
+          );
+        } else if (tc.function.name === "list_kosis_table_items") {
+          result = await runListKosisTableItems(
+            args as { orgId?: unknown; tblId?: unknown; filter?: unknown; offset?: unknown }
           );
         } else {
           result = JSON.stringify({ error: `알 수 없는 도구: ${tc.function.name}` });

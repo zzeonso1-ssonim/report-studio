@@ -10,9 +10,12 @@
   │ ①매칭        gpt-4o + list_indicators(name·aliases) / search_catalog / list_table_items
   ▼
 카탈로그 검색     lib/search.ts searchAll — 3단
-  │ ①-a 분해     LLM이 소스별 검색어로 나눔 (lib/search-llm.ts planSourceQueries)
+  │ ①-a 넓히기   원문 검색은 항상 실행 + LLM이 소스별 검색어를 **추가** (planSourceQueries)
   │              "한국 대출금리랑 미국 모기지금리" → ecos:"예금은행 대출금리" / fred:"mortgage rate"
-  │ ①-b 확장     표 → 세부항목. 질의 관련도 순 정렬 후 상한 적용, 표·소스 단위 라운드로빈
+  │              LLM은 소스를 지우지 못한다 → ON은 언제나 OFF의 상위집합
+  │ ①-b 확장     표 선정 = 표 이름 + 목차번호 + **항목명 색인**(data/ecos-item-names.json)
+  │              세부항목은 질의 관련도 순 정렬 후 **표당** 상한, 표·소스 단위 라운드로빈
+  │              잘린 표는 truncated로 드러냄
   │ ①-c 선별     LLM이 질의에 맞는 후보를 앞으로 재정렬 (rankByRelevance, 후보를 버리지 않음)
   ▼
 조회 계획(plan)   series[indicatorId|source+params] + derived + transform + 기간
@@ -43,10 +46,11 @@
 검색 앞뒤에 LLM 단계를 붙였다. **판단만 맡기고 숫자는 만들지 않는다.**
 
 - 모델: `SEARCH_LLM_MODEL`(기본 `gpt-4o-mini`, 플래너의 `OPENAI_MODEL`과 별개)
-- 호출: 질의 1건당 최대 2회(분해 1 + 선별 1). 같은 입력은 프로세스 메모리 캐시로 0회
+- 호출: 질의 1건당 최대 2회(검색어 제안 1 + 정렬 1). 같은 입력은 캐시로 0회(TTL 30분, 실패는 캐시 안 함)
 - 실패·미설정·시간초과(`SEARCH_LLM_TIMEOUT_MS`, 기본 4초)면 **전부 문자열 경로로 폴백**
-- 끄기: 환경변수 `SEARCH_LLM=off`
-- 분해가 소스를 건너뛰었는데 결과가 0건이면 원문으로 한 번 더 조회(안전망)
+- 끄기: 환경변수 `SEARCH_LLM=off`, 요청 단위로는 `/api/search?q=…&llm=off`
+- **불변조건: ON은 OFF의 상위집합.** LLM에 소스 제거 권한을 줬더니 결과가 좁아지는 역전이 났다
+  (2026-08-05: 생산자물가 세부품목 ON 36건 / OFF 96건). `scripts/search-ab-check.py`로 상시 측정한다
 
 ## 원칙
 
@@ -73,11 +77,16 @@
 | 축이 이상하게 붙음 | 단위(unit) 표기 확인 — ⑤는 표시 단위 문자열로 그룹핑한다 |
 | 조회 안 한 지표가 차트에 낌 | 이전 챗 질의의 선택이 남은 것 — 수동 패널의 "질의 선택" 칩(비노출 지표 포함, 2026-08-02 신설)에서 ×로 제거. 챗 질의는 항상 선택을 통째로 교체한다 |
 
-## 회귀 배터리
+## 검증 스크립트
 
-`scripts/korean-query-battery.py` — 별칭·용어집을 고치면 문항도 같이 추가한다.
-로컬 dev + 세션 토큰으로 실행(파일 상단 사용법). OpenAI TPM 한도 때문에
-문항당 25초 페이싱.
+| 스크립트 | 무엇을 지키는가 | 통과 기준 |
+|---|---|---|
+| `scripts/korean-query-battery.py` | 한국어 표현 → 지표 해석 | **3회 연속** 전항목 PASS (모델 응답이 비결정적이라 1회는 표본이 아니다) |
+| `scripts/e2e-query-check.py` | 계획이 아니라 **값**이 나오는가 | 전 계열이 값 반환 + 시점 표기 |
+| `scripts/search-ab-check.py` | LLM이 검색을 좁히지 않는가 | ON < OFF인 질의 0건 |
+| `scripts/build-ecos-item-index.mjs` | 항목명 색인 갱신 | ECOS 3분 300회 한도 준수(60초당 90회 페이싱) |
+
+별칭·용어집을 고치면 배터리 문항도 같이 추가한다. OpenAI TPM 한도 때문에 문항당 25초 페이싱.
 
 ## 남은 구조적 한계 (알고 있는 것)
 

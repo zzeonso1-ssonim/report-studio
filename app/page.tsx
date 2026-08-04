@@ -105,14 +105,53 @@ function transformUnit(tf: string): string | null {
   return m ? m[1] : null;
 }
 
+/** PNG 하단 캡션(기준일) 조판값 — 캔버스에 직접 그리므로 CSS와 별개로 둔다 */
+const CAPTION_FONT = '12px system-ui, -apple-system, "Segoe UI", sans-serif';
+const CAPTION_LINE_H = 16;
+const CAPTION_PAD = 8;
+
+/**
+ * 캡션 줄바꿈 — 계열이 많으면 한 줄에 안 들어간다. 구분자(" · ") 단위로만
+ * 끊어 "이름 2026-08-04" 한 쌍이 줄에 걸쳐 갈라지지 않게 한다.
+ */
+function wrapCaption(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number
+): string[] {
+  if (ctx.measureText(text).width <= maxWidth) return [text];
+  const out: string[] = [];
+  let cur = "";
+  for (const part of text.split(" · ")) {
+    const next = cur ? `${cur} · ${part}` : part;
+    if (cur && ctx.measureText(next).width > maxWidth) {
+      out.push(cur);
+      cur = part;
+    } else {
+      cur = next;
+    }
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+
 /**
  * 차트 컨테이너 내부의 recharts SVG를 PNG Blob으로 변환한다.
  * SVG의 색이 CSS 변수(var(--series-1) 등)로 지정돼 있어 그대로 직렬화하면
  * 색이 사라지므로, 원본 요소를 순회하며 getComputedStyle로 resolve된
  * stroke/fill(텍스트는 font까지)을 복제본에 인라인으로 박은 뒤 직렬화한다.
  * 버튼 핸들러와 검증이 동일하게 이 함수를 거친다.
+ *
+ * captionLines: 그림 아래에 덧붙일 문구(기준일). recharts의 Legend는 svg가
+ * 아니라 .recharts-legend-wrapper라는 **HTML div**로 그려지므로, 직렬화 대상인
+ * `.recharts-wrapper > svg` 안에 범례 텍스트가 들어있지 않다. 즉 범례에 기준일을
+ * 적어도 PNG에는 따라가지 않는다. 사외로 나가는 산출물에서 기준일이 빠지면
+ * 안 되므로 캔버스 하단에 직접 그려 넣는다.
  */
-async function chartContainerToPngBlob(container: HTMLElement): Promise<Blob> {
+async function chartContainerToPngBlob(
+  container: HTMLElement,
+  captionLines: string[] = []
+): Promise<Blob> {
   // 범례가 있으면 legend-wrapper의 14px 아이콘 svg가 DOM상 메인 차트 svg보다
   // 먼저 오므로, 반드시 .recharts-wrapper 직계 자식인 차트 표면 svg를 잡는다.
   const svg =
@@ -155,20 +194,39 @@ async function chartContainerToPngBlob(container: HTMLElement): Promise<Blob> {
   });
 
   // 배경은 투명 대신 현재 테마의 --surface 계산값으로 채운다 (다크모드 대응).
-  const surface =
-    getComputedStyle(container).getPropertyValue("--surface").trim() ||
-    "#ffffff";
+  const cs = getComputedStyle(container);
+  const surface = cs.getPropertyValue("--surface").trim() || "#ffffff";
+  const captionColor = cs.getPropertyValue("--foreground").trim() || "#000000";
 
   const scale = 2; // 2배 해상도
   const canvas = document.createElement("canvas");
-  canvas.width = Math.round(rect.width * scale);
-  canvas.height = Math.round(rect.height * scale);
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("canvas 2d context를 얻을 수 없습니다");
-  ctx.fillStyle = surface;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // 줄 수를 알아야 캔버스 높이가 정해지므로 폭 측정을 먼저 한다.
+  ctx.font = CAPTION_FONT;
+  const lines = captionLines.flatMap((t) =>
+    wrapCaption(ctx, t, rect.width - CAPTION_PAD * 2)
+  );
+  const captionH = lines.length ? CAPTION_PAD + lines.length * CAPTION_LINE_H : 0;
+  const totalH = rect.height + captionH;
+
+  canvas.width = Math.round(rect.width * scale);
+  canvas.height = Math.round(totalH * scale);
+  // 캔버스 크기를 바꾸면 컨텍스트 상태가 초기화되므로 여기서부터 다시 설정한다.
   ctx.scale(scale, scale);
+  ctx.fillStyle = surface;
+  ctx.fillRect(0, 0, rect.width, totalH);
   ctx.drawImage(img, 0, 0, rect.width, rect.height);
+
+  if (lines.length) {
+    ctx.font = CAPTION_FONT;
+    ctx.fillStyle = captionColor;
+    ctx.textBaseline = "top";
+    lines.forEach((line, i) => {
+      ctx.fillText(line, CAPTION_PAD, rect.height + i * CAPTION_LINE_H);
+    });
+  }
 
   const blob = await new Promise<Blob | null>((resolve) =>
     canvas.toBlob(resolve, "image/png")
@@ -256,6 +314,27 @@ function computeDerived(d: DerivedSpec, a: SeriesResponse, b: SeriesResponse): S
 function hasAnyValue(s: SeriesResponse): boolean {
   return Array.isArray(s.points) && s.points.some((p) => p.value != null);
 }
+
+/**
+ * 계열의 기준일(as-of) = 값이 있는(value != null) 포인트 중 가장 늦은 시점.
+ *
+ * 날짜는 서버가 주기별 정규형(D=YYYY-MM-DD · M=YYYY-MM · Q=YYYY-Qn · A=YYYY)으로
+ * 주고 한 계열 안에서는 형식이 같으므로 문자열 비교로 최댓값을 잡을 수 있다.
+ * 반환값은 원문 그대로다 — 날짜를 새로 만들거나 보간하지 않는다.
+ * 값이 전부 null이면 null(호출부에서 "값 없음"으로 표기).
+ */
+function lastObservedDate(s: SeriesResponse | undefined): string | null {
+  if (!s || !Array.isArray(s.points)) return null;
+  let last: string | null = null;
+  for (const p of s.points) {
+    if (p.value == null) continue;
+    if (last === null || p.date.localeCompare(last) > 0) last = p.date;
+  }
+  return last;
+}
+
+/** 기준일 표기 — 관측치가 하나도 없으면 날짜를 지어내지 않고 이렇게 적는다 */
+const NO_OBSERVATION = "값 없음";
 
 // ── 주기 정렬 ────────────────────────────────────────────────
 // 일간·월간처럼 주기가 다른 시리즈를 겹치면 날짜 키가 서로 달라 병합 행마다
@@ -709,12 +788,39 @@ export default function Home() {
     adhoc.find((a) => a.id === id)?.name ??
     id;
 
+  // ── 계열별 기준일(as-of) ─────────────────────────────────────
+  // 산출물이 사외까지 나가므로 "모든 숫자에 출처와 기준일 병기" 원칙상
+  // 계열마다 마지막 관측시점을 화면·PNG 양쪽에 남긴다.
+  //
+  // 어느 시점을 쓰는가: **환산 후(displaySeries)** 시점을 쓴다.
+  // 주기가 섞이면 resampleTo가 일간 계열을 월/분기 평균으로 접는데, 이때 마지막
+  // 시점이 원자료보다 성기게 바뀐다(예: 원자료 2026-08-04 → 환산 후 2026-08).
+  // 차트의 x축·툴팁·테이블이 전부 환산 후 값을 보여주므로, 기준일만 환산 전
+  // 날짜로 적으면 화면에 없는 시점을 표기하게 되어 어긋난다.
+  // 환산이 일어났다는 사실 자체는 alignNote가 따로 알린다.
+  const asOfEntries = loadedIds.map((id) => ({
+    id,
+    name: nameOf(id),
+    asOf: lastObservedDate(displaySeries[id]),
+  }));
+  /** "국고채 10년 2026-08-04 · 미 국채 10년 2026-07-31" — 안내문·PNG 캡션 공용 */
+  const asOfSummary = asOfEntries
+    .map((e) => `${e.name} ${e.asOf ?? NO_OBSERVATION}`)
+    .join(" · ");
+  // 서로 다를 때만 경고한다. 같으면 아래 기준일 줄에 담백하게 표기만 한다.
+  const asOfMismatch =
+    asOfEntries.length > 1 &&
+    new Set(asOfEntries.map((e) => e.asOf ?? NO_OBSERVATION)).size > 1;
+
   const downloadPng = useCallback(async () => {
     const container = chartRef.current;
     if (!container) return;
     setExporting(true);
     try {
-      const blob = await chartContainerToPngBlob(container);
+      // 범례는 HTML로 그려져 SVG 직렬화에 안 실린다 — 기준일은 캡션으로 넘긴다
+      const blob = await chartContainerToPngBlob(container, [
+        `기준일 — ${asOfSummary}`,
+      ]);
       // 파일명은 현재 상태에서 파생: 실제 로드된 지표 id들 + 응답의 변환값 + 오늘(로컬).
       const ids = Object.keys(series).join("-");
       const tf = Object.values(series)[0]?.transform ?? transform;
@@ -729,7 +835,7 @@ export default function Home() {
     } finally {
       setExporting(false);
     }
-  }, [series, transform]);
+  }, [series, transform, asOfSummary]);
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-8">
@@ -1178,6 +1284,13 @@ export default function Home() {
               ℹ {autoAxisNote}
             </p>
           )}
+          {/* 계열 간 최종 관측시점이 어긋나면 알린다 — 국고채(D)와 미 국채(D)가
+              영업일 차이로, 한·미 CPI(M)가 발표 시차로 실제로 어긋난다 */}
+          {asOfMismatch && (
+            <p className="mb-2 text-xs" style={{ color: "var(--muted)" }}>
+              ℹ 계열별 최종 시점이 다릅니다 — {asOfSummary}
+            </p>
+          )}
           {mixedUnits && (
             <p className="mb-2 text-xs" style={{ color: "var(--muted)" }}>
               단위가 다른 지표를 원계열로 겹쳤어요 — 비교하려면 전년동기대비(%)나
@@ -1313,13 +1426,26 @@ export default function Home() {
                     />
                     {loadedIds.length > 1 && (
                       <Legend
-                        formatter={(id) => (
-                          <span
-                            style={{ color: "var(--foreground)", fontSize: 12 }}
-                          >
-                            {nameOf(String(id))}
-                          </span>
-                        )}
+                        formatter={(id) => {
+                          const key = String(id);
+                          // 기준일은 이름 뒤에 작게만 붙인다 — 컨테이너가 h-96
+                          // 고정이라 범례가 길어지면 플롯 높이를 잠식한다.
+                          // 읽기 쉬운 전체 목록은 차트 아래 "기준일" 줄에 있다.
+                          const asOf = lastObservedDate(displaySeries[key]);
+                          return (
+                            <span
+                              style={{ color: "var(--foreground)", fontSize: 12 }}
+                            >
+                              {nameOf(key)}
+                              <span
+                                style={{ color: "var(--muted)", fontSize: 11 }}
+                              >
+                                {" "}
+                                {asOf ?? NO_OBSERVATION}
+                              </span>
+                            </span>
+                          );
+                        }}
                       />
                     )}
                     {loadedIds.map((id, i) => {
@@ -1375,6 +1501,39 @@ export default function Home() {
               })()}
             </ResponsiveContainer>
           </div>
+
+          {/* 계열 기준일 — 사외로 나가는 산출물이라 마지막 관측시점을 항상 명시한다.
+              차트 바로 아래에 두어 범례를 확대하지 않고도 눈에 들어오게 한다. */}
+          {asOfEntries.length > 0 && (
+            <div
+              className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-lg border px-3 py-2 text-xs"
+              style={{ borderColor: "var(--border)", background: "var(--primary-soft)" }}
+            >
+              <span className="font-semibold" style={{ color: "var(--primary)" }}>
+                기준일
+              </span>
+              {asOfEntries.map((e, i) => {
+                // 색 인덱스는 차트가 loadedIds를 그리는 순서와 동일하다
+                const { colorVar } = seriesStyle(i);
+                return (
+                  <span key={e.id} className="flex items-center gap-1.5">
+                    <span
+                      aria-hidden
+                      className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ background: `var(${colorVar})` }}
+                    />
+                    <span style={{ color: "var(--muted)" }}>{e.name}</span>
+                    <span
+                      className="font-semibold"
+                      style={{ color: "var(--foreground)", fontVariantNumeric: "tabular-nums" }}
+                    >
+                      {e.asOf ?? NO_OBSERVATION}
+                    </span>
+                  </span>
+                );
+              })}
+            </div>
+          )}
 
           {/* 테이블 뷰 (접근성) · PNG 다운로드 */}
           <div className="mt-3 flex items-center gap-4">

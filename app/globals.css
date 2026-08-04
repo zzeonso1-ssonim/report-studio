@@ -17,12 +17,16 @@
   --series-2: #2a78d6;
   --series-3: #eb6834;
   --series-4: #6270b0;
-  /* 5~8: 한·미·기관 간 다계열 비교용 확장분. 색만으로 8개를 구분하기는 어려워
-     app/page.tsx가 5번째부터 파선(SERIES_DASH)을 함께 입힌다 */
+  /* 5~10: 한·미·기관 간 다계열 비교용 확장분. 토큰 수는 lib/chart-config.ts의
+     MAX_SERIES(8) + MAX_DERIVED(2) = 10과 맞춰야 하며 어긋나면 그 파일이 빌드에서 throw한다.
+     5~10은 validate_palette 재검증을 돌리지 않았으므로 색 단독 구분에 의존하면 안 되고,
+     app/page.tsx가 5번째부터 파선(SERIES_DASH)을 반드시 함께 입힌다 */
   --series-5: #9a3f9e;
   --series-6: #a06a00;
   --series-7: #0f8c8c;
   --series-8: #5b6770;
+  --series-9: #b02a4a;
+  --series-10: #6b7f1e;
   --grid: #e1e0d9;
   --axis: #898781;
 }
@@ -53,6 +57,9 @@
     --series-6: #c08419;
     --series-7: #23a6a6;
     --series-8: #8b95a1;
+    /* 9~10 확장분 — 라이트 블록과 동수(10개)여야 한다. 색약 미검증이라 파선 병용 필수 */
+    --series-9: #d2596f;
+    --series-10: #97ad3d;
     --grid: #2c2c2a;
     --axis: #898781;
   }

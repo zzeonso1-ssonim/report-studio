@@ -28,6 +28,10 @@ export async function GET(request: Request) {
     return Response.json({ error: "검색어는 2자 이상이어야 합니다" }, { status: 400 });
   }
 
-  const { results, errors, notes } = await searchAll(q);
-  return Response.json({ query: q, results, errors, notes });
+  // llm=off — LLM 보조를 끈 결과를 같은 서버에서 대조하기 위한 진단 스위치.
+  // "LLM ON은 OFF의 상위집합"이라는 불변조건은 측정으로만 지킬 수 있다
+  // (scripts/search-ab-check.py가 이 파라미터를 쓴다).
+  const llm = url.searchParams.get("llm") !== "off";
+  const { results, errors, notes, truncated } = await searchAll(q, { llm });
+  return Response.json({ query: q, llm, results, errors, notes, truncated });
 }
