@@ -50,7 +50,22 @@
 - 실패·미설정·시간초과(`SEARCH_LLM_TIMEOUT_MS`, 기본 4초)면 **전부 문자열 경로로 폴백**
 - 끄기: 환경변수 `SEARCH_LLM=off`, 요청 단위로는 `/api/search?q=…&llm=off`
 - **불변조건: ON은 OFF의 상위집합.** LLM에 소스 제거 권한을 줬더니 결과가 좁아지는 역전이 났다
-  (2026-08-05: 생산자물가 세부품목 ON 36건 / OFF 96건). `scripts/search-ab-check.py`로 상시 측정한다
+  (2026-08-05: 생산자물가 세부품목 ON 36건 / OFF 96건). `scripts/search-ab-check.py`로 상시 측정한다.
+  건수만 보면 부족하다 — 건수가 같아도 **다른 항목으로 바뀌는** 누수가 실제로 있었다
+  (통안증권·국민주택채권·CD·KORIBOR). 원인은 정렬이 아니라 **선택**이었다: LLM 힌트가
+  원문 점수 0인 동점 항목의 순서를 갈라, Group 상한(20)에 걸리는 27항목 표에서 살아남는
+  항목이 달라졌다. 그래서 표 확장을 **원문 토큰만으로 한 번 + 힌트를 더해 한 번** 돌려
+  합집합을 낸다(`expandEcosTable`·`expandKosisTable`의 `pass()`). 스크립트도 집합 포함을 검사한다
+
+## 조용한 실패를 드러내는 자리
+
+| 무엇이 조용히 죽는가 | 어디서 드러나는가 |
+|---|---|
+| ECOS 항목명 색인 부재 → 항목명 매칭 전면 중단 | `/api/health`(503 + reason), `/api/search`의 `errors`·`indexStatus` |
+| 색인 기준일이 오래됨 | `/api/health`·`/api/search`의 `indexStatus.builtAt` |
+| ECOS 항목조회 실패(3분 300회 한도 등) | `/api/search`의 `errors`에 표 이름과 함께 |
+| KOSIS 원격 검색 0건 → 축약 재검색 | `/api/search`의 `notes`에 "…로 좁혀 찾았습니다" |
+| 표 항목이 잘림 | `/api/search`의 `truncated`·`notes`, 챗 도구의 `truncatedTables` |
 
 ## 원칙
 
@@ -83,8 +98,9 @@
 |---|---|---|
 | `scripts/korean-query-battery.py` | 한국어 표현 → 지표 해석 | **3회 연속** 전항목 PASS (모델 응답이 비결정적이라 1회는 표본이 아니다) |
 | `scripts/e2e-query-check.py` | 계획이 아니라 **값**이 나오는가 | 전 계열이 값 반환 + 시점 표기 |
-| `scripts/search-ab-check.py` | LLM이 검색을 좁히지 않는가 | ON < OFF인 질의 0건 |
+| `scripts/search-ab-check.py` | LLM이 검색을 좁히지 않는가 | **건수·소스별 건수·집합 포함** 3가지 모두 통과(ON이 OFF의 상위집합) |
 | `scripts/build-ecos-item-index.mjs` | 항목명 색인 갱신 | ECOS 3분 300회 한도 준수(60초당 90회 페이싱) |
+| `scripts/index-missing-check.py` | 색인이 빠졌을 때 **신호와 복구** | 503+사유, errors 신호, 재시작 없이 복구 |
 
 별칭·용어집을 고치면 배터리 문항도 같이 추가한다. OpenAI TPM 한도 때문에 문항당 25초 페이싱.
 

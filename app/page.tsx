@@ -333,15 +333,20 @@ function lastObservedDate(s: SeriesResponse | undefined): string | null {
   return last;
 }
 
-/** 기준일 표기 — 관측치가 하나도 없으면 날짜를 지어내지 않고 이렇게 적는다 */
-const NO_OBSERVATION = "값 없음";
-
 // ── 주기 정렬 ────────────────────────────────────────────────
 // 일간·월간처럼 주기가 다른 시리즈를 겹치면 날짜 키가 서로 달라 병합 행마다
 // 한쪽 값만 남는다(툴팁에 값이 하나만 보이는 원인). 가장 성긴 주기로
 // 세밀한 시리즈를 평균 환산해 같은 키로 정렬한다 — 계산은 코드가 한다.
 const CYCLE_RANK: Record<string, number> = { D: 0, M: 1, Q: 2, A: 3 };
+/** 환산 안내문용 — "월평균 / 분기평균 / 연평균"으로 이어 붙인다 */
 const CYCLE_LABEL: Record<string, string> = { M: "월", Q: "분기", A: "연" };
+/** 주기 자체를 가리킬 때 쓰는 명칭 — 기준일 옆 괄호("2026-08-04(일간)")에 쓴다 */
+const CYCLE_FREQ_LABEL: Record<string, string> = {
+  D: "일간",
+  M: "월간",
+  Q: "분기",
+  A: "연간",
+};
 
 function bucketDate(date: string, target: string): string {
   if (target === "M") return date.slice(0, 7);
@@ -368,6 +373,127 @@ function resampleTo(s: SeriesResponse, target: string): SeriesResponse {
       value: Math.round((vals.reduce((x, y) => x + y, 0) / vals.length) * 10000) / 10000,
     }));
   return { ...s, indicator: { ...s.indicator, cycle: target }, points };
+}
+
+// ── 기준일(as-of) 판정 ──────────────────────────────────────
+// 환산(resampleTo)이 걸리면 차트 x축은 성긴 주기가 되지만, 기준일까지 환산 후
+// 시점으로 적으면 원자료 시차가 통째로 사라진다. 아래 함수들은 "환산 전 원자료
+// 마지막 관측시점"과 "그 시점이 속한 버킷의 경계"를 계산해 둘을 구분해 보여주기
+// 위한 것이다. 날짜를 새로 만들거나 보간하지 않는다 — 달력에서만 유도한다.
+
+/**
+ * 버킷 문자열(YYYY-MM · YYYY-Qn · YYYY)이 덮는 달력 구간의 마지막 날짜.
+ * 예: "2026-Q3" → "2026-09-30", "2026-02" → "2026-02-28".
+ * Date.UTC(y, m, 0) = m월의 0일 = (m−1)월 말일이라 윤년도 달력이 알아서 처리한다.
+ */
+function bucketEndDate(bucket: string): string | null {
+  const y = Number(bucket.slice(0, 4));
+  if (!Number.isFinite(y)) return null;
+  let endMonth: number;
+  if (/^\d{4}-Q[1-4]$/.test(bucket)) endMonth = Number(bucket[6]) * 3;
+  else if (/^\d{4}-\d{2}$/.test(bucket)) endMonth = Number(bucket.slice(5, 7));
+  else if (/^\d{4}$/.test(bucket)) endMonth = 12;
+  else return null;
+  return new Date(Date.UTC(y, endMonth, 0)).toISOString().slice(0, 10);
+}
+
+/**
+ * 그 버킷이 "다 찼다"고 볼 수 있는, 원자료 주기 기준의 마지막 관측시점.
+ * 원자료 주기의 표기 형식으로 돌려주므로 원자료 기준일과 문자열 비교가 가능하다.
+ *
+ * 일간(D)만 구간 말일이 아니라 **마지막 평일**을 경계로 삼는다. 시장 데이터는
+ * 주말에 관측치가 없어 말일을 그대로 쓰면 주말로 끝나는 달이 매번 "미완결"로
+ * 오판된다. 공휴일까지는 보지 않으므로 12/31이 휴일인 해 같은 경우는 미완결
+ * 쪽으로 기울 수 있다 — 안내를 덜 하는 것보다 더 하는 쪽이 안전하다.
+ */
+function bucketLastObservable(bucket: string, rawCycle: string): string | null {
+  const end = bucketEndDate(bucket);
+  if (!end) return null;
+  if (rawCycle === "D") {
+    const d = new Date(`${end}T00:00:00Z`);
+    while (d.getUTCDay() === 0 || d.getUTCDay() === 6) {
+      d.setUTCDate(d.getUTCDate() - 1);
+    }
+    return d.toISOString().slice(0, 10);
+  }
+  if (rawCycle === "M") return end.slice(0, 7);
+  if (rawCycle === "Q") return `${end.slice(0, 4)}-Q${Math.ceil(Number(end.slice(5, 7)) / 3)}`;
+  if (rawCycle === "A") return end.slice(0, 4);
+  return null;
+}
+
+/**
+ * 주기별 정규형 날짜를 비교 가능한 달력 종료일(YYYY-MM-DD)로 환산.
+ * 형식이 서로 다른 두 시점(예: 일간 "2026-08-04" vs 월간 "2026-06")을 견줄 때만
+ * 쓴다. 표기에는 쓰지 않는다 — 표기는 항상 원문 그대로다.
+ */
+function comparableEnd(date: string): string {
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : (bucketEndDate(date) ?? date);
+}
+
+/** 계열 하나의 기준일 정보 — 화면(범례·기준일 줄·안내문)과 PNG 캡션이 공유한다 */
+interface AsOfInfo {
+  id: string;
+  name: string;
+  /** 환산 전 원자료의 마지막 관측시점 (원문 그대로, 없으면 null) */
+  rawAsOf: string | null;
+  /** 원자료 주기 (D·M·Q·A) */
+  rawCycle: string | null;
+  /** 차트 x축 주기 = 환산 후 주기 */
+  displayCycle: string | null;
+  /** 환산이 실제로 걸렸는가 (rawCycle !== displayCycle) */
+  resampled: boolean;
+  /** 원자료 기준일이 속한 환산 버킷 (환산이 걸렸을 때만) */
+  lastBucket: string | null;
+  /** 그 버킷의 달력상 종료일 — 미완결 안내의 근거로 함께 보여준다 */
+  bucketEnd: string | null;
+  /** 마지막 버킷이 주기를 다 채우지 못했는가 */
+  incomplete: boolean;
+  /** 파생 계열일 때, 기준일을 가져온 입력 계열 이름 (없으면 null) */
+  bindingName: string | null;
+}
+
+/** 원자료 시리즈 하나에서 기준일·버킷·미완결 여부를 뽑는다 */
+function rawAsOfOf(
+  raw: SeriesResponse | undefined,
+  displayCycle: string | null
+): Pick<
+  AsOfInfo,
+  "rawAsOf" | "rawCycle" | "resampled" | "lastBucket" | "bucketEnd" | "incomplete"
+> {
+  const rawAsOf = lastObservedDate(raw);
+  const rawCycle = raw?.indicator.cycle ?? null;
+  const resampled = Boolean(rawCycle && displayCycle && rawCycle !== displayCycle);
+  if (!resampled || !rawAsOf || !displayCycle || !rawCycle) {
+    return {
+      rawAsOf,
+      rawCycle,
+      resampled,
+      lastBucket: null,
+      bucketEnd: null,
+      incomplete: false,
+    };
+  }
+  const lastBucket = bucketDate(rawAsOf, displayCycle);
+  const boundary = bucketLastObservable(lastBucket, rawCycle);
+  return {
+    rawAsOf,
+    rawCycle,
+    resampled,
+    lastBucket,
+    bucketEnd: bucketEndDate(lastBucket),
+    incomplete: boundary != null && rawAsOf.localeCompare(boundary) < 0,
+  };
+}
+
+/** 기준일 표기 — 관측치가 하나도 없으면 날짜를 지어내지 않고 이렇게 적는다 */
+const NO_OBSERVATION = "값 없음";
+
+/** "2026-08-04(일간)" — 기준일 뒤에 원자료 주기를 항상 붙여 x축 주기와 구분한다 */
+function asOfLabel(e: AsOfInfo): string {
+  if (!e.rawAsOf) return NO_OBSERVATION;
+  const freq = e.rawCycle ? CYCLE_FREQ_LABEL[e.rawCycle] : null;
+  return freq ? `${e.rawAsOf}(${freq})` : e.rawAsOf;
 }
 
 export default function Home() {
@@ -792,34 +918,124 @@ export default function Home() {
   // 산출물이 사외까지 나가므로 "모든 숫자에 출처와 기준일 병기" 원칙상
   // 계열마다 마지막 관측시점을 화면·PNG 양쪽에 남긴다.
   //
-  // 어느 시점을 쓰는가: **환산 후(displaySeries)** 시점을 쓴다.
-  // 주기가 섞이면 resampleTo가 일간 계열을 월/분기 평균으로 접는데, 이때 마지막
-  // 시점이 원자료보다 성기게 바뀐다(예: 원자료 2026-08-04 → 환산 후 2026-08).
-  // 차트의 x축·툴팁·테이블이 전부 환산 후 값을 보여주므로, 기준일만 환산 전
-  // 날짜로 적으면 화면에 없는 시점을 표기하게 되어 어긋난다.
-  // 환산이 일어났다는 사실 자체는 alignNote가 따로 알린다.
-  const asOfEntries = loadedIds.map((id) => ({
-    id,
-    name: nameOf(id),
-    asOf: lastObservedDate(displaySeries[id]),
-  }));
-  /** "국고채 10년 2026-08-04 · 미 국채 10년 2026-07-31" — 안내문·PNG 캡션 공용 */
-  const asOfSummary = asOfEntries
-    .map((e) => `${e.name} ${e.asOf ?? NO_OBSERVATION}`)
-    .join(" · ");
+  // 어느 시점을 쓰는가: **환산 전 원자료(series state)** 의 마지막 관측시점이다.
+  // 주기가 섞이면 resampleTo가 세밀한 계열을 성긴 주기 평균으로 접는데, 환산 후
+  // 시점을 기준일로 적으면 원자료 시차가 통째로 사라진다. 실측에서 국고채 10년
+  // (원자료 2026-08-04)과 미 국채 10년(원자료 2026-07-31)이 둘 다 "2026-Q3"로
+  // 표기돼 4영업일 차가 보이지 않았다. 그래서 기준일은 원자료 시점으로 적고,
+  // 그 날짜가 차트 x축(환산 주기)과 다른 눈금이라는 사실을 rawCycle·displayCycle을
+  // 병기해 드러낸다. 마지막 버킷이 주기를 다 못 채운 경우도 함께 명시한다.
+  //
+  // 파생 계열(source === "계산")은 원자료가 없다. 처리 방식은 아래와 같다.
+  //  1) 스프레드·비율은 두 입력이 **모두 있는 시점**에서만 값이 나온다. 따라서 파생은
+  //     두 입력 중 더 오래된 쪽보다 신선할 수 없다 → 두 입력의 원자료 기준일 중
+  //     **더 오래된 쪽(binding)** 을 그대로 인용한다. 날짜를 새로 만들지 않는다.
+  //  2) 형식이 다른 두 시점(일간 "2026-08-04" vs 월간 "2026-07")은 comparableEnd로
+  //     달력 종료일에 맞춰 **비교만** 하고, 화면 표기는 항상 원문 그대로다.
+  //  3) 미완결 판정은 binding 하나만 본다. 다른 입력이 더 뒤 버킷까지 있어도 파생에는
+  //     그 버킷 값이 생기지 않으므로, 두 입력을 OR로 묶으면 "원자료가 구간 끝까지
+  //     있는데 미완결"이라는 모순된 안내가 나온다(실제로 그렇게 만들 뻔했다).
+  //  4) 다만 값 결손 등으로 파생의 실제 마지막 버킷이 binding의 버킷보다 이르면
+  //     binding 날짜가 파생을 과대표시하게 된다. 그때는 파생 시리즈 자신의 마지막
+  //     버킷을 환산 주기 표기로 쓰고, 미완결 주장은 하지 않는다.
+  //  어느 입력에서 기준일을 가져왔는지는 bindingName으로 화면에 함께 밝힌다.
+  const asOfEntries: AsOfInfo[] = loadedIds.map((id) => {
+    const displayCycle = displaySeries[id]?.indicator.cycle ?? null;
+    const spec = derived.find((d) => derivedKey(d) === id);
+    if (spec) {
+      const inputs = [spec.aId, spec.bId]
+        .map((inputId) => ({
+          name: nameOf(inputId),
+          ...rawAsOfOf(series[inputId], displayCycle),
+        }))
+        .filter((x) => x.rawAsOf != null);
+      const binding =
+        inputs.length > 0
+          ? inputs.reduce((a, b) =>
+              comparableEnd(b.rawAsOf!).localeCompare(comparableEnd(a.rawAsOf!)) < 0 ? b : a
+            )
+          : null;
+      // binding의 마지막 시점을 환산 주기 표기로 환산해 파생의 실제 마지막 버킷과 대조
+      const bindingBucket = binding
+        ? (binding.resampled ? binding.lastBucket : binding.rawAsOf)
+        : null;
+      const derivedBucket = lastObservedDate(displaySeries[id]);
+      const alignsWithBinding = Boolean(
+        binding && derivedBucket && bindingBucket && derivedBucket === bindingBucket
+      );
+      if (!binding || !alignsWithBinding) {
+        return {
+          id,
+          name: nameOf(id),
+          rawAsOf: derivedBucket,
+          rawCycle: displayCycle,
+          displayCycle,
+          resampled: false,
+          lastBucket: null,
+          bucketEnd: null,
+          incomplete: false,
+          bindingName: null,
+        };
+      }
+      return {
+        id,
+        name: nameOf(id),
+        rawAsOf: binding.rawAsOf,
+        rawCycle: binding.rawCycle,
+        displayCycle,
+        resampled: binding.resampled,
+        lastBucket: binding.lastBucket,
+        bucketEnd: binding.bucketEnd,
+        incomplete: binding.incomplete,
+        bindingName: binding.name,
+      };
+    }
+    return {
+      id,
+      name: nameOf(id),
+      displayCycle,
+      bindingName: null,
+      ...rawAsOfOf(series[id], displayCycle),
+    };
+  });
+  /** "국고채 10년 2026-08-04(일간) · 미 국채 10년 2026-07-31(일간)" — 안내문·PNG 캡션 공용 */
+  const asOfSummary = asOfEntries.map((e) => `${e.name} ${asOfLabel(e)}`).join(" · ");
   // 서로 다를 때만 경고한다. 같으면 아래 기준일 줄에 담백하게 표기만 한다.
   const asOfMismatch =
     asOfEntries.length > 1 &&
-    new Set(asOfEntries.map((e) => e.asOf ?? NO_OBSERVATION)).size > 1;
+    new Set(asOfEntries.map((e) => e.rawAsOf ?? NO_OBSERVATION)).size > 1;
+  /** 환산이 걸린 계열이 하나라도 있으면 "기준일 눈금 ≠ x축 눈금"을 안내해야 한다 */
+  const resampledEntries = asOfEntries.filter((e) => e.resampled);
+  /** 마지막 버킷이 주기를 다 채우지 못한 계열 — 완결처럼 보이는 것을 막는다 */
+  const incompleteEntries = asOfEntries.filter(
+    (e) => e.incomplete && e.lastBucket && e.rawAsOf && e.bucketEnd
+  );
+  /** 차트 x축 주기 명칭 — 환산 대상 계열의 displayCycle에서 파생 */
+  const displayFreqLabel =
+    resampledEntries.length > 0
+      ? (CYCLE_FREQ_LABEL[resampledEntries[0].displayCycle ?? ""] ??
+        resampledEntries[0].displayCycle)
+      : null;
+  /** "2026-Q3: 원자료 2026-08-04까지(구간 종료 2026-09-30)" — 화면·PNG 공용 */
+  const incompleteSummary = incompleteEntries
+    .map((e) => `${e.name} ${e.lastBucket}: 원자료 ${e.rawAsOf}까지(구간 종료 ${e.bucketEnd})`)
+    .join(" · ");
 
   const downloadPng = useCallback(async () => {
     const container = chartRef.current;
     if (!container) return;
     setExporting(true);
     try {
-      // 범례는 HTML로 그려져 SVG 직렬화에 안 실린다 — 기준일은 캡션으로 넘긴다
+      // 범례는 HTML로 그려져 SVG 직렬화에 안 실린다 — 기준일은 캡션으로 넘긴다.
+      // 화면의 기준일 줄과 같은 값·같은 순서를 쓴다(한쪽만 고치면 어긋난다).
       const blob = await chartContainerToPngBlob(container, [
-        `기준일 — ${asOfSummary}`,
+        `원자료 기준일 — ${asOfSummary}`,
+        ...(displayFreqLabel
+          ? [`차트 x축은 ${displayFreqLabel} 환산값 — 위 날짜는 환산 전 원자료 관측시점`]
+          : []),
+        ...(incompleteSummary
+          ? [`미완결 구간 — ${incompleteSummary}`]
+          : []),
       ]);
       // 파일명은 현재 상태에서 파생: 실제 로드된 지표 id들 + 응답의 변환값 + 오늘(로컬).
       const ids = Object.keys(series).join("-");
@@ -835,7 +1051,7 @@ export default function Home() {
     } finally {
       setExporting(false);
     }
-  }, [series, transform, asOfSummary]);
+  }, [series, transform, asOfSummary, displayFreqLabel, incompleteSummary]);
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-8">
@@ -1285,10 +1501,11 @@ export default function Home() {
             </p>
           )}
           {/* 계열 간 최종 관측시점이 어긋나면 알린다 — 국고채(D)와 미 국채(D)가
-              영업일 차이로, 한·미 CPI(M)가 발표 시차로 실제로 어긋난다 */}
+              영업일 차이로, 한·미 CPI(M)가 발표 시차로 실제로 어긋난다.
+              환산 후가 아니라 원자료 시점을 비교한다(환산하면 시차가 뭉개진다) */}
           {asOfMismatch && (
             <p className="mb-2 text-xs" style={{ color: "var(--muted)" }}>
-              ℹ 계열별 최종 시점이 다릅니다 — {asOfSummary}
+              ℹ 계열별 원자료 최종 시점이 다릅니다 — {asOfSummary}
             </p>
           )}
           {mixedUnits && (
@@ -1430,8 +1647,9 @@ export default function Home() {
                           const key = String(id);
                           // 기준일은 이름 뒤에 작게만 붙인다 — 컨테이너가 h-96
                           // 고정이라 범례가 길어지면 플롯 높이를 잠식한다.
-                          // 읽기 쉬운 전체 목록은 차트 아래 "기준일" 줄에 있다.
-                          const asOf = lastObservedDate(displaySeries[key]);
+                          // 읽기 쉬운 전체 목록은 차트 아래 "원자료 기준일" 줄에 있다.
+                          // 값은 그 줄·PNG 캡션과 같은 asOfEntries에서 가져온다.
+                          const e = asOfEntries.find((x) => x.id === key);
                           return (
                             <span
                               style={{ color: "var(--foreground)", fontSize: 12 }}
@@ -1441,7 +1659,8 @@ export default function Home() {
                                 style={{ color: "var(--muted)", fontSize: 11 }}
                               >
                                 {" "}
-                                {asOf ?? NO_OBSERVATION}
+                                {e ? asOfLabel(e) : NO_OBSERVATION}
+                                {e?.incomplete ? "*" : ""}
                               </span>
                             </span>
                           );
@@ -1503,35 +1722,63 @@ export default function Home() {
           </div>
 
           {/* 계열 기준일 — 사외로 나가는 산출물이라 마지막 관측시점을 항상 명시한다.
-              차트 바로 아래에 두어 범례를 확대하지 않고도 눈에 들어오게 한다. */}
+              차트 바로 아래에 두어 범례를 확대하지 않고도 눈에 들어오게 한다.
+              날짜는 환산 전 원자료 시점이므로 x축 주기와 다르다는 점을 함께 적는다. */}
           {asOfEntries.length > 0 && (
             <div
-              className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-lg border px-3 py-2 text-xs"
+              className="mt-3 rounded-lg border px-3 py-2 text-xs"
               style={{ borderColor: "var(--border)", background: "var(--primary-soft)" }}
             >
-              <span className="font-semibold" style={{ color: "var(--primary)" }}>
-                기준일
-              </span>
-              {asOfEntries.map((e, i) => {
-                // 색 인덱스는 차트가 loadedIds를 그리는 순서와 동일하다
-                const { colorVar } = seriesStyle(i);
-                return (
-                  <span key={e.id} className="flex items-center gap-1.5">
-                    <span
-                      aria-hidden
-                      className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{ background: `var(${colorVar})` }}
-                    />
-                    <span style={{ color: "var(--muted)" }}>{e.name}</span>
-                    <span
-                      className="font-semibold"
-                      style={{ color: "var(--foreground)", fontVariantNumeric: "tabular-nums" }}
-                    >
-                      {e.asOf ?? NO_OBSERVATION}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                <span className="font-semibold" style={{ color: "var(--primary)" }}>
+                  원자료 기준일
+                </span>
+                {asOfEntries.map((e, i) => {
+                  // 색 인덱스는 차트가 loadedIds를 그리는 순서와 동일하다
+                  const { colorVar } = seriesStyle(i);
+                  return (
+                    <span key={e.id} className="flex items-center gap-1.5">
+                      <span
+                        aria-hidden
+                        className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{ background: `var(${colorVar})` }}
+                      />
+                      <span style={{ color: "var(--muted)" }}>{e.name}</span>
+                      <span
+                        className="font-semibold"
+                        style={{
+                          color: "var(--foreground)",
+                          fontVariantNumeric: "tabular-nums",
+                        }}
+                      >
+                        {e.rawAsOf ?? NO_OBSERVATION}
+                      </span>
+                      <span style={{ color: "var(--muted)" }}>
+                        {e.rawCycle ? CYCLE_FREQ_LABEL[e.rawCycle] ?? e.rawCycle : "주기 미상"}
+                        {e.resampled && e.lastBucket ? ` → ${e.lastBucket} 환산` : ""}
+                        {e.incomplete ? " ※미완결" : ""}
+                        {/* 파생 계열은 원자료가 없어 입력 계열의 기준일을 인용한다 */}
+                        {e.bindingName ? ` · ${e.bindingName} 기준` : ""}
+                      </span>
                     </span>
-                  </span>
-                );
-              })}
+                  );
+                })}
+              </div>
+              {displayFreqLabel && (
+                <p className="mt-1.5" style={{ color: "var(--muted)" }}>
+                  ℹ 차트 x축은 {displayFreqLabel} 환산값입니다 — 여기와 범례의 날짜는 모두
+                  환산 전 원자료 관측시점이고, 날짜 뒤에 붙은 말이 그 원자료의 주기예요.
+                  {incompleteSummary ? " 범례의 *는 마지막 구간이 미완결이라는 표시입니다." : ""}
+                </p>
+              )}
+              {incompleteSummary && (
+                <p
+                  className="mt-1 font-semibold"
+                  style={{ color: "var(--foreground)" }}
+                >
+                  ⚠ 마지막 구간은 아직 완결되지 않았습니다 — {incompleteSummary}
+                </p>
+              )}
             </div>
           )}
 

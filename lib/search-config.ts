@@ -129,12 +129,25 @@ export const ECOS_COMBOS_PER_TABLE = 24;
 export const KOSIS_ITEM_CAP = 6;
 
 /**
- * 자르는 대상: KOSIS 분류차수별 항목 수 (objL1, objL2, objL3 순).
- * 배열 길이 = 어댑터(lib/sources/kosis.ts)가 지원하는 분류 차수. 이보다 깊은
- * 표는 조회 params를 만들 수 없어 결과에서 제외되므로, 길이를 줄이면 그만큼
- * 통계표가 통째로 검색에서 사라진다.
+ * KOSIS 분류 차수(objL1…objLN) 지원 한계 — **검색과 조회의 단일 소스**.
+ *
+ * 검색이 이보다 깊은 표를 결과에 올리면 조회에서 100% 실패하고,
+ * 반대로 이보다 얕게 잡으면 그만큼 통계표가 통째로 검색에서 사라진다.
+ * 두 곳에 따로 적었다가 사고가 났다 — 2026-08-05, 검색 상한만 8로 올리고
+ * 어댑터(lib/sources/kosis.ts)는 3단에 머물러 `err 20 필수요청변수값 누락`이
+ * 났다("취업자수 산업별" KOSIS 42건 중 36건 조회 불가, 그중 1건이 순위 2위).
+ * KOSIS OpenAPI가 받는 최대치는 objL8이다.
  */
-export const KOSIS_OBJ_CAPS = [6, 2, 1, 1, 1, 1, 1, 1];
+export const KOSIS_OBJ_LEVELS = 8;
+
+/**
+ * 자르는 대상: KOSIS 분류차수별 항목 수 (objL1, objL2, … 순).
+ * 배열 길이는 위 KOSIS_OBJ_LEVELS에서 파생한다 — 손으로 적으면 어긋난다.
+ * 앞 차수일수록 조합에 미치는 영향이 크므로 앞만 넉넉히 준다.
+ */
+export const KOSIS_OBJ_CAPS = Array.from({ length: KOSIS_OBJ_LEVELS }, (_, i) =>
+  i === 0 ? 6 : i === 1 ? 2 : 1
+);
 
 /** 자르는 대상: KOSIS 표 하나가 만들어내는 항목 조합 수 */
 export const KOSIS_COMBOS_PER_TABLE = 24;
@@ -157,10 +170,15 @@ export const TRUNCATION_NOTES_SHOWN = 5;
 
 /**
  * 자르는 대상: 챗 플래너(모델)에게 넘기는 검색 결과 수.
- * 소스 단위 라운드로빈으로 배분한다 — 소스 순서대로 이어붙여 자르면
+ * 소스별 최소 몫을 먼저 확보한 뒤 자른다 — 소스 순서대로 이어붙여 자르면
  * ECOS가 칸을 다 먹어 KOSIS·FRED 후보가 모델 눈에 들어오지 않는다.
+ *
+ * 30에서 18로 낮췄다(2026-08-05). 도구 결과는 **이후 모든 라운드의 프롬프트에
+ * 누적**돼서, 탈출구까지 가는 연쇄 질의에서 프롬프트가 25k~27k 토큰이 됐다
+ * (조직 gpt-4o 30k TPM의 85~90% → 429 → 백오프 → 응답 27~29초 → HTTP 502).
+ * 화면 검색(/api/search)은 이 상한과 무관하게 전량 그대로 받는다.
  */
-export const CHAT_RESULT_CAP = 30;
+export const CHAT_RESULT_CAP = 18;
 
 /** 자르는 대상: list_table_items가 그룹당 나열하는 항목 수 (표 안을 열어볼 때) */
 export const TABLE_ITEMS_PER_GROUP = 40;

@@ -1,13 +1,17 @@
+import { KOSIS_OBJ_LEVELS } from "../search-config";
 import { SeriesPoint, SourceAdapter, SourceError, requireKey } from "./types";
 
 /**
  * 통계청 KOSIS 공유서비스 OpenAPI
  * https://kosis.kr/openapi/
- * params: { orgId, tblId, itmId, objL1, objL2?, objL3?, prdSe(M|Q|Y) }
+ * params: { orgId, tblId, itmId, objL1, objL2?…objL8?, prdSe(M|Q|Y) }
  *
- * 분류 차수(objL)는 표마다 다르다. 지원 차수를 늘리지 않으면 그보다 깊은 표는
- * 조회 params를 만들 수 없어 검색 결과에서 통째로 빠진다
- * (대응 상한: lib/search-config.ts의 KOSIS_OBJ_CAPS 배열 길이).
+ * 분류 차수(objL)는 표마다 다르다. **지원 차수는 KOSIS_OBJ_LEVELS 하나로 정하고,
+ * 검색 쪽 상한(lib/search-config.ts의 KOSIS_OBJ_CAPS)은 이 값에서 파생시킨다.**
+ * 두 곳을 따로 적었다가 사고가 났다 — 2026-08-05, 검색 상한만 8단으로 올리고
+ * 어댑터는 3단에 머물러, 4단 이상 표가 결과에 올라온 뒤 조회하면 KOSIS가
+ * `err 20 필수요청변수값이 누락되었습니다`로 거절했다("취업자수 산업별"의
+ * KOSIS 42건 중 36건이 조회 불가, 그중 1건이 전체 순위 2위).
  */
 export const kosis: SourceAdapter = {
   id: "kosis",
@@ -19,7 +23,7 @@ export const kosis: SourceAdapter = {
     // err 11(유효하지 않은 인증KEY)이 나므로 길이가 4의 배수가 되도록 보정한다.
     const rawKey = requireKey("kosis", "KOSIS_API_KEY");
     const key = rawKey + "=".repeat((4 - (rawKey.length % 4)) % 4);
-    const { orgId, tblId, itmId, objL1, objL2 = "", objL3 = "", prdSe = "M" } = params;
+    const { orgId, tblId, itmId, prdSe = "M" } = params;
     const start = toKosisPeriod(range.start, prdSe);
     const end = toKosisPeriod(range.end, prdSe);
 
@@ -29,15 +33,17 @@ export const kosis: SourceAdapter = {
       orgId,
       tblId,
       itmId,
-      objL1,
-      objL2,
-      objL3,
       format: "json",
       jsonVD: "Y",
       prdSe,
       startPrdDe: start,
       endPrdDe: end,
     });
+    // 분류축은 지원 차수만큼 전부 실어 보낸다. 값이 없는 차수는 빈 문자열로
+    // 보내야 KOSIS가 "필수요청변수 누락"으로 거절하지 않는다.
+    for (let i = 1; i <= KOSIS_OBJ_LEVELS; i++) {
+      qs.set(`objL${i}`, params[`objL${i}`] ?? "");
+    }
     const res = await fetch(`https://kosis.kr/openapi/Param/statisticsParameterData.do?${qs}`, {
       next: { revalidate: 600 },
     });

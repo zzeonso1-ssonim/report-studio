@@ -1,4 +1,5 @@
 import { Cycle } from "./indicators";
+import { EcosItemIndexStatus } from "./ecos-item-index";
 import { SourceId } from "./sources/types";
 
 /**
@@ -35,4 +36,9 @@ export interface SearchOutcome {
   notes: string[];
   /** 항목이 잘린 통계표 목록 — 챗 도구가 모델에 그대로 전달한다 */
   truncated: TableTruncation[];
+  /**
+   * ECOS 항목명 색인 상태 + 기준일(builtAt).
+   * 색인이 빠지면 검색 품질이 수정 전으로 되돌아가므로 응답에 항상 싣는다.
+   */
+  indexStatus: EcosItemIndexStatus;
 }

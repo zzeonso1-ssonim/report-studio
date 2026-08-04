@@ -35,6 +35,12 @@ QUERIES = [
     ("국고채 3년 5년 10년 커브", "국고채"),
     ("국고채 10년", "국고채"),
     ("한국이랑 미국 소비자물가 비교", None),
+    # 아래 3개는 집합 포함 위반이 실제로 났던 표(817Y002·721Y001, Group1 27항목)를
+    # 정면으로 겨냥한다. LLM 힌트가 원문 점수 0인 동점 항목의 선택을 갈라
+    # ON에서 통안증권·국민주택채권·CD·KORIBOR가 사라졌던 자리다.
+    ("통안증권 금리", "통안증권"),
+    ("KORIBOR 금리", None),
+    ("국민주택채권 금리", None),
 ]
 
 #: 기대 표현을 찾을 상위 결과 개수
@@ -78,6 +84,27 @@ def by_source(d: dict) -> dict:
     return out
 
 
+def sigs(d: dict) -> set:
+    """결과 하나의 신원 = 소스 + 조회 파라미터.
+
+    건수만 비교하면 "ON에서 4건이 빠지고 다른 4건이 들어온" 경우를 못 잡는다.
+    실제로 그렇게 새고 있었다(통안증권·국민주택채권·CD·KORIBOR).
+    불변조건은 '집합 포함'이지 '건수 비교'가 아니다.
+    """
+    return {
+        x["source"] + ":" + "&".join(f"{k}={v}" for k, v in sorted(x.get("params", {}).items()))
+        for x in d.get("results", [])
+    }
+
+
+def name_of(d: dict, sig: str) -> str:
+    for x in d.get("results", []):
+        s = x["source"] + ":" + "&".join(f"{k}={v}" for k, v in sorted(x.get("params", {}).items()))
+        if s == sig:
+            return x.get("name", sig)
+    return sig
+
+
 def main() -> int:
     print(f"{'질의':<34} {'OFF':>18}  {'ON':>18}  판정")
     print("-" * 84)
@@ -100,6 +127,12 @@ def main() -> int:
         ok = n_on >= n_off and not lost
         if not ok:
             failures.append((q, f"ON {n_on} < OFF {n_off} · 감소 소스 {lost}"))
+        # 핵심 불변조건: OFF의 결과 집합이 ON에 전부 들어 있어야 한다
+        missing = sigs(off) - sigs(on)
+        if missing:
+            ok = False
+            sample = ", ".join(name_of(off, m) for m in list(missing)[:3])
+            failures.append((q, f"ON에서 사라진 결과 {len(missing)}건: {sample}"))
         # 기대 표현은 ON·OFF 양쪽 상위 결과에 있어야 한다 (LLM 없이도 닿아야 한다)
         if expect:
             for label, d in (("OFF", off), ("ON", on)):

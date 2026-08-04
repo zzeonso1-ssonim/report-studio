@@ -1,5 +1,5 @@
 import { Cycle } from "./indicators";
-import { ecosItemIndex } from "./ecos-item-index";
+import { INDEX_MISSING_NOTE, ecosItemIndex, ecosItemIndexStatus } from "./ecos-item-index";
 import { SourceId } from "./sources/types";
 import {
   ECOS_COMBOS_PER_TABLE,
@@ -86,6 +86,21 @@ function variantsOf(...candidates: (string | null | undefined)[]): string[] {
 interface SourceOutput {
   results: SearchResult[];
   truncated: TableTruncation[];
+  /** 표 단위 부분 실패 — 조용히 결과만 줄어들면 한도 초과를 아무도 모른다 */
+  errors: string[];
+  /** 실패가 아닌 안내 (검색어 축약 폴백 등) */
+  notes?: string[];
+}
+
+const EMPTY_OUTPUT: SourceOutput = { results: [], truncated: [], errors: [] };
+
+/** 표 확장 실패를 결과 0건 + 사유로 바꾼다 (한 표가 실패해도 나머지는 살린다) */
+function expansionFailure(label: string, err: unknown): SourceOutput {
+  return {
+    results: [],
+    truncated: [],
+    errors: [`${label} 항목 조회 실패: ${err instanceof Error ? err.message : String(err)}`],
+  };
 }
 
 /**
@@ -115,6 +130,10 @@ export async function searchAll(
     [...(plan?.items ?? []), plan?.ecos ?? "", plan?.kosis ?? ""].join(" ")
   ).filter((t) => !primaryTokens.includes(t));
 
+  // 색인이 없으면 검색이 수정 전 상태로 회귀한다 — 조용히 넘기지 않고 드러낸다
+  const indexStatus = ecosItemIndexStatus();
+  if (!indexStatus.available) errors.push(`[ecos] ${INDEX_MISSING_NOTE}`);
+
   if (queries.fred.length === 0) notes.push(FRED_SKIP_NOTE);
   else if (!queries.fred.includes(q)) notes.push(fredTranslatedNote(queries.fred.join(" / ")));
 
@@ -143,6 +162,10 @@ export async function searchAll(
     if (s.status === "fulfilled") {
       perSource.push(s.value.results);
       truncated.push(...s.value.truncated);
+      // 표 단위 실패(ECOS 3분 300회 한도 등)를 드러낸다 — 종전에는 결과만
+      // 조용히 줄어들어 한도 초과와 "원래 없는 계열"을 구분할 수 없었다
+      errors.push(...s.value.errors.map((e) => `[${source}] ${e}`));
+      notes.push(...(s.value.notes ?? []));
     } else if (s.reason === TIMED_OUT) {
       errors.push(timeoutNote(source));
     } else {
@@ -171,7 +194,7 @@ export async function searchAll(
     );
   }
 
-  return { results, errors, notes, truncated };
+  return { results, errors, notes, truncated, indexStatus };
 }
 
 /**
@@ -404,7 +427,9 @@ async function searchEcos(
 
   const expanded = await Promise.all(
     matched.map((t) =>
-      expandEcosTable(key, t, primary, extra).catch(() => ({ results: [], truncated: [] }))
+      expandEcosTable(key, t, primary, extra).catch((err) =>
+        expansionFailure(`${t.STAT_NAME}(${t.STAT_CODE})`, err)
+      )
     )
   );
   return {
@@ -415,6 +440,7 @@ async function searchEcos(
       )
     ),
     truncated: expanded.flatMap((e) => e.truncated),
+    errors: expanded.flatMap((e) => e.errors),
   };
 }
 
@@ -451,64 +477,76 @@ async function expandEcosTable(
   extra: string[]
 ): Promise<SourceOutput> {
   const rows = await fetchEcosItems(key, table.STAT_CODE);
-  if (rows.length === 0) return { results: [], truncated: [] };
+  if (rows.length === 0) return EMPTY_OUTPUT;
 
   const rawCycle = pickEcosCycle(rows, table.CYCLE);
-  if (!rawCycle) return { results: [], truncated: [] };
-  const { capped: groups, totalItems } = ecosGroups(
-    rows.filter((r) => r.CYCLE === rawCycle),
-    primary,
-    extra
-  );
-  if (groups.length === 0) return { results: [], truncated: [] };
+  if (!rawCycle) return EMPTY_OUTPUT;
+  const cycleRows = rows.filter((r) => r.CYCLE === rawCycle);
 
   // 앞자리 목차번호는 표시 이름에서만 뺀다 — 차트 범례를 짧게 유지하기 위함이고,
   // 검색 대조는 위에서 목차번호가 붙은 원문으로 이미 끝났다.
   const tableName = table.STAT_NAME.replace(/^[\d.]+\s*/, "");
 
-  const combos: EcosItemRow[][] = groups.reduce<EcosItemRow[][]>(
-    (acc, items) => acc.flatMap((combo) => items.map((it) => [...combo, it])),
-    [[]]
-  );
-  // 조합도 관련도 순으로 정렬한 뒤 자른다. Group1이 바깥 루프라 정렬 없이 자르면
-  // Group2가 짧은 표에서 Group1 상한을 올려도 결과가 바뀌지 않는다.
-  const ranked = rankByTokens(
-    combos,
-    (c) => c.map((it) => it.ITEM_NAME).join(" "),
-    primary,
-    extra
-  );
-  const shownCombos = ranked.slice(0, ECOS_COMBOS_PER_TABLE);
+  /** 토큰 한 벌로 항목을 고르고 조합을 만든다 */
+  const pass = (extraTokens: string[]) => {
+    const { capped: groups, totalItems } = ecosGroups(cycleRows, primary, extraTokens);
+    if (groups.length === 0) return { results: [] as SearchResult[], items: [] as string[], totalItems };
+    const combos: EcosItemRow[][] = groups.reduce<EcosItemRow[][]>(
+      (acc, items) => acc.flatMap((combo) => items.map((it) => [...combo, it])),
+      [[]]
+    );
+    // 조합도 관련도 순으로 정렬한 뒤 자른다. Group1이 바깥 루프라 정렬 없이 자르면
+    // Group2가 짧은 표에서 Group1 상한을 올려도 결과가 바뀌지 않는다.
+    const shown = rankByTokens(
+      combos,
+      (c) => c.map((it) => it.ITEM_NAME).join(" "),
+      primary,
+      extraTokens
+    ).slice(0, ECOS_COMBOS_PER_TABLE);
+    return {
+      results: shown.map((combo) => {
+        const params: Record<string, string> = { statCode: table.STAT_CODE, cycle: rawCycle };
+        combo.forEach((it, i) => (params[`itemCode${i + 1}`] = it.ITEM_CODE));
+        return {
+          source: "ecos" as const,
+          name: `${tableName} · ${combo.map((it) => it.ITEM_NAME).join(" / ")}`,
+          params,
+          cycle: ECOS_CYCLE[rawCycle] ?? "M",
+          unit: combo[0].UNIT_NAME ?? undefined,
+          origin: table.ORG_NAME ?? "한국은행 ECOS",
+        };
+      }),
+      items: shown.flat().map((it) => it.ITEM_CODE),
+      totalItems,
+    };
+  };
 
-  const shownItems = new Set(shownCombos.flat().map((it) => it.ITEM_CODE)).size;
+  // **ON ⊇ OFF 불변조건을 여기서 지킨다.**
+  // 원문 토큰만으로 한 번(=LLM OFF와 완전히 동일한 결과), LLM 힌트를 더해 한 번
+  // 돌리고 **합집합**을 낸다. 한 번만 돌리면 힌트가 원문 점수 0인 동점 항목의
+  // 순서를 갈라, Group 상한에 걸리는 표(817Y002·721Y001 등 27항목)에서 살아남는
+  // 항목이 달라진다 — 2026-08-05 실측에서 16질의 중 3건에서 각 4건이 사라졌다
+  // (통안증권·국민주택채권·CD·KORIBOR). 정렬이 아니라 **선택**이 바뀌는 문제라
+  // 순서를 손보는 것으로는 못 고친다.
+  const base = pass([]);
+  const boosted = extra.length > 0 ? pass(extra) : { results: [], items: [], totalItems: base.totalItems };
+  const results = dedupeResults([...base.results, ...boosted.results]);
+
+  const shownItems = new Set([...base.items, ...boosted.items]).size;
   const truncated: TableTruncation[] =
-    shownItems < totalItems
+    shownItems < base.totalItems
       ? [
           {
             source: "ecos",
             statCode: table.STAT_CODE,
             statName: tableName,
             shownItems,
-            totalItems,
+            totalItems: base.totalItems,
           },
         ]
       : [];
 
-  return {
-    results: shownCombos.map((combo) => {
-      const params: Record<string, string> = { statCode: table.STAT_CODE, cycle: rawCycle };
-      combo.forEach((it, i) => (params[`itemCode${i + 1}`] = it.ITEM_CODE));
-      return {
-        source: "ecos" as const,
-        name: `${tableName} · ${combo.map((it) => it.ITEM_NAME).join(" / ")}`,
-        params,
-        cycle: ECOS_CYCLE[rawCycle] ?? "M",
-        unit: combo[0].UNIT_NAME ?? undefined,
-        origin: table.ORG_NAME ?? "한국은행 ECOS",
-      };
-    }),
-    truncated,
-  };
+  return { results, truncated, errors: [] };
 }
 
 // ── 통계표 안 열어보기 (탈출구) ────────────────────────────────
@@ -687,15 +725,55 @@ function kosisMeta(key: string, orgId: string, tblId: string, type: string) {
   }).then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))));
 }
 
+/**
+ * KOSIS 표 검색 + **검색어 축약 폴백**.
+ *
+ * KOSIS 원격 검색은 문장형·수식어가 많은 검색어에서 0건을 준다. 실측:
+ * "KOSIS 사업체노동력조사에서 금융 및 보험업 상용근로자 1인당 임금총액" → 0건,
+ * "사업체노동력조사" → 96건. 0건이면 열어볼 표 자체가 없어 탈출구도 못 쓴다.
+ * 그래서 0건일 때 토큰을 줄여 다시 묻는다 — 넓히기만 하고 좁히지 않는다.
+ */
+async function kosisSearchWithFallback(
+  key: string,
+  q: string,
+  primary: string[]
+): Promise<{ rows: KosisSearchRow[]; note?: string }> {
+  const first = await kosisSearchTables(key, q);
+  if (first.length > 0) return { rows: first, note: undefined };
+
+  // 긴 토큰이 대개 고유명사(조사명·통계명)라 축약 후보로 낫다
+  const byLength = [...primary].sort((a, b) => b.length - a.length);
+  const attempts = [byLength.slice(0, 2).join(" "), byLength[0]].filter(
+    (t): t is string => Boolean(t) && t !== q
+  );
+  for (const attempt of [...new Set(attempts)]) {
+    const rows = await kosisSearchTables(key, attempt);
+    if (rows.length > 0) {
+      return { rows, note: `KOSIS는 "${q}"에 결과가 없어 "${attempt}"로 좁혀 찾았습니다` };
+    }
+  }
+  return { rows: [], note: undefined };
+}
+
 async function searchKosis(
   queries: string[],
   primary: string[],
   extra: string[]
 ): Promise<SourceOutput> {
   const key = kosisKey();
-  const perQuery = await Promise.all(
-    queries.map((q) => kosisSearchTables(key, q).catch(() => []))
+  const notes: string[] = [];
+  const settledQueries = await Promise.all(
+    queries.map((q) =>
+      kosisSearchWithFallback(key, q, primary).catch(() => ({
+        rows: [] as KosisSearchRow[],
+        note: undefined,
+      }))
+    )
   );
+  const perQuery = settledQueries.map((r) => {
+    if (r.note) notes.push(r.note);
+    return r.rows;
+  });
 
   // 검색어 변형별로 상위 N개씩 뽑아 이어붙인다 (LLM 변형이 원문 결과를 밀어내지 않게)
   const picked: KosisSearchRow[] = [];
@@ -712,7 +790,9 @@ async function searchKosis(
 
   const expanded = await Promise.all(
     picked.map((t) =>
-      expandKosisTable(key, t, primary, extra).catch(() => ({ results: [], truncated: [] }))
+      expandKosisTable(key, t, primary, extra).catch((err) =>
+        expansionFailure(`${t.TBL_NM}(${t.ORG_ID}/${t.TBL_ID})`, err)
+      )
     )
   );
   return {
@@ -723,6 +803,8 @@ async function searchKosis(
       )
     ),
     truncated: expanded.flatMap((e) => e.truncated),
+    errors: expanded.flatMap((e) => e.errors),
+    notes,
   };
 }
 
@@ -736,40 +818,78 @@ async function expandKosisTable(
     kosisMeta(key, table.ORG_ID, table.TBL_ID, "ITM"),
     kosisMeta(key, table.ORG_ID, table.TBL_ID, "PRD"),
   ]);
-  if (!Array.isArray(itmJson) || !Array.isArray(prdJson)) return { results: [], truncated: [] };
+  if (!Array.isArray(itmJson) || !Array.isArray(prdJson)) return EMPTY_OUTPUT;
 
   // 주기: M > Q > D > A 우선
   const available = new Set((prdJson as { PRD_SE: string }[]).map((p) => p.PRD_SE));
   const label = ["월", "분기", "일", "년"].find((l) => available.has(l));
-  if (!label) return { results: [], truncated: [] };
+  if (!label) return EMPTY_OUTPUT;
   const { cycle, prdSe } = KOSIS_PRD[label];
 
   const itmRows = itmJson as KosisItmRow[];
-  const rank = (rows: KosisItmRow[]) =>
-    rankByTokens(dedupe(rows), (r) => r.ITM_NM, primary, extra);
   const itemRows = itmRows.filter((r) => r.OBJ_ID === "ITEM");
-  const items = rank(itemRows).slice(0, KOSIS_ITEM_CAP);
-  if (items.length === 0) return { results: [], truncated: [] };
-  let totalItems = dedupe(itemRows).length;
+  if (itemRows.length === 0) return EMPTY_OUTPUT;
 
   const objSns = [...new Set(itmRows.filter((r) => r.OBJ_ID_SN).map((r) => r.OBJ_ID_SN!))].sort();
   // 어댑터가 지원하는 분류 차수까지만 — 그 이상은 조회 params를 만들 수 없다.
-  // (KOSIS_OBJ_CAPS 길이 = 지원 차수. 넘치면 표가 통째로 검색에서 사라진다)
-  if (objSns.length > KOSIS_OBJ_CAPS.length) return { results: [], truncated: [] };
-  const objLevels = objSns.map((sn, i) => {
-    const level = itmRows.filter((r) => r.OBJ_ID_SN === sn);
-    totalItems += dedupe(level).length;
-    return rank(level).slice(0, KOSIS_OBJ_CAPS[i]);
-  });
+  // (KOSIS_OBJ_CAPS 길이는 KOSIS_OBJ_LEVELS에서 파생. 넘치면 표가 통째로 빠진다)
+  if (objSns.length > KOSIS_OBJ_CAPS.length) return EMPTY_OUTPUT;
 
-  const combos: KosisItmRow[][] = [items, ...objLevels].reduce<KosisItmRow[][]>(
-    (acc, level) => acc.flatMap((combo) => level.map((it) => [...combo, it])),
-    [[]]
-  );
-  const ranked = rankByTokens(combos, (c) => c.map((it) => it.ITM_NM).join(" "), primary, extra);
-  const shownCombos = ranked.slice(0, KOSIS_COMBOS_PER_TABLE);
+  const totalItems =
+    dedupe(itemRows).length +
+    objSns.reduce((n, sn) => n + dedupe(itmRows.filter((r) => r.OBJ_ID_SN === sn)).length, 0);
 
-  const shownItems = new Set(shownCombos.flat().map((it) => it.ITM_ID)).size;
+  /** 토큰 한 벌로 항목·분류를 고르고 조합을 만든다 (ECOS와 같은 구조) */
+  const pass = (extraTokens: string[]) => {
+    const rank = (rows: KosisItmRow[]) =>
+      rankByTokens(dedupe(rows), (r) => r.ITM_NM, primary, extraTokens);
+    const items = rank(itemRows).slice(0, KOSIS_ITEM_CAP);
+    if (items.length === 0) return { results: [] as SearchResult[], items: [] as string[] };
+    const objLevels = objSns.map((sn, i) =>
+      rank(itmRows.filter((r) => r.OBJ_ID_SN === sn)).slice(0, KOSIS_OBJ_CAPS[i])
+    );
+    const combos: KosisItmRow[][] = [items, ...objLevels].reduce<KosisItmRow[][]>(
+      (acc, level) => acc.flatMap((combo) => level.map((it) => [...combo, it])),
+      [[]]
+    );
+    const shown = rankByTokens(
+      combos,
+      (c) => c.map((it) => it.ITM_NM).join(" "),
+      primary,
+      extraTokens
+    ).slice(0, KOSIS_COMBOS_PER_TABLE);
+    return {
+      results: shown.map((combo) => {
+        const [itm, ...objs] = combo;
+        const params: Record<string, string> = {
+          orgId: table.ORG_ID,
+          tblId: table.TBL_ID,
+          itmId: itm.ITM_ID,
+          objL1: objs[0]?.ITM_ID ?? "",
+          prdSe,
+        };
+        objs.slice(1).forEach((o, i) => (params[`objL${i + 2}`] = o.ITM_ID));
+        const parts = combo.map((it) => it.ITM_NM).filter((n, i, a) => a.indexOf(n) === i);
+        return {
+          source: "kosis" as const,
+          name: `${table.TBL_NM} · ${parts.join(" / ")}`,
+          params,
+          cycle,
+          unit: itm.UNIT_NM || undefined,
+          origin: table.ORG_NM ?? "KOSIS",
+        };
+      }),
+      items: shown.flat().map((it) => it.ITM_ID),
+    };
+  };
+
+  // ECOS와 같은 이유로 두 번 돌려 합집합을 낸다 (ON ⊇ OFF 불변조건)
+  const base = pass([]);
+  const boosted = extra.length > 0 ? pass(extra) : { results: [], items: [] };
+  const results = dedupeResults([...base.results, ...boosted.results]);
+  if (results.length === 0) return EMPTY_OUTPUT;
+
+  const shownItems = new Set([...base.items, ...boosted.items]).size;
   const truncated: TableTruncation[] =
     shownItems < totalItems
       ? [
@@ -783,29 +903,7 @@ async function expandKosisTable(
         ]
       : [];
 
-  return {
-    results: shownCombos.map((combo) => {
-      const [itm, ...objs] = combo;
-      const params: Record<string, string> = {
-        orgId: table.ORG_ID,
-        tblId: table.TBL_ID,
-        itmId: itm.ITM_ID,
-        objL1: objs[0]?.ITM_ID ?? "",
-        prdSe,
-      };
-      objs.slice(1).forEach((o, i) => (params[`objL${i + 2}`] = o.ITM_ID));
-      const parts = combo.map((it) => it.ITM_NM).filter((n, i, a) => a.indexOf(n) === i);
-      return {
-        source: "kosis" as const,
-        name: `${table.TBL_NM} · ${parts.join(" / ")}`,
-        params,
-        cycle,
-        unit: itm.UNIT_NM || undefined,
-        origin: table.ORG_NM ?? "KOSIS",
-      };
-    }),
-    truncated,
-  };
+  return { results, truncated, errors: [] };
 }
 
 /** KOSIS 탈출구 — ECOS의 listEcosTableItems와 같은 역할 */
@@ -946,5 +1044,6 @@ async function searchFred(queries: string[]): Promise<SourceOutput> {
   return {
     results: dedupeResults(interleave(perQuery, SOURCE_RESULT_CEILING)),
     truncated: [],
+    errors: [],
   };
 }

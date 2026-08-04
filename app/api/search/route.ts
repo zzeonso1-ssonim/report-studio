@@ -32,6 +32,8 @@ export async function GET(request: Request) {
   // "LLM ON은 OFF의 상위집합"이라는 불변조건은 측정으로만 지킬 수 있다
   // (scripts/search-ab-check.py가 이 파라미터를 쓴다).
   const llm = url.searchParams.get("llm") !== "off";
-  const { results, errors, notes, truncated } = await searchAll(q, { llm });
-  return Response.json({ query: q, llm, results, errors, notes, truncated });
+  const { results, errors, notes, truncated, indexStatus } = await searchAll(q, { llm });
+  // indexStatus는 항목명 색인의 가용 여부와 **기준일(builtAt)**을 담는다.
+  // 색인이 빠지면 검색 품질이 조용히 수정 전으로 되돌아가므로 응답에 항상 싣는다.
+  return Response.json({ query: q, llm, results, errors, notes, truncated, indexStatus });
 }

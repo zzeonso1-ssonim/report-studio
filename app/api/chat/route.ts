@@ -39,6 +39,41 @@ const MAX_TOOL_ROUNDS = 8;
 /** 소스별 최소 노출 건수 — 한·미 비교에서 한쪽 소스가 0건이 되지 않게 한다 */
 const CHAT_SOURCE_FLOOR = 4;
 
+/**
+ * 요청 하나에 쓰는 총 예산(ms). 서버리스 상한(FUNCTION_MAX_DURATION_S=25초)보다
+ * 짧아야 함수가 잘려 5xx가 나가는 대신 우리가 안내를 돌려줄 수 있다.
+ *
+ * 2026-08-05 실측: 탈출구 연쇄 질의가 27.1초·28.9초까지 늘어 HTTP 502가 났다.
+ * 원인은 ① 도구 결과가 누적돼 프롬프트가 25k~27k 토큰이 되고(조직 30k TPM의
+ * 85~90%) ② 429 백오프가 라운드마다 독립적으로 최대 12초씩 쌓인 것이다.
+ */
+const CHAT_BUDGET_MS = 20_000;
+
+/** 라운드 하나(모델 호출 + 도구 실행)에 최소한 남겨둬야 하는 시간(ms) */
+const MIN_ROUND_MS = 3_000;
+
+/**
+ * 도구 결과 하나를 모델에 넘길 때의 문자 상한.
+ *
+ * 도구 결과는 이후 모든 라운드의 프롬프트에 누적돼서 토큰을 지수적으로 밀어올린다.
+ * 잘릴 때는 반드시 "무엇이 잘렸고 어떻게 더 보는지"를 함께 알려 도달 경로를 남긴다.
+ */
+const CHAT_TOOL_RESULT_MAX_CHARS = 6_000;
+
+/** 도구 결과가 너무 길면 자르고, 좁히는 방법을 알려준다 */
+function capToolResult(json: string): string {
+  if (json.length <= CHAT_TOOL_RESULT_MAX_CHARS) return json;
+  return JSON.stringify({
+    truncatedToolResult: true,
+    shownChars: CHAT_TOOL_RESULT_MAX_CHARS,
+    totalChars: json.length,
+    hint:
+      "결과가 너무 길어 일부만 전달했습니다. filter로 항목명을 좁히거나 offset으로 다음 구간을 요청하세요. " +
+      "아래는 잘린 원본의 앞부분입니다.",
+    partial: json.slice(0, CHAT_TOOL_RESULT_MAX_CHARS),
+  });
+}
+
 const TRANSFORMS: Transform[] = [...REQUEST_TRANSFORMS];
 const CYCLES: Cycle[] = ["D", "M", "Q", "A"];
 const AXES = ["left", "right"] as const;
@@ -300,8 +335,13 @@ async function runSearchCatalog(args: { query?: unknown; source?: unknown }): Pr
   //
   // truncatedTables를 함께 돌려주는 것이 핵심이다 — 검색 결과만 보면 모델은
   // "이게 전부"라고 믿는다. 무엇이 잘렸는지 알려줘야 표를 열어볼 이유가 생긴다.
+  // origin(기관명)은 계획에 쓰이지 않는 표시용 필드라 모델에는 보내지 않는다 —
+  // 누적 프롬프트에서 순수 낭비다
+  const forModel = capWithSourceFloor(filtered, CHAT_RESULT_CAP, CHAT_SOURCE_FLOOR).map(
+    ({ source, name, params, cycle, unit }) => ({ source, name, params, cycle, unit })
+  );
   return JSON.stringify({
-    results: capWithSourceFloor(filtered, CHAT_RESULT_CAP, CHAT_SOURCE_FLOOR),
+    results: forModel,
     errors,
     truncatedTables: truncated.map((t) => ({
       source: t.source,
@@ -508,6 +548,10 @@ export async function POST(request: Request) {
     return Response.json({ error: "query는 2자 이상의 문자열이어야 합니다" }, { status: 400 });
   }
 
+  // 응답 예산 — 서버리스 상한에 잘려 5xx가 나가기 전에 우리가 먼저 멈춘다
+  const startedAt = Date.now();
+  const remainingMs = () => CHAT_BUDGET_MS - (Date.now() - startedAt);
+
   const model = process.env.OPENAI_MODEL ?? DEFAULT_OPENAI_MODEL;
   const messages: ChatMessage[] = [
     { role: "system", content: buildSystemPrompt() },
@@ -519,8 +563,22 @@ export async function POST(request: Request) {
 
   try {
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-      // 429(분당 토큰 한도)는 몇 초 뒤 풀리므로 짧은 백오프로 최대 2회 재시도.
-      // 총 대기는 Vercel 20초 상한 안에 들어오도록 6초로 제한한다.
+      // 예산을 넘겼으면 더 시도하지 않고 지금까지의 상태로 응답한다.
+      // 서버리스 상한(FUNCTION_MAX_DURATION_S)에서 잘리면 5xx가 나가므로,
+      // 우리가 먼저 멈추고 사람이 읽을 수 있는 안내를 돌려주는 편이 낫다.
+      if (remainingMs() < MIN_ROUND_MS) {
+        console.log(`[chat] 예산 소진 — round=${round + 1} elapsed=${Date.now() - startedAt}ms`);
+        return Response.json(
+          {
+            error: `응답이 ${Math.round(CHAT_BUDGET_MS / 1000)}초를 넘어 중단했습니다 — 질의를 더 구체적으로 좁혀 다시 시도하세요`,
+          },
+          { status: 504 }
+        );
+      }
+
+      // 429(분당 토큰 한도)는 몇 초 뒤 풀리므로 짧은 백오프로 재시도하되,
+      // **요청 전체 예산 안에서만** 기다린다. 종전에는 라운드마다 최대 2회×6초를
+      // 독립적으로 써서 라운드가 겹치면 총 대기가 폭발했다(실측 27.1s·28.9s → 502).
       let res: Response | null = null;
       for (let attempt = 0; attempt < 3; attempt++) {
         res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -533,11 +591,17 @@ export async function POST(request: Request) {
         });
         if (res.status !== 429 || attempt === 2) break;
         const retryAfter = Number(res.headers.get("retry-after"));
-        const waitMs = Math.min(
+        const want = Math.min(
           Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 + 300 : 3000,
           6000
         );
-        console.log(`[chat] 429 — ${waitMs}ms 후 재시도 (${attempt + 1}/2)`);
+        // 남은 예산에서 응답 조립분을 뺀 만큼만 기다린다
+        const waitMs = Math.min(want, remainingMs() - MIN_ROUND_MS);
+        if (waitMs <= 0) {
+          console.log(`[chat] 429 — 남은 예산이 없어 재시도 포기`);
+          break;
+        }
+        console.log(`[chat] 429 — ${waitMs}ms 후 재시도 (${attempt + 1}/2, 남은예산 ${remainingMs()}ms)`);
         await new Promise((r) => setTimeout(r, waitMs));
       }
       if (!res || !res.ok) {
@@ -619,7 +683,9 @@ export async function POST(request: Request) {
         } else {
           result = JSON.stringify({ error: `알 수 없는 도구: ${tc.function.name}` });
         }
-        messages.push({ role: "tool", tool_call_id: tc.id, content: result });
+        // 도구 결과는 이후 모든 라운드의 프롬프트에 누적된다 — 상한을 걸어
+        // 토큰 폭증(→429→백오프→25초 초과)을 막는다
+        messages.push({ role: "tool", tool_call_id: tc.id, content: capToolResult(result) });
       }
     }
 

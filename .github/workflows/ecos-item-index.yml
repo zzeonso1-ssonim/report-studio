@@ -1,0 +1,81 @@
+name: ECOS 항목명 색인 갱신 (월간)
+
+# 왜 자동화하는가: data/ecos-item-names.json은 표 선정에 쓰는 빌드 산출물이라
+# 갱신하지 않으면 ECOS가 통계표·항목을 추가해도 검색이 **조용히** 못 찾는다.
+# 실패해도 화면에 아무 표시가 없는 부류의 결손이라 사람이 눈치채지 못한다.
+#
+# 주기를 월 1회로 잡은 근거:
+#  - ECOS 통계표 목록은 분기~반기 단위로 드물게 바뀐다(신규 표 추가가 대부분).
+#  - 한 번 도는 데 608표 × API 1회 = 약 18분이 걸리고 3분 300회 한도를 쓴다.
+#    주간으로 돌릴 만큼 변화가 잦지 않고, 한도만 축낸다.
+#  - 디렉터 리듬상 월요일 8시 전략회의 전에 끝나 있어야 하므로 첫 주 일요일 새벽에 돈다.
+#
+# 필요한 시크릿: ECOS_API_KEY  ← **디렉터가 저장소 Secrets에 등록해야 한다.**
+# 미등록이면 이 워크플로는 실패하고, 색인은 마지막 커밋본이 그대로 쓰인다
+# (앱은 죽지 않고 항목명 매칭 품질만 그 시점에 고정된다).
+
+on:
+  schedule:
+    # 매월 1~7일 중 일요일 19:00 UTC = 월요일 04:00 KST
+    - cron: "0 19 1-7 * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ecos-item-index
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    # 608표 × 페이싱(60초당 90회) ≈ 18분. 여유를 두되 무한정 돌지 않게 한다.
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: 색인 재생성
+        env:
+          ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}
+        run: |
+          if [ -z "$ECOS_API_KEY" ]; then
+            echo "::error::ECOS_API_KEY 시크릿이 없습니다. 저장소 Settings → Secrets에 등록하세요."
+            exit 1
+          fi
+          # 이어받기를 쓰지 않도록 기존 파일을 치우고 전량 재수집한다
+          # (이어받기는 삭제된 표를 색인에 남긴다)
+          rm -f data/ecos-item-names.json
+          node scripts/build-ecos-item-index.mjs
+
+      - name: 결과 점검
+        run: |
+          node -e '
+            const j = require("./data/ecos-item-names.json");
+            const tables = Object.keys(j.tables).length;
+            console.log(`builtAt=${j.builtAt} indexed=${tables}/${j.searchableTables} failed=${j.failed.length}`);
+            // 표가 급감했으면 API 장애일 가능성이 높다 — 커밋하지 않고 실패시킨다
+            if (tables < j.searchableTables * 0.9) {
+              throw new Error(`색인된 표가 너무 적습니다 (${tables}/${j.searchableTables}) — 커밋하지 않습니다`);
+            }
+            // 회귀 감시: 국고채가 항목명에 잡히지 않으면 표 선정이 다시 0건이 된다
+            const hits = Object.values(j.tables).filter((t) => t.s.includes("국고채")).length;
+            if (hits === 0) throw new Error("항목명에 국고채가 하나도 없습니다 — 색인이 잘못됐습니다");
+            console.log(`국고채 포함 표 ${hits}개`);
+          '
+
+      - name: 변경분 커밋
+        run: |
+          if git diff --quiet -- data/ecos-item-names.json; then
+            echo "변경 없음 — 커밋하지 않습니다"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/ecos-item-names.json
+          git commit -m "chore: ECOS 항목명 색인 갱신 (자동)"
+          git push
