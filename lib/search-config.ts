@@ -197,8 +197,19 @@ export const TABLE_ITEMS_PER_GROUP = 40;
  * (scripts/search-ab-check.py가 이 불변조건을 측정한다).
  */
 
-/** 보조 호출용 모델 — 플래너(OPENAI_MODEL)와 별개. 값싸고 빠른 쪽을 쓴다 (서버 전용) */
-export const SEARCH_LLM_MODEL = process.env.OPENAI_SEARCH_MODEL || "gpt-4o-mini";
+/**
+ * 보조 호출용 모델 — 플래너(OPENAI_MODEL)와 별개. 값싸고 빠른 쪽을 쓴다 (서버 전용).
+ *
+ * **개발·검증 경로에서는 환경변수 재정의를 받지 않고 여기에 고정한다** (2026-08-05).
+ * 검색 보조는 질의 1건당 최대 2회 호출이라 개발 루프에서 조용히 반복되는데,
+ * `.env.local`에 상위 모델이 한 번 들어가면 그 상태가 그대로 청구서가 된다.
+ * 프로덕션(NODE_ENV=production)에서만 OPENAI_SEARCH_MODEL로 바꿀 수 있다.
+ */
+const SEARCH_LLM_MODEL_DEFAULT = "gpt-4o-mini";
+export const SEARCH_LLM_MODEL =
+  process.env.NODE_ENV === "production"
+    ? process.env.OPENAI_SEARCH_MODEL || SEARCH_LLM_MODEL_DEFAULT
+    : SEARCH_LLM_MODEL_DEFAULT;
 
 /** 자르는 대상: 선별 단계에서 LLM에게 보여주는 후보 수 (토큰 비용 상한) */
 export const SEARCH_LLM_CANDIDATES = 60;

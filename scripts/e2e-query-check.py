@@ -8,19 +8,24 @@
 
 각 계열에 대해 마지막 관측치(시점·값)와 관측 수, 서버 안내문(note)을 찍는다.
 
-사용법 (배터리와 동일):
-  ln -sfn "<저장소>" /tmp/econ-cockpit && cd /tmp/econ-cockpit && npm run dev -- -p 3500
-  cd <저장소> && set -a; . ./.env.local; set +a
-  python3 scripts/e2e-query-check.py                 # 기본 질의 묶음
-  python3 scripts/e2e-query-check.py "질의1" "질의2"  # 임의 질의
+**기본 실행은 무과금이다** — 저장된 픽스처(scripts/fixtures/)를 재생한다.
+실제 서버·OpenAI를 부르는 것은 `--live`를 명시했을 때뿐이고, 그 실행이 통과하면
+같은 응답으로 픽스처를 갱신한다(scripts/verify_common.py).
+
+사용법:
+  # 기본 — 네트워크 0회, 서버 없이 돈다
+  python3 scripts/e2e-query-check.py
+
+  # 실호출(과금) — 서버를 띄운 뒤 픽스처를 갱신할 때만
+  npx next dev --webpack -p 3500        # 또는 ASCII 경로 복제본에서 npm run dev
+  python3 scripts/e2e-query-check.py --live
+  python3 scripts/e2e-query-check.py --live "질의1" "질의2"   # 임의 질의
 """
-import json
-import os
+import argparse
 import sys
 import time
-import urllib.request
 
-BASE = os.environ.get("COCKPIT_BASE", "http://localhost:3500")
+from verify_common import Session, add_common_args
 
 DEFAULT_QUERIES = [
     "ecos 1.3.3.2.1 예금은행 대출금리 중 기업대출, 가계대출, 주택담보대출의 전년대비 증감률",
@@ -28,41 +33,6 @@ DEFAULT_QUERIES = [
     "한국 CPI랑 미국 CPI 전년비로 겹쳐줘",
     "한국 소비자물가랑 실질 GDP 5년치",
 ]
-
-
-def login() -> str:
-    token = os.environ.get("COCKPIT_SESSION")
-    if token:
-        return token
-    pw = os.environ.get("APP_PASSWORD")
-    if not pw:
-        sys.exit("COCKPIT_SESSION 또는 APP_PASSWORD 환경변수가 필요합니다")
-    req = urllib.request.Request(
-        f"{BASE}/api/login",
-        data=json.dumps({"password": pw}).encode(),
-        headers={"Content-Type": "application/json"},
-    )
-    with urllib.request.urlopen(req, timeout=30) as r:
-        for k, v in r.getheaders():
-            if k.lower() == "set-cookie" and v.startswith("econ_cockpit_session="):
-                return v.split(";")[0].split("=", 1)[1]
-    sys.exit("로그인 응답에 세션 쿠키가 없습니다")
-
-
-TOKEN = login()
-HEAD = {"Content-Type": "application/json", "Cookie": f"econ_cockpit_session={TOKEN}"}
-
-
-def post(path: str, body: dict, timeout: int = 120) -> dict:
-    req = urllib.request.Request(f"{BASE}{path}", data=json.dumps(body).encode(), headers=HEAD)
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.load(r)
-
-
-def get(path: str, timeout: int = 120) -> dict:
-    req = urllib.request.Request(f"{BASE}{path}", headers=HEAD)
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.load(r)
 
 
 def last_obs(points: list) -> str:
@@ -74,11 +44,11 @@ def last_obs(points: list) -> str:
     return f"{p['date']} = {p['value']}"
 
 
-def check(query: str) -> bool:
+def check(S: Session, query: str) -> bool:
     print(f"\n{'=' * 78}\n질의: {query}")
     t0 = time.time()
     try:
-        d = post("/api/chat", {"query": query})
+        _, d = S.post("/api/chat", {"query": query})
     except Exception as e:  # noqa: BLE001
         print(f"  실패: /api/chat {e}")
         return False
@@ -96,13 +66,13 @@ def check(query: str) -> bool:
         try:
             if s.get("indicatorId"):
                 label = s["indicatorId"]
-                r = get(
+                _, r = S.get(
                     f"/api/series/{s['indicatorId']}?start={plan['startDate']}"
                     f"&end={plan['endDate']}&transform={plan['transform']}"
                 )
             else:
-                label = f"{s.get('source')} {json.dumps(s.get('params', {}), ensure_ascii=False)}"
-                r = post(
+                label = f"{s.get('source')} {s.get('params', {})}"
+                _, r = S.post(
                     "/api/series/adhoc",
                     {
                         "source": s.get("source"),
@@ -135,15 +105,26 @@ def check(query: str) -> bool:
 
 
 def main() -> int:
-    queries = sys.argv[1:] or DEFAULT_QUERIES
+    ap = argparse.ArgumentParser(description=__doc__)
+    add_common_args(ap)
+    ap.add_argument("queries", nargs="*", help="임의 질의 (--live에서만 의미가 있다)")
+    args = ap.parse_args()
+
+    queries = args.queries or DEFAULT_QUERIES
+    if args.queries and not args.live:
+        sys.exit("임의 질의는 픽스처에 없습니다 — `--live`와 함께 쓰세요")
+
+    S = Session("e2e-query-check", args.live, args.base)
     results = []
     for i, q in enumerate(queries):
         if i:
-            time.sleep(20)  # OpenAI TPM 페이싱
-        results.append(check(q))
+            S.sleep("e2eBetweenQueriesS")  # OpenAI TPM 페이싱 (재생 모드에서는 대기 없음)
+        results.append(check(S, q))
     npass = sum(results)
     print(f"\n{'=' * 78}\n{npass}/{len(results)} 질의에서 모든 계열이 값을 반환")
-    return 0 if npass == len(results) else 1
+    ok = npass == len(results)
+    S.finish(ok)
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":

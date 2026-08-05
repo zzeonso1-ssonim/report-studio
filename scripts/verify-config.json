@@ -1,0 +1,23 @@
+{
+  "_comment": "검증 스크립트 공통 설정 — 단일 소스. scripts/verify_common.py가 읽는다. 경로는 저장소 루트 기준 상대경로.",
+  "fixtureDir": "scripts/fixtures",
+  "envFile": ".env.local",
+  "bases": {
+    "default": "http://localhost:3500",
+    "indexMissing": "http://localhost:3501"
+  },
+  "pricingUsdPerMTok": {
+    "_source": "OpenAI 공개 요금표 (developers.openai.com/api/docs/pricing), 확인일 2026-08-05. 100만 토큰당 USD.",
+    "_cachedNote": "cachedInput은 '캐시된 입력 90% 할인' 규칙에서 파생한 값이다(입력가 × 0.1).",
+    "gpt-4o": { "input": 2.5, "cachedInput": 0.25, "output": 10.0 },
+    "gpt-5": { "input": 1.25, "cachedInput": 0.125, "output": 10.0 },
+    "gpt-4o-mini": { "input": 0.15, "cachedInput": 0.015, "output": 0.6 }
+  },
+  "pacing": {
+    "batteryBetweenQueriesS": 25,
+    "e2eBetweenQueriesS": 20,
+    "abBetweenQueriesS": 3,
+    "abBetweenOnOffS": 1,
+    "indexRetryWaitS": 35
+  }
+}

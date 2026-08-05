@@ -1,3 +1,4 @@
+import { addLlmTokens, recordLlmCall } from "./llm-usage";
 import {
   SEARCH_LLM_CACHE_SIZE,
   SEARCH_LLM_CACHE_TTL_MS,
@@ -109,6 +110,8 @@ async function callJson(
   const abort = new AbortController();
   const timer = setTimeout(() => abort.abort(), SEARCH_LLM_TIMEOUT_MS);
   try {
+    // 계측(lib/llm-usage.ts) — 요청 단위 집계에만 쓰이고 동작에는 영향이 없다
+    recordLlmCall(SEARCH_LLM_MODEL);
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -129,6 +132,12 @@ async function callJson(
       return null;
     }
     const json = await res.json();
+    addLlmTokens(
+      SEARCH_LLM_MODEL,
+      json?.usage?.prompt_tokens,
+      json?.usage?.completion_tokens,
+      json?.usage?.prompt_tokens_details?.cached_tokens
+    );
     const content = json?.choices?.[0]?.message?.content;
     if (typeof content !== "string") return null;
     const parsed = JSON.parse(content);

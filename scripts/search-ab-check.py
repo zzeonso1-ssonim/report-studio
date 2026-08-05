@@ -8,19 +8,19 @@ LLM은 넓히는 데만 써야 하며, 그 불변조건은 이 스크립트로 �
 판정: **ON 건수가 OFF보다 적은 질의가 하나라도 있으면 실패.**
 소스별 건수도 함께 대조한다(총량이 같아도 한 소스가 사라지면 실패다).
 
-사용법:
-  ln -sfn "<저장소>" /tmp/econ-cockpit  # 또는 ASCII 경로 복제본
-  cd <저장소> && set -a; . ./.env.local; set +a
-  python3 scripts/search-ab-check.py
-"""
-import json
-import os
-import sys
-import time
-import urllib.parse
-import urllib.request
+**기본 실행은 무과금이다** — 저장된 픽스처(scripts/fixtures/)를 재생한다.
+`--live`일 때만 실제 서버에 붙고(ON 경로가 OpenAI를 호출한다) 통과 시 픽스처를
+갱신한다(scripts/verify_common.py).
 
-BASE = os.environ.get("COCKPIT_BASE", "http://localhost:3500")
+사용법:
+  python3 scripts/search-ab-check.py            # 기본 — 네트워크 0회
+  python3 scripts/search-ab-check.py --live     # 실호출·과금, 픽스처 갱신
+"""
+import argparse
+import sys
+import urllib.parse
+
+from verify_common import Session, add_common_args
 
 # (질의, 상위 결과에 반드시 들어가야 하는 표현 or None)
 #  - 앞 4개: LLM ON이 OFF보다 좁아졌던 질의 (2026-08-05 검증 지적)
@@ -47,34 +47,10 @@ QUERIES = [
 TOP_N = 5
 
 
-def login() -> str:
-    token = os.environ.get("COCKPIT_SESSION")
-    if token:
-        return token
-    pw = os.environ.get("APP_PASSWORD")
-    if not pw:
-        return ""  # 로컬 dev에서 APP_PASSWORD 미설정이면 게이트가 열려 있다
-    req = urllib.request.Request(
-        f"{BASE}/api/login",
-        data=json.dumps({"password": pw}).encode(),
-        headers={"Content-Type": "application/json"},
-    )
-    with urllib.request.urlopen(req, timeout=30) as r:
-        for k, v in r.getheaders():
-            if k.lower() == "set-cookie" and v.startswith("econ_cockpit_session="):
-                return v.split(";")[0].split("=", 1)[1]
-    return ""
-
-
-TOKEN = login()
-HEAD = {"Cookie": f"econ_cockpit_session={TOKEN}"} if TOKEN else {}
-
-
-def search(q: str, llm: bool) -> dict:
-    url = f"{BASE}/api/search?q={urllib.parse.quote(q)}" + ("" if llm else "&llm=off")
-    req = urllib.request.Request(url, headers=HEAD)
-    with urllib.request.urlopen(req, timeout=120) as r:
-        return json.load(r)
+def search(S: Session, q: str, llm: bool) -> dict:
+    path = f"/api/search?q={urllib.parse.quote(q)}" + ("" if llm else "&llm=off")
+    _, d = S.get(path)
+    return d
 
 
 def by_source(d: dict) -> dict:
@@ -106,16 +82,21 @@ def name_of(d: dict, sig: str) -> str:
 
 
 def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    add_common_args(ap)
+    args = ap.parse_args()
+    S = Session("search-ab-check", args.live, args.base)
+
     print(f"{'질의':<34} {'OFF':>18}  {'ON':>18}  판정")
     print("-" * 84)
     failures = []
     for i, (q, expect) in enumerate(QUERIES):
         if i:
-            time.sleep(3)  # 기관 API 예의
+            S.sleep("abBetweenQueriesS")  # 기관 API 예의 (재생 모드에서는 대기 없음)
         try:
-            off = search(q, False)
-            time.sleep(1)
-            on = search(q, True)
+            off = search(S, q, False)
+            S.sleep("abBetweenOnOffS")
+            on = search(S, q, True)
         except Exception as e:  # noqa: BLE001
             print(f"{q:<34} 조회 실패: {e}")
             failures.append((q, "조회 실패"))
@@ -149,8 +130,10 @@ def main() -> int:
         print(f"실패 {len(failures)}건 — LLM이 결과를 좁혔거나 기대 계열에 못 닿았다")
         for q, why in failures:
             print(f"  - {q}: {why}")
+        S.finish(False)
         return 1
     print(f"{len(QUERIES)}/{len(QUERIES)} OK — ON이 OFF보다 좁아진 질의 없음 · 기대 계열 전부 도달")
+    S.finish(True)
     return 0
 
 

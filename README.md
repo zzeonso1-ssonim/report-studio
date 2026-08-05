@@ -87,7 +87,9 @@ npm run dev
 `.env.example`에는 두 가지 누락·구식 표기가 있으니 주의:
 
 - **`OPENAI_API_KEY`(자연어 조회 필수)·`OPENAI_MODEL`(선택, 기본 `gpt-4o`)이 빠져 있다** — `.env.local`에 직접 추가할 것.
-  검색 보조 LLM은 `OPENAI_SEARCH_MODEL`(선택, 기본 `gpt-4o-mini`)·`SEARCH_LLM=off`(끄기)·`NEXT_PUBLIC_SEARCH_LLM_TIMEOUT_MS`(선택, 기본 4000)·`SEARCH_LLM_CACHE_TTL_MS`(선택, 기본 30분)로 조절한다. 같은 `OPENAI_API_KEY`를 쓰며, 질의 1건당 최대 2회 호출(캐시 적중 시 0회). `/api/search?q=…&llm=off`로 한 요청만 끌 수도 있다(A/B 대조용)
+  검색 보조 LLM은 `OPENAI_SEARCH_MODEL`(**프로덕션 전용** 선택 변수)·`SEARCH_LLM=off`(끄기)·`NEXT_PUBLIC_SEARCH_LLM_TIMEOUT_MS`(선택, 기본 4000)·`SEARCH_LLM_CACHE_TTL_MS`(선택, 기본 30분)로 조절한다. 같은 `OPENAI_API_KEY`를 쓰며, 질의 1건당 최대 2회 호출(캐시 적중 시 0회). `/api/search?q=…&llm=off`로 한 요청만 끌 수도 있다(A/B 대조용).
+  **개발·검증 경로에서는 검색 보조 모델이 `gpt-4o-mini`로 고정된다**(`lib/search-config.ts`) — 개발 루프에서 상위 모델이 조용히 반복 호출되는 것을 막는다. `NODE_ENV=production`에서만 `OPENAI_SEARCH_MODEL`이 먹는다
+- **비용 계측** — `/api/chat` 요청이 끝날 때 `[usage] chat rounds=… calls=… elapsed=…ms <모델>(호출수) p=… c=… cached=…` 한 줄이 서버 로그에 남는다(`lib/llm-usage.ts`). 질의 원문·키는 남기지 않는다. 끄려면 `LLM_USAGE_LOG=off`. 같은 숫자가 `/api/chat` 응답의 `usage`에도 실려 배터리가 비용·라운드를 집계한다
 - KRX·R-ONE·FISIS에 붙은 "미구현" 주석은 어댑터 구현 이전 시점 표기다. 현재 상태는 위 소스 표 기준
 
 ## 배포
@@ -122,6 +124,37 @@ cd /tmp/econ-verify && npm run dev -- -p 3500
 npx next dev --webpack -p 3500
 ```
 
-검증 스크립트(`scripts/korean-query-battery.py`·`e2e-query-check.py`·`search-ab-check.py`)는
-이렇게 띄운 서버에 붙인다. 로컬에서 `APP_PASSWORD`를 빈 값으로 띄우면 게이트가 열린다
-(`APP_PASSWORD= npm run dev -- -p 3500`).
+### 검증 스크립트 — 기본은 무과금, 실호출은 `--live`에서만
+
+`scripts/korean-query-battery.py`·`e2e-query-check.py`·`search-ab-check.py`·`index-missing-check.py`는
+**플래그 없이 돌리면 네트워크를 한 번도 쓰지 않는다.** 저장된 응답 픽스처(`scripts/fixtures/`)를
+호출 순서대로 재생할 뿐이다(공통 뼈대 `scripts/verify_common.py`). 서버도 필요 없고 대기 시간도 없다.
+
+```bash
+python3 scripts/search-ab-check.py            # 무과금 재생 — 실행 끝에 "실제 네트워크 호출 0건"을 찍는다
+python3 scripts/korean-query-battery.py       # 〃
+```
+
+실제 서버·OpenAI를 부르는 것은 `--live`뿐이고, **그 실행이 통과해야** 픽스처가 갱신된다(썩지 않는 이유).
+픽스처가 없거나 요청 순서가 어긋나면 조용히 통과시키지 않고 실패한다.
+
+```bash
+npx next dev --webpack -p 3500                                   # 위 (b) 방식
+python3 scripts/e2e-query-check.py --live                        # 실호출·과금, 픽스처 갱신
+python3 scripts/korean-query-battery.py --live --label after --out /tmp/after.json
+OPENAI_MODEL=gpt-5 npx next dev --webpack -p 3500                # 모델 A/B는 서버 환경변수로
+```
+
+로컬에서 `APP_PASSWORD`를 빈 값으로 띄우면 게이트가 열린다(`APP_PASSWORD= npm run dev -- -p 3500`).
+비워두지 않으면 스크립트가 `.env.local`의 `APP_PASSWORD`를 직접 읽어 로그인한다(셸로 export할 필요 없다).
+
+색인 부재 테스트만 별도 서버가 필요하다.
+
+```bash
+APP_PASSWORD= ECOS_ITEM_INDEX_PATH=/tmp/econ-idx-test.json npx next dev --webpack -p 3501
+APP_PASSWORD= python3 scripts/index-missing-check.py --live --index-path /tmp/econ-idx-test.json
+```
+
+배터리는 실행마다 눈금 4개를 함께 낸다 — **정답률 / 라운드 평균·최대 / 질의당 비용 USD / 응답시간**
+(`scripts/battery_metrics.py`, 요금표는 `scripts/verify-config.json`에 출처·확인일과 함께 있다).
+라운드 수는 검색 결손의 대리지표이자 비용의 직접 원인이라 정답률과 함께 본다.

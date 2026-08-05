@@ -1,6 +1,14 @@
 import { indicators, getIndicator, Cycle } from "@/lib/indicators";
 import { MAX_DERIVED, MAX_SERIES } from "@/lib/chart-config";
 import {
+  addLlmTokens,
+  countRound,
+  llmUsageSummary,
+  logLlmUsage,
+  recordLlmCall,
+  withLlmUsage,
+} from "@/lib/llm-usage";
+import {
   capWithSourceFloor,
   listEcosTableItems,
   listKosisTableItems,
@@ -101,6 +109,8 @@ interface ChatMessage {
 interface Usage {
   prompt_tokens: number;
   completion_tokens: number;
+  /** 캐시 적중 입력 토큰 — 있으면 입력 요금이 크게 내려간다(없으면 필드 자체가 없다) */
+  prompt_tokens_details?: { cached_tokens?: number };
 }
 
 // ── 계획 타입 ──────────────────────────────────────────────────
@@ -531,7 +541,36 @@ function aliasViolation(query: string, plan: Plan): string | null {
 }
 
 // ── 라우트 ─────────────────────────────────────────────────────
+/**
+ * 계측 껍데기 — 요청 하나를 lib/llm-usage 범위로 감싸고, 끝날 때 한 줄만 남긴다.
+ * (라운드 수 · OpenAI 호출 수 · 모델별 토큰 · 총 소요). **동작은 바꾸지 않는다.**
+ * 어느 경로로 반환·예외가 나가든 로그가 찍히도록 finally에 둔다.
+ */
 export async function POST(request: Request) {
+  return withLlmUsage(async () => {
+    try {
+      return await handleChat(request);
+    } finally {
+      logLlmUsage("chat");
+    }
+  });
+}
+
+/** 응답 body에 실을 사용량 — 기존 필드에 라운드·호출수·소요시간을 **더하기만** 한다 */
+function usagePayload(model: string, promptTokens: number, completionTokens: number) {
+  const s = llmUsageSummary();
+  return {
+    model,
+    promptTokens,
+    completionTokens,
+    rounds: s?.rounds ?? 0,
+    llmCalls: s?.calls ?? 0,
+    elapsedMs: s?.elapsedMs ?? 0,
+    byModel: s?.byModel ?? {},
+  };
+}
+
+async function handleChat(request: Request) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     return Response.json({ error: "OPENAI_API_KEY 환경변수가 설정되지 않았습니다" }, { status: 500 });
@@ -576,11 +615,14 @@ export async function POST(request: Request) {
         );
       }
 
+      countRound(); // 계측만 — 라운드 상한(MAX_TOOL_ROUNDS)에는 관여하지 않는다
+
       // 429(분당 토큰 한도)는 몇 초 뒤 풀리므로 짧은 백오프로 재시도하되,
       // **요청 전체 예산 안에서만** 기다린다. 종전에는 라운드마다 최대 2회×6초를
       // 독립적으로 써서 라운드가 겹치면 총 대기가 폭발했다(실측 27.1s·28.9s → 502).
       let res: Response | null = null;
       for (let attempt = 0; attempt < 3; attempt++) {
+        recordLlmCall(model); // 429 재시도도 호출이므로 시도마다 센다
         res = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -617,6 +659,12 @@ export async function POST(request: Request) {
       if (usage) {
         promptTokens += usage.prompt_tokens ?? 0;
         completionTokens += usage.completion_tokens ?? 0;
+        addLlmTokens(
+          model,
+          usage.prompt_tokens,
+          usage.completion_tokens,
+          usage.prompt_tokens_details?.cached_tokens
+        );
       }
       const msg: ChatMessage = json.choices?.[0]?.message;
       if (!msg) return Response.json({ error: "OpenAI 응답 형식 오류" }, { status: 502 });
@@ -627,7 +675,7 @@ export async function POST(request: Request) {
         console.log(`[chat] model=${model} message-end tokens p=${promptTokens} c=${completionTokens}`);
         return Response.json({
           message: msg.content ?? "",
-          usage: { model, promptTokens, completionTokens },
+          usage: usagePayload(model, promptTokens, completionTokens),
         });
       }
 
@@ -655,7 +703,7 @@ export async function POST(request: Request) {
             return Response.json({
               plan,
               note: typeof note === "string" ? note : undefined,
-              usage: { model, promptTokens, completionTokens },
+              usage: usagePayload(model, promptTokens, completionTokens),
             });
           }
           // 검증 실패 → 모델에 피드백하고 재시도 기회 제공
