@@ -291,6 +291,47 @@ def write_verdict(notion, item, rrcfg, run_date_iso):
     notion.request("PATCH", "/pages/%s" % item["page_id"], {"properties": props})
 
 
+# ---------------------------------------------------------------- 배타 소유 고지
+
+def exclusion_block(cfg):
+    """이 4건이 FRED 경로 전용임을 알리는 문안. **page_id는 rules에서 파생한다.**
+
+    왜 코드가 문안을 만드나:
+      덮어쓰는 주체가 클라우드 루틴이라 코드로는 막을 수 없다. 사람이 루틴 프롬프트·에이전트
+      정의에 규칙을 붙여야 하는데, page_id를 손으로 옮겨 적으면 rules가 바뀔 때 조용히 어긋난다.
+      그래서 **여기서 뽑아 붙인다** — 대상이 늘거나 줄면 이 출력도 따라 바뀐다.
+    """
+    rr = cfg["risk_rules"]
+    eo = rr.get("exclusive_owner") or {}
+    p = rr["properties"]
+    lines = [
+        "### %s 배타 소유 — 기사 대조 경로는 쓰지 마라" % rr.get("database_label", "Risk Log"),
+        "",
+        "**소유 경로**: %s" % eo.get("owner_label", "(미기재)"),
+        "**충돌 경로**: %s" % eo.get("conflicting_path", "(미기재)"),
+        "**사유**: %s" % eo.get("reason", "(미기재)"),
+        "",
+        eo.get("rule_text", ""),
+        "",
+        "| 리스크 | page_id |",
+        "|---|---|",
+    ]
+    for r in rr["rules"]:
+        lines.append("| %s | `%s` |" % (r["label"], r["page_id"]))
+    lines += [
+        "",
+        "대상 필드: `%s` · `%s` (이 두 개만. 다른 필드는 평소대로)" % (p["verdict"], p["checked"]),
+        "",
+        "_이 표는 econ-cockpit `scripts/liquidity/config.json`의 `risk_rules.rules`에서 파생한다._",
+        "_갱신: `python3 scripts/liquidity/risk_verdicts.py --exclusion-block`_",
+    ]
+    return "\n".join(lines)
+
+
+def exclusion_page_ids(cfg):
+    return [r["page_id"] for r in cfg["risk_rules"]["rules"]]
+
+
 # ---------------------------------------------------------------- 본체
 
 def evaluate_all(result, cfg, notion, run_date):
@@ -377,11 +418,16 @@ def main():
     ap.add_argument("--dump-criteria", action="store_true",
                     help="노션의 `판정 기준` 현재 원문을 repr로 출력하고 끝낸다(config 사본 갱신용)")
     ap.add_argument("--selftest", action="store_true", help="평가·드리프트 로직 자체 검증(네트워크 불필요)")
+    ap.add_argument("--exclusion-block", action="store_true",
+                    help="이 4건이 FRED 경로 전용임을 알리는 문안을 출력한다(에이전트 정의·루틴 프롬프트에 붙일 것). 아무것도 쓰지 않는다")
     args = ap.parse_args()
 
     cfg = load_config(args.config)
     if args.selftest:
         return selftest(cfg)
+    if args.exclusion_block:
+        print(exclusion_block(cfg))
+        return 0
 
     rrcfg = cfg.get("risk_rules") or {}
     if not rrcfg.get("enabled", False):
