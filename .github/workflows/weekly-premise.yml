@@ -1,0 +1,114 @@
+name: 주간전략 전제 → Risk Log 등재 (주간)
+
+# 일 22:00 UTC = 월 07:00 KST.
+# 디렉터는 일요일에 주간전략을 쓴다. 월요일 8시 전략회의가 앵커라 그 전에 등재돼 있어야 한다.
+# 토요일에는 아무것도 돌리지 않는다(디렉터 원칙).
+on:
+  schedule:
+    - cron: "0 22 * * 0"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "dry-run=파싱까지만(아무것도 안 씀) / preflight=노션 스키마만 확인 / run=실제 등재"
+        required: false
+        default: "dry-run"
+        type: choice
+        options: ["dry-run", "preflight", "run"]
+      round:
+        description: "회차 YYMMDD 지정(비우면 최신 회차)"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: weekly-premise
+  cancel-in-progress: false
+
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # 파싱·멱등·안전장치 검증. 네트워크·토큰 불필요, 1초.
+      # **실데이터를 만지기 전에 돈다.** 여기서 깨지면 노션을 건드리지 않고 끝난다.
+      - name: 셀프테스트
+        run: python3 scripts/strategy/premise_to_risklog.py --selftest
+
+      - name: NOTION_TOKEN 확인
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+        run: |
+          if [ -z "${NOTION_TOKEN}" ]; then
+            echo "::error title=NOTION_TOKEN 미등록::gh secret set NOTION_TOKEN -R zzeonso1-ssonim/econ-cockpit (등록은 디렉터 몫)"
+            exit 1
+          fi
+
+      # exit 2 = '후보' 상태 옵션이 없어 쓰기가 차단된 상태. 실패가 아니라 **디렉터 대기**다.
+      # continue-on-error로 받고 아래에서 사유를 명시한다(침묵 실패 금지).
+      - name: 등재 실행
+        id: run
+        continue-on-error: true
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          PREMISE_NOTIFY_URL: ${{ secrets.PREMISE_NOTIFY_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          MODE="${{ github.event.inputs.mode }}"
+          MODE="${MODE:-run}"
+          ARGS=""
+          case "$MODE" in
+            dry-run)   ARGS="--dry-run" ;;
+            preflight) ARGS="--preflight" ;;
+          esac
+          if [ -n "${{ github.event.inputs.round }}" ]; then
+            ARGS="$ARGS --round ${{ github.event.inputs.round }}"
+          fi
+          python3 scripts/strategy/premise_to_risklog.py \
+            $ARGS --out "${RUNNER_TEMP}/premise.json"
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: 결과 요약
+        if: always()
+        run: |
+          OUT="${RUNNER_TEMP}/premise.json"
+          if [ -f "$OUT" ]; then
+            python3 - "$OUT" <<'PY'
+          import json, sys, os
+          d = json.load(open(sys.argv[1]))
+          lines = [
+            "## 주간전략 전제 → Risk Log",
+            "",
+            f"- 회차: **{d['round_title']}** ({d['round']})",
+            f"- 추출 {len(d['items'])}건 · 신규 {d['created']}건 · 기존 재사용 {d['existing']}건 · 건너뜀 {len(d['skips'])}건",
+            f"- relation {d['relation_before']} → {d['relation_after']}건",
+            f"- dry_run={d['dry_run']} / write_blocked={d['write_blocked']}",
+          ]
+          if d["write_blocked"]:
+            lines += ["", f"> **쓰기 차단** — {d['preflight']}"]
+          if d["skips"]:
+            lines += ["", "### 건너뛴 것 (창작하지 않고 남김)"]
+            lines += [f"- §{s.get('section')} row={s.get('row')}: {s['reason']}" for s in d["skips"]]
+          open(os.environ["GITHUB_STEP_SUMMARY"], "a").write("\n".join(lines) + "\n")
+          PY
+          fi
+          if [ "${{ steps.run.outcome }}" != "success" ]; then
+            echo "::warning title=등재 미완료::스크립트가 0이 아닌 코드로 끝났다. 위 요약의 write_blocked/사유를 확인하라."
+          fi
+
+      # 쓰기가 차단된 상태를 '성공'으로 찍지 않는다. 조용히 넘어가면 아무도 눈치채지 못한다.
+      - name: 실패 판정
+        if: always()
+        run: |
+          if [ "${{ steps.run.outcome }}" != "success" ]; then
+            echo "::error title=주간전제 등재 미완료::로그와 요약을 확인하라"
+            exit 1
+          fi

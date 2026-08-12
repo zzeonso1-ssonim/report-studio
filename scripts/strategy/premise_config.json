@@ -1,0 +1,99 @@
+{
+  "_": "주간채권전략 전제 → Risk Log 등재. 좌표·속성명·문안·임계는 전부 여기서만 읽는다. 코드에 상수를 두지 않는다.",
+  "as_of": "2026-08-12",
+  "enabled": true,
+
+  "notion": {
+    "api_version": "2025-09-03",
+    "page_url_format": "https://www.notion.so/{page_id_compact}"
+  },
+
+  "source": {
+    "_": "주간채권전략 DB. 여기서 읽고, 여기에는 relation 한 개만 쓴다.",
+    "data_source_id": "b065d3d2-a54b-4fe2-8948-f2a9b3ec70fc",
+    "label": "주간채권전략",
+    "title_property": "이름",
+    "week_property": "주간",
+    "relation_property": "관련 리스크",
+    "round_pattern": "^(?P<yymmdd>[0-9]{6})\\b",
+    "_round_note": "회차 식별자는 제목 앞 6자리(YYMMDD)다. 회차번호 전용 속성은 DB에 없다(2026-08-12 스키마 실측).",
+    "write_properties": ["관련 리스크"],
+    "_never_write": [
+      "이름", "주간", "상태", "핵심 콜", "금리 레인지", "복기 메모",
+      "관련 브리핑", "일간 시황", "판단"
+    ],
+    "_never_write_note": "본문·콜·레인지·복기는 디렉터가 쓴 판단이다. 자동화는 relation만 잇는다."
+  },
+
+  "target": {
+    "_": "Risk Log DB. 신규 행 생성 + 최초 1회 속성 기입만. 기존 행은 절대 갱신하지 않는다.",
+    "data_source_id": "b97816ce-0f33-4bb7-91e8-b3c80286e074",
+    "label": "Risk Log",
+    "title_property": "리스크",
+    "title_format": "{yymmdd}_{risk}",
+    "status_property": "상태",
+    "status_type": "status",
+    "status_value": "후보",
+    "_status_note": "2026-08-11 디렉터 결정 — 자동 생성분은 '후보'로 분리하고 확정은 사람이 한다. status 타입은 노션 API가 옵션을 자동 생성하지 않으므로, 옵션이 없으면 이 스크립트는 아무것도 쓰지 않고 멈춘다(preflight).",
+    "criteria_property": "판정 기준",
+    "source_property": "데이터 출처",
+    "memo_property": "메모",
+
+    "create_properties": ["리스크", "상태", "판정 기준", "데이터 출처", "메모"],
+    "_create_note": "영역·중요도·시장 영향은 본문에서 기계적으로 확정할 수 없다. 추정하지 않고 비워 둔다(디렉터가 채운다).",
+
+    "_never_write": [
+      "영역", "중요도", "시장 영향", "결말", "관찰 지표", "관찰기간",
+      "대응 방향", "복기 메모", "보강 필요", "관련 판단",
+      "최근 판정", "최근 확인일"
+    ],
+    "_never_write_note": "econ-cockpit/scripts/liquidity/risk_verdicts.py assert_risk_safe와 같은 원칙. 특히 '최근 판정'·'최근 확인일'은 유동성 워치·기사 대조 경로의 것이라 등재 경로가 손대면 안 된다."
+  },
+
+  "extract": {
+    "_": "본문에서 전제·조건부 트리거를 뽑는 규칙. 표는 노션 table 블록이다(마크다운 아님).",
+    "heading_types": ["heading_2"],
+    "section_number_pattern": "(?P<num>[0-9]+)\\s*\\.",
+    "_section_note": "헤딩 텍스트에 이모지가 인라인으로 섞여 있어 '숫자.'만 잡는다(예: '🎯 6. 전략 제시').",
+    "max_cell_chars": 1800,
+    "sections": [
+      {
+        "id": "risk_table",
+        "enabled": true,
+        "section_number": 6,
+        "table_index": -1,
+        "_table_index_note": "§6에는 표가 둘이다(앞: 구간/판단/실행). 마지막 표가 리스크 표다. 헤더 검증이 이중 안전장치.",
+        "expected_headers": ["리스크", "확인 조건", "전략 수정"],
+        "columns": { "risk": 0, "criteria": 1, "action": 2 }
+      },
+      {
+        "id": "scenario_table",
+        "enabled": false,
+        "section_number": 5,
+        "table_index": -1,
+        "expected_headers": ["시나리오", "전제", "국고 3년", "전략"],
+        "columns": { "risk": 0, "criteria": 1, "action": 3 },
+        "skip_reason": "시나리오 전제(강세/기본/약세)는 §6 리스크 표와 조건이 겹친다(Core CPI·WTI·외국인 수급). 개별 트리거로 분해하려면 창작이 필요해 등재하지 않는다. 등재하려면 디렉터가 enabled=true로 바꾼다."
+      }
+    ]
+  },
+
+  "text": {
+    "memo_format": "{round_title} §{section_number} '{header_line}' 표에서 자동 등재({run_date}).\n전략 수정(본문 원문): {action}\n원천: {source_url}\n상태·결말·대응 방향·영역·중요도·시장 영향은 디렉터 영역이라 비움.",
+    "source_format": "주간채권전략 {round_title} — {source_url}",
+    "skip_no_criteria": "확인 조건 칸이 비어 있다 — 판정 기준을 만들어낼 수 없어 건너뛴다",
+    "skip_no_risk": "리스크 칸이 비어 있다 — 제목을 만들 수 없어 건너뛴다",
+    "skip_header_mismatch": "표 헤더가 기대와 다르다(기대 {expected} / 실제 {got}) — 다른 표를 잘못 파싱할 위험이 있어 이 구역을 통째로 건너뛴다",
+    "skip_no_table": "§{section_number}에서 표를 찾지 못했다",
+    "skip_no_section": "§{section_number} 헤딩을 찾지 못했다",
+    "status_missing": "Risk Log '{status_property}'({status_type}) 옵션에 '{status_value}'가 없다. 노션 API는 status 옵션을 자동 생성하지 않는다. 디렉터가 노션에서 옵션을 추가해야 한다(추가 전에는 아무것도 쓰지 않는다). 현재 옵션: {options}"
+  },
+
+  "notify": {
+    "_": "등재 결과를 mp-scoring-app 푸시 라우트로 넘긴다. URL·시크릿은 환경변수(PREMISE_NOTIFY_URL / CRON_SECRET). 미설정이면 조용히 건너뛴다.",
+    "enabled": true,
+    "url_env": "PREMISE_NOTIFY_URL",
+    "secret_env": "CRON_SECRET",
+    "timeout_seconds": 20
+  }
+}
