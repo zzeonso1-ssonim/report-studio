@@ -1,0 +1,164 @@
+{
+  "_": "주간 복기 초안 자동 생성. 좌표·라벨·판정 규칙·문안은 전부 여기서만 읽는다. 코드에 상수를 두지 않는다.",
+  "as_of": "2026-08-12",
+  "enabled": true,
+
+  "notion": {
+    "api_version": "2025-09-03",
+    "page_url_format": "https://www.notion.so/{page_id_compact}",
+    "timezone_offset_hours": 9,
+    "rich_text_chunk": 1900
+  },
+
+  "source": {
+    "data_source_id": "b065d3d2-a54b-4fe2-8948-f2a9b3ec70fc",
+    "label": "주간채권전략",
+    "title_property": "이름",
+    "week_property": "주간",
+    "call_property": "핵심 콜",
+    "range_property": "금리 레인지",
+    "review_property": "복기 메모",
+    "round_pattern": "^(?P<yymmdd>[0-9]{6})\\b",
+
+    "write_properties": ["복기 메모"],
+    "_never_write": [
+      "이름", "주간", "상태", "핵심 콜", "금리 레인지",
+      "관련 리스크", "관련 브리핑", "일간 시황", "판단"
+    ],
+    "_never_write_note": "복기 '메모'만 쓴다. `상태`(작성중/발행/복기완료)는 디렉터가 확정한다 — 초안이 올라갔다고 자동으로 '복기완료'로 바꾸지 않는다."
+  },
+
+  "market": {
+    "_": "이미 있는 수집분을 읽기만 한다. 새 수집기를 만들지 않는다.",
+    "yield_table": "bond_spread_daily",
+    "yield_columns": "trade_date,label,yield",
+    "yield_unit": "percent",
+    "series_table": "market_daily",
+    "series_columns": "trade_date,symbol,value",
+    "source_label": "Supabase bond_spread_daily (원천: KOFIA 채권시가평가기준수익률, 평가사 평균)",
+    "series_source_label": "Supabase market_daily",
+    "credentials": {
+      "url_env": "BOND_SUPABASE_URL",
+      "key_env": "BOND_SUPABASE_KEY",
+      "config_js_fallback": "~/Desktop/bond-monitor/js/config.js",
+      "_note": "환경변수가 없으면 bond-monitor의 공개 프론트엔드 설정(publishable 키)을 런타임에 파싱한다. 키를 파일로 복사하지 않는다."
+    },
+    "maturities": [
+      { "alias": ["국고 3년", "국고채 3년", "3년"], "label": "국고채 3년" },
+      { "alias": ["국고 5년", "국고채 5년", "5년"], "label": "국고채 5년" },
+      { "alias": ["국고 10년", "국고채 10년", "10년"], "label": "국고채 10년" },
+      { "alias": ["국고 20년", "국고채 20년", "20년"], "label": "국고채 20년" },
+      { "alias": ["국고 30년", "국고채 30년", "30년"], "label": "국고채 30년" }
+    ],
+    "primary_maturity": "국고채 3년"
+  },
+
+  "extract": {
+    "_": "premise_to_risklog.collect_section_tables가 읽는 블록. 헤딩 텍스트에 이모지가 섞여 '숫자.'만 잡는다.",
+    "heading_types": ["heading_2"],
+    "section_number_pattern": "(?P<num>[0-9]+)\\s*\\.",
+    "max_cell_chars": 1800
+  },
+
+  "axes": {
+    "direction": {
+      "_": "핵심 콜의 방향 vs 실제 주간 변화. 양쪽 어휘가 섞여 있으면 판정하지 않는다.",
+      "enabled": true,
+      "bull_keywords": ["강세", "금리 하락", "하락", "랠리", "매수 우위"],
+      "bear_keywords": ["약세", "금리 상승", "상승", "조정", "매도 우위"],
+      "flat_keywords": ["박스", "횡보", "중립", "레인지"],
+      "min_move_bp": 2.0,
+      "_min_move_note": "주간 변화가 ±2bp 미만이면 방향이 없었다고 보고 '보합'으로 둔다. 임계 근거는 국고 3년 일간 변동 통상 범위 — 디렉터가 조정 가능."
+    },
+    "range": {
+      "_": "제시 레인지 안에 실제 금리가 있었는가. 레인지 원문은 `금리 레인지` 속성 우선, 없으면 시나리오 표.",
+      "enabled": true,
+      "range_pattern": "(?P<lo>[0-9]+\\.[0-9]+)\\s*[~∼〜-]\\s*(?P<hi>[0-9]+\\.[0-9]+)\\s*%",
+      "scenario_fallback": { "section_number": 5, "table_index": -1, "base_row_keyword": "기본", "yield_column": 2 }
+    },
+    "triggers": {
+      "_": "§6 리스크 표의 확인 조건을 기계로 대조한다. **매핑이 선언된 것만** 판정하고 나머지는 '확인 불가'다.",
+      "enabled": true,
+      "section_number": 6,
+      "table_index": -1,
+      "expected_headers": ["리스크", "확인 조건", "전략 수정"],
+      "columns": { "risk": 0, "criteria": 1, "action": 2 },
+      "_match_note": "match_all은 '리스크명 + 확인 조건'을 합친 문장에서, match_any는 **확인 조건에서만** 찾는다. 리스크명에 '외국인 수급'이 있다고 '순매도 전환'을 평가해 버리면 조건과 다른 것을 판정하게 된다(260803 'WGBI 수급 소멸 / 순매수 둔화'가 그 사례).",
+      "mappings": [
+        {
+          "id": "wti_level",
+          "match_all": ["WTI"],
+          "series": "WTI",
+          "source": "series",
+          "mode": "level_max",
+          "threshold_pattern": "(?P<v>[0-9]+(?:\\.[0-9]+)?)\\s*달러",
+          "all_thresholds": true,
+          "op": ">=",
+          "unit": "달러",
+          "note": "확인 조건에 나오는 임계 달러값을 **전부** 뽑아 그 주 최고가와 각각 대조한다. '접근'·'3일 이상 지속' 같은 수식어는 기계가 해석하지 않는다 — 도달 여부만 사실로 제시하고 지속일수 판정은 하지 않는다."
+        },
+        {
+          "id": "usdkrw_level",
+          "match_all": ["환율"],
+          "series": "USDKRW",
+          "source": "series",
+          "mode": "level_max",
+          "threshold_pattern": "(?P<v>[0-9][0-9,]*)\\s*원",
+          "all_thresholds": true,
+          "op": ">=",
+          "unit": "원",
+          "note": "그 주 고가와 대조한다. '당국 개입 효과 소멸' 같은 정성 조건은 기계가 판정하지 않는다."
+        },
+        {
+          "id": "foreign_ktb3f",
+          "match_all": ["외국인"],
+          "match_any": ["순매도"],
+          "series": "KTB3F_FRG",
+          "source": "series",
+          "mode": "cumulative_sign",
+          "window_days": 3,
+          "op": "<",
+          "threshold": 0,
+          "unit": "계약",
+          "note": "3일 누적 순매수 합계의 부호만 본다. **누적을 포지션으로 읽지 않는다** — 미결제약정(OI)이 없으면 숏커버와 신규 매도를 구분할 수 없다(2026-08-05 실사고). 판정은 '순매도 전환' 사실까지만."
+        }
+      ],
+      "unmapped_verdict": "확인 불가",
+      "unmapped_reason": "이 조건을 기계로 대조할 계열이 수집분에 없다(예: 미국 CPI·입찰 결과·투신 수급). 추정하지 않고 비워 둔다."
+    },
+    "levels": {
+      "_": "§6 첫 표 `구간(국고 3년) / 판단 / 실행`의 레벨에 실제로 도달했는가.",
+      "enabled": true,
+      "section_number": 6,
+      "table_index": 0,
+      "expected_header_prefix": "구간",
+      "level_range_pattern": "(?P<lo>[0-9]+\\.[0-9]+)\\s*[~∼〜-]\\s*(?P<hi>[0-9]+\\.[0-9]+)\\s*%",
+      "_level_range_note": "'3.80~3.90%'는 앞 숫자에 %가 안 붙는다. 단일 패턴만 쓰면 3.80을 놓치고 구간을 점으로 오독한다(셀프테스트가 잡았다). 범위를 먼저 시도하고, 없을 때만 단일 레벨로 본다.",
+      "level_pattern": "(?P<v>[0-9]+\\.[0-9]+)\\s*%",
+      "maturity_from_header_pattern": "\\((?P<mat>[^)]+)\\)"
+    }
+  },
+
+  "verdicts": {
+    "match": "부합",
+    "miss": "이탈",
+    "partial": "부분 부합",
+    "unknown": "확인 불가",
+    "flat": "보합"
+  },
+
+  "text": {
+    "marker_open": "<!-- AUTO:weekly-review v1 {round} -->",
+    "marker_close": "<!-- /AUTO:weekly-review -->",
+    "heading": "복기 초안 (자동 생성 · {run_date} 기준 · 디렉터 확정 전)",
+    "disclaimer": "※ 자동 생성 초안이다. 4축은 기계 대조 결과이고, **원인 귀속과 확정은 사람이 한다.**",
+    "cause_heading": "원인 — 디렉터 작성란",
+    "cause_prompt": "· 왜 이렇게 됐나(한 줄):",
+    "no_data": "확인 불가 — 해당 구간 수집 데이터가 없다",
+    "human_written_skip": "`복기 메모`에 자동 생성 표식이 없는 내용이 이미 있다 — 디렉터가 직접 쓴 것으로 보고 덮어쓰지 않는다",
+    "coverage_note": "거래일 {days}일 ({first}~{last}) 기준. 원천 {source}, 조회 {run_date}.",
+    "partial_week_note": "⚠ 그 주 거래일이 아직 다 차지 않았다({days}일). 주 마감 후 다시 돌려야 확정된다."
+  },
+
+  "schedule_note": "금요일 장 마감 후에 돈다. 토요일에는 아무것도 보내지 않는다(디렉터 원칙)."
+}
