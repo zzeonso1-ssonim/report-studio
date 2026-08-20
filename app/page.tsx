@@ -1080,6 +1080,13 @@ export default function Home() {
             공시 검색
           </a>
           <a
+            href="/outlook"
+            className="rounded-lg border px-3 py-1.5"
+            style={{ borderColor: "var(--border)", color: "var(--primary)" }}
+          >
+            경제전망
+          </a>
+          <a
             href="/liquidity"
             className="rounded-lg border px-3 py-1.5"
             style={{ borderColor: "var(--border)", color: "var(--primary)" }}

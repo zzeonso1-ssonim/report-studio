@@ -157,3 +157,27 @@ FISIS 일 30회 카운터는 느슨해지며, DART corp_code는 콜드스타트�
 - [ ] FISIS 지표 등록 — 키 활성화 후. 그때 정상 응답 파싱 경로(정상코드 `000`, 데이터 배열 위치 `list`, 행 필드 `base_month`, 값 필드 `a`)를 실응답으로 확인하고 어댑터의 다중 키 폴백을 정리할 것
 - [ ] 발표 캘린더 시드 갱신 — `lib/calendar-kr.ts`·`lib/calendar-us.ts`는 2026년 잔여 일정만 적재(2026-07-24 기준). **2027년 일정 공표 후 교체 필요**
 - [x] CPI·GDP 앱의 기존 챗봇 코드 삭제 — 2026-07-24 완료. GDP는 `web/src/app/{chat,api/chat}`·`ChatPanel`·`lib/ecos.ts` 제거 + openai 의존성 제거, CPI는 `engine/qa_agent.py`·`api/routers/qa.py`·`web/app/qa` 제거. 양쪽 빌드 통과·푸시 완료 (git 히스토리로 복구 가능)
+
+## 10. 경제전망 보고서 출력 — 구현 예정
+
+경제전망 워크벤치의 화면과 데이터 연결은 보고서 자체가 아니다. 보고서 생성·미리보기·내보내기는
+[경제전망 보고서 출력 계약](outlook-report-contract.md)을 따라 별도 구현한다.
+
+### GitHub 양식 단일 기준
+
+- 내용 순서·데이터 상태 표현: 이 저장소의 `scripts/liquidity/config.json` 및 `scripts/liquidity/post_briefing.py`
+- 시나리오·리스크 표: 이 저장소의 `scripts/strategy/premise_config.json`
+- 시각·문체·인쇄·편집 규격: GitHub `zzeonso1-ssonim/bond-strategy-reports`
+- 정본: 편집 가능한 `index.html`; 구조화 상태 `report.json`; PDF·Word는 정본에서 파생
+- DAAI 연동·노출 없음
+
+### 완료 조건
+
+- [ ] Cockpit에서 보고서 미리보기 아티팩트를 먼저 제공
+- [ ] 헤드라인 기계 판정 → 신호 보드 → 핵심 주장 → 섹터별 근거 차트 → 시나리오 → 리스크 → 교차검증 → 데이터 주의 → 출처 순서 구현
+- [ ] 잠재성장률 `1.5 / 1.7 / 2.0` 시나리오를 사용자 수정 가능 입력으로 구현
+- [ ] 모든 차트에 단위·빈도·계절조정 여부·기준일·출처 표시
+- [ ] 미연결·결측·교차검증 불일치를 수치 추정 없이 명시
+- [ ] IBM × Coinbase 흰색 A4 인쇄형 스타일 및 연구노트형 명사 종결 적용
+- [ ] HTML 블록 편집·이동·삭제·되돌리기, PDF·Word 출력 검증
+- [ ] PDF 전 페이지 렌더링 QA 및 모바일/인쇄 오버플로 검증

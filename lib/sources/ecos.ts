@@ -16,18 +16,34 @@ export const ecos: SourceAdapter = {
     const start = toEcosPeriod(range.start, cycle);
     const end = toEcosPeriod(range.end, cycle);
 
-    const url = `https://ecos.bok.or.kr/api/StatisticSearch/${key}/json/kr/1/10000/${statCode}/${cycle}/${start}/${end}/${itemCode1}/${itemCode2}/${itemCode3}`;
+    const path = [
+      statCode,
+      cycle,
+      start,
+      end,
+      itemCode1,
+      itemCode2,
+      itemCode3,
+    ].map(encodeURIComponent).join("/");
+    const url = `https://ecos.bok.or.kr/api/StatisticSearch/${key}/json/kr/1/10000/${path}`;
     const res = await fetch(url, { next: { revalidate: 600 } });
     if (!res.ok) throw new SourceError("ecos", `HTTP ${res.status}`);
     const json = await res.json();
 
     if (json.RESULT) throw new SourceError("ecos", `${json.RESULT.CODE} ${json.RESULT.MESSAGE}`);
-    const rows: { TIME: string; DATA_VALUE: string }[] = json.StatisticSearch?.row ?? [];
+    const rows: {
+      TIME: string;
+      DATA_VALUE: string;
+      ITEM_CODE2?: string;
+      ITEM_NAME2?: string;
+    }[] = json.StatisticSearch?.row ?? [];
 
     return rows.map(
       (r): SeriesPoint => ({
         date: fromEcosPeriod(r.TIME, cycle),
         value: r.DATA_VALUE === "" ? null : Number(r.DATA_VALUE),
+        ...(r.ITEM_CODE2 ? { dimensionCode: r.ITEM_CODE2 } : {}),
+        ...(r.ITEM_NAME2 ? { dimensionName: r.ITEM_NAME2 } : {}),
       })
     );
   },

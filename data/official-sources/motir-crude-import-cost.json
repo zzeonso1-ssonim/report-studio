@@ -1,0 +1,15 @@
+{
+  "parserVersion": 1,
+  "series": [
+    { "date": "2025-07", "value": 72.2 },
+    { "date": "2026-06", "value": 117.0 },
+    { "date": "2026-07", "value": 103.7 }
+  ],
+  "provenance": {
+    "publishedAt": "2026-08-01",
+    "sourceUrl": "https://www.motir.go.kr/kor/article/ATCL3f49a5a8c/172077/view",
+    "title": "2026년 7월 수출입 동향",
+    "vintage": "2026년 7월호",
+    "note": "주요 원자재 동향 ② 원유 도입단가 및 도입물량 공식표"
+  }
+}

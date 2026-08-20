@@ -105,6 +105,601 @@ export const indicators: IndicatorDef[] = [
     params: { statCode: "200Y104", cycle: "Q", itemCode1: "1400" },
     verified: true,
   },
+  // ECOS 200Y102 국민계정 주요지표의 공식 증가율 계열.
+  // 성장 워크벤치는 수준값을 재계산하지 않고 이 공표 증가율을 그대로 표시한다.
+  ...(
+    [
+      ["kr_real_gdp_qoq", "실질 GDP 성장률 (전기대비)", "10111"],
+      ["kr_real_gdp_yoy", "실질 GDP 성장률 (전년동기대비)", "10211"],
+      ["kr_manufacturing_gdp_yoy", "제조업 생산 증가율 (전년동기대비)", "10213"],
+      ["kr_construction_gdp_yoy", "건설업 생산 증가율 (전년동기대비)", "10215"],
+      ["kr_services_gdp_yoy", "서비스업 생산 증가율 (전년동기대비)", "10216"],
+      ["kr_private_consumption_yoy", "민간소비 증가율 (전년동기대비)", "10222"],
+      ["kr_government_consumption_yoy", "정부소비 증가율 (전년동기대비)", "10228"],
+      ["kr_equipment_investment_yoy", "설비투자 증가율 (전년동기대비)", "10223"],
+      ["kr_construction_investment_yoy", "건설투자 증가율 (전년동기대비)", "10224"],
+    ] as const
+  ).map(
+    ([id, name, itemCode1]): IndicatorDef => ({
+      id,
+      name,
+      country: "KR",
+      unit: "%",
+      kind: "rate",
+      cycle: "Q",
+      origin: "한국은행",
+      featured: false,
+      source: "ecos",
+      params: { statCode: "200Y102", cycle: "Q", itemCode1 },
+      verified: true,
+    })
+  ),
+  // ── 재정 워크벤치 ──────────────────────────────────────
+  // 총수입·총지출은 월간 누계표이므로 전망 화면에서 12월 값만 연간 결산치로 선택한다.
+  ...(
+    [
+      ["kr_national_tax_total", "국세총액", "901Y081", "G2AA", 10_000],
+      ["kr_income_tax_revenue", "소득세", "901Y081", "G2AAAAA", 10_000],
+      ["kr_corporate_tax_revenue", "법인세", "901Y081", "G2AAAAB", 10_000],
+      ["kr_vat_revenue", "부가가치세", "901Y081", "G2AAABA", 10_000],
+    ] as const
+  ).map(
+    ([id, name, statCode, itemCode1, divideBy]): IndicatorDef => ({
+      id,
+      name,
+      country: "KR",
+      unit: "조원",
+      kind: "amount",
+      cycle: "A",
+      origin: "기획예산처 (한국은행 ECOS 수록)",
+      featured: false,
+      source: "ecos",
+      params: {
+        statCode,
+        cycle: "A",
+        itemCode1,
+      },
+      divideBy,
+      verified: true,
+    })
+  ),
+  {
+    id: "kr_national_debt_to_gdp",
+    name: "GDP 대비 국가채무 비율",
+    country: "KR",
+    unit: "%",
+    kind: "rate",
+    cycle: "A",
+    origin: "기획예산처 (KOSIS)",
+    featured: false,
+    source: "kosis",
+    params: {
+      orgId: "184",
+      tblId: "DT_102006_001",
+      itmId: "T001",
+      objL1: "A02",
+      prdSe: "Y",
+    },
+    verified: true,
+  },
+  ...(
+    [
+      ["kr_fiscal_total_revenue_progress", "총수입 월별 진도율", "total_revenue_progress"],
+      ["kr_fiscal_total_expenditure_progress", "총지출 월별 진도율", "total_expenditure_progress"],
+      ["kr_ktb_issuance_progress", "국고채 누계 발행 진도율", "ktb_issuance_progress"],
+    ] as const
+  ).map(([id, name, metric]): IndicatorDef => ({
+    id,
+    name,
+    country: "KR",
+    unit: "%",
+    kind: "rate",
+    cycle: "M",
+    origin: "기획예산처 월간 재정동향",
+    featured: false,
+    source: "mpb",
+    params: { metric },
+    verified: true,
+  })),
+  // ── 물가 워크벤치 ──────────────────────────────────────
+  // CPI·PPI·수출입물가는 원지수를 받아 전망 화면에서 전년동월비로 변환한다.
+  ...(
+    [
+      ["kr_core_cpi", "근원 소비자물가지수 (식료품 및 에너지 제외)", "DT_1J22009", "T", "DB", undefined],
+      ["kr_goods_cpi", "상품 소비자물가지수", "DT_1J22002", "T", "T10", "21"],
+      ["kr_services_cpi", "서비스 소비자물가지수", "DT_1J22002", "T", "T10", "22"],
+    ] as const
+  ).map(
+    ([id, name, tblId, itmId, objL1, objL2]): IndicatorDef => ({
+      id,
+      name,
+      country: "KR",
+      unit: "지수",
+      kind: "index",
+      cycle: "M",
+      origin: "통계청",
+      featured: false,
+      source: "kosis",
+      params: {
+        orgId: "101",
+        tblId,
+        itmId,
+        objL1,
+        ...(objL2 ? { objL2 } : {}),
+        prdSe: "M",
+      },
+      verified: true,
+    })
+  ),
+  ...(
+    [
+      ["kr_export_price_index", "수출물가지수 (원화 기준)", "402Y014", "*AA", "W"],
+      ["kr_import_price_index", "수입물가지수 (원화 기준)", "401Y015", "*AA", "W"],
+      ["kr_ppi_total", "생산자물가지수 총지수", "404Y014", "*AA", undefined],
+      ["kr_ppi_industrial_products", "공산품 생산자물가지수", "404Y014", "3AA", undefined],
+      ["kr_ppi_services", "서비스 생산자물가지수", "404Y014", "5AA", undefined],
+    ] as const
+  ).map(
+    ([id, name, statCode, itemCode1, itemCode2]): IndicatorDef => ({
+      id,
+      name,
+      country: "KR",
+      unit: "지수",
+      kind: "index",
+      cycle: "M",
+      origin: "한국은행",
+      featured: false,
+      source: "ecos",
+      params: {
+        statCode,
+        cycle: "M",
+        itemCode1,
+        ...(itemCode2 ? { itemCode2 } : {}),
+      },
+      verified: true,
+    })
+  ),
+  {
+    id: "kr_usdkrw_monthly_average",
+    name: "원/달러 환율 (월평균)",
+    country: "KR",
+    unit: "원",
+    kind: "amount",
+    cycle: "M",
+    origin: "한국은행",
+    featured: false,
+    source: "ecos",
+    params: {
+      statCode: "731Y004",
+      cycle: "M",
+      itemCode1: "0000001",
+      itemCode2: "0000100",
+    },
+    verified: true,
+  },
+  {
+    id: "kr_expected_inflation",
+    name: "기대인플레이션율 (향후 1년)",
+    country: "KR",
+    unit: "%",
+    kind: "rate",
+    cycle: "M",
+    origin: "한국은행",
+    featured: false,
+    source: "ecos",
+    params: { statCode: "511Y003", cycle: "M", itemCode1: "FMB" },
+    verified: true,
+  },
+  {
+    id: "dubai_crude_oil_price",
+    name: "Dubai유 가격",
+    country: "KR",
+    unit: "달러/배럴",
+    kind: "amount",
+    cycle: "M",
+    origin: "한국석유공사 (한국은행 ECOS 수록)",
+    featured: false,
+    source: "ecos",
+    params: { statCode: "902Y003", cycle: "M", itemCode1: "010102" },
+    verified: true,
+  },
+  {
+    id: "kr_crude_import_unit_cost",
+    name: "원유 도입단가",
+    country: "KR",
+    unit: "달러/배럴",
+    kind: "amount",
+    cycle: "M",
+    origin: "산업통상부 수출입 동향",
+    featured: false,
+    source: "motir",
+    params: { metric: "crude_import_unit_cost" },
+    verified: true,
+  },
+  // ── 설비투자 워크벤치 ─────────────────────────────
+  // 국민계정 실질 원계열과 월별 동행·전망 지표. 전망 화면에서 전년비를 계산하며,
+  // 기업경기조사 BSI는 공표 수준을 그대로 사용한다.
+  ...(
+    [
+      ["kr_equipment_investment_na", "설비투자 (실질 원계열)", "10105"],
+      ["kr_machinery_investment_na", "기계류 투자 (실질 원계열)", "1010520"],
+      ["kr_transport_equipment_investment_na", "운송장비 투자 (실질 원계열)", "1010510"],
+    ] as const
+  ).map(
+    ([id, name, itemCode1]): IndicatorDef => ({
+      id,
+      name,
+      country: "KR",
+      unit: "십억원",
+      kind: "amount",
+      cycle: "Q",
+      origin: "한국은행",
+      featured: false,
+      source: "ecos",
+      params: { statCode: "200Y130", cycle: "Q", itemCode1 },
+      verified: true,
+    })
+  ),
+  {
+    id: "kr_manufacturing_utilization_rate",
+    name: "제조업 평균가동률",
+    country: "KR",
+    unit: "%",
+    kind: "rate",
+    cycle: "M",
+    origin: "국가데이터처",
+    featured: false,
+    source: "kosis",
+    params: {
+      orgId: "101",
+      tblId: "DT_1F32002",
+      itmId: "T50",
+      objL1: "C",
+      prdSe: "M",
+    },
+    verified: true,
+  },
+  {
+    id: "kr_semiconductor_machinery_investment_index",
+    name: "반도체제조용기계 설비투자지수",
+    country: "KR",
+    unit: "지수",
+    kind: "index",
+    cycle: "M",
+    origin: "국가데이터처",
+    featured: false,
+    source: "kosis",
+    params: {
+      orgId: "101",
+      tblId: "DT_1F70011",
+      itmId: "T3",
+      objL1: "S",
+      objL2: "C1122",
+      prdSe: "M",
+    },
+    verified: true,
+  },
+  {
+    id: "kr_semiconductor_equipment_import_amount",
+    name: "반도체 제조용 장비 수입액",
+    country: "KR",
+    unit: "달러",
+    kind: "amount",
+    cycle: "M",
+    origin: "한국무역협회 K-stat (산업통상자원부·관세청 통관자료)",
+    featured: false,
+    source: "kita",
+    // KDI와 동일한 한국무역협회 MTI 3단위 '732 반도체제조용장비'.
+    params: { itemCode: "732" },
+    verified: true,
+  },
+  ...(
+    [
+      ["kr_equipment_investment_outlook_bsi_large", "대기업 설비투자전망 BSI", "X5000"],
+      ["kr_equipment_investment_outlook_bsi_manufacturing", "제조업 설비투자전망 BSI", "C0000"],
+      ["kr_equipment_investment_outlook_bsi_sme", "중소기업 설비투자전망 BSI", "X6000"],
+    ] as const
+  ).map(
+    ([id, name, itemCode1]): IndicatorDef => ({
+      id,
+      name,
+      country: "KR",
+      unit: "지수",
+      kind: "index",
+      cycle: "M",
+      origin: "한국은행",
+      featured: false,
+      source: "ecos",
+      params: {
+        statCode: "512Y014",
+        cycle: "M",
+        itemCode1,
+        itemCode2: "BI",
+      },
+      verified: true,
+    })
+  ),
+  // ── 건설투자 워크벤치 ─────────────────────────────
+  // 국민계정 실질 원계열과 건설경기 동행·선행 원계열. 전망 화면에서
+  // 완결된 분기만 합산하고 이동평균·전년비를 계산한다(결측 보간 없음).
+  ...(
+    [
+      ["kr_construction_investment_na_yoy", "건설투자 (실질 원계열)", "10102"],
+      ["kr_building_construction_investment_yoy", "건물건설 투자 (실질 원계열)", "10103"],
+      ["kr_civil_construction_investment_yoy", "토목건설 투자 (실질 원계열)", "10104"],
+    ] as const
+  ).map(
+    ([id, name, itemCode1]): IndicatorDef => ({
+      id,
+      name,
+      country: "KR",
+      unit: "십억원",
+      kind: "amount",
+      cycle: "Q",
+      origin: "한국은행",
+      featured: false,
+      source: "ecos",
+      params: { statCode: "200Y130", cycle: "Q", itemCode1 },
+      verified: true,
+    })
+  ),
+  ...(
+    [
+      ["kr_construction_completed_total", "건설기성 총계", "0"],
+      ["kr_construction_completed_building", "건축 기성", "1"],
+      ["kr_construction_completed_civil", "토목 기성", "2"],
+    ] as const
+  ).map(
+    ([id, name, objL1]): IndicatorDef => ({
+      id,
+      name,
+      country: "KR",
+      unit: "백만원",
+      kind: "amount",
+      cycle: "M",
+      origin: "국가데이터처",
+      featured: false,
+      source: "kosis",
+      params: { orgId: "101", tblId: "DT_1G18011", itmId: "T10", objL1, prdSe: "M" },
+      verified: true,
+    })
+  ),
+  {
+    id: "kr_building_orders_amount",
+    name: "건축 수주액",
+    country: "KR",
+    unit: "백만원",
+    kind: "amount",
+    cycle: "M",
+    origin: "국가데이터처",
+    featured: false,
+    source: "kosis",
+    params: { orgId: "101", tblId: "DT_1G1B002", itmId: "T10", objL1: "0", objL2: "1", prdSe: "M" },
+    verified: true,
+  },
+  {
+    id: "kr_building_start_area",
+    name: "건축 착공면적",
+    country: "KR",
+    unit: "㎡",
+    kind: "amount",
+    cycle: "M",
+    origin: "국토교통부",
+    featured: false,
+    source: "kosis",
+    params: { orgId: "101", tblId: "DT_1YL7402E", itmId: "13103792712T1", objL1: "13102792712A.0001", prdSe: "M" },
+    verified: true,
+  },
+  {
+    id: "kr_construction_completed_current_value",
+    name: "건설기성 경상금액",
+    country: "KR",
+    unit: "백만원",
+    kind: "amount",
+    cycle: "M",
+    origin: "국가데이터처",
+    featured: false,
+    source: "kosis",
+    params: { orgId: "101", tblId: "DT_1G18007", itmId: "T30", objL1: "0", prdSe: "M" },
+    verified: true,
+  },
+  ...(
+    [
+      ["kr_housing_completions", "주택 준공", "DT_MLTM_5372", "13103766972T1", "13102766972"],
+      ["kr_housing_starts", "주택 착공", "DT_MLTM_5386", "13103766971T1", "13102766971"],
+    ] as const
+  ).map(
+    ([id, name, tblId, itmId, prefix]): IndicatorDef => ({
+      id,
+      name,
+      country: "KR",
+      unit: "호",
+      kind: "amount",
+      cycle: "M",
+      origin: "국토교통부",
+      featured: false,
+      source: "kosis",
+      params: {
+        orgId: "116",
+        tblId,
+        itmId,
+        objL1: `${prefix}A.0001`,
+        objL2: `${prefix}B.0001`,
+        objL3: `${prefix}C.0001`,
+        prdSe: "M",
+      },
+      verified: true,
+    })
+  ),
+  {
+    id: "kr_housing_permits_cumulative",
+    name: "주택 인허가 (누계)",
+    country: "KR",
+    unit: "호",
+    kind: "amount",
+    cycle: "M",
+    origin: "국토교통부 (한국은행 ECOS 수록)",
+    featured: false,
+    source: "ecos",
+    params: { statCode: "901Y105", cycle: "M", itemCode1: "ALL" },
+    verified: true,
+  },
+  {
+    id: "kr_m2_sa_average",
+    name: "M2 (평잔, 계절조정)",
+    country: "KR",
+    unit: "조원",
+    kind: "amount",
+    cycle: "M",
+    origin: "한국은행",
+    featured: false,
+    source: "ecos",
+    params: { statCode: "161Y005", cycle: "M", itemCode1: "BBHS00" },
+    divideBy: 1_000,
+    verified: true,
+  },
+  ...(
+    [
+      ["kr_m2_total_original", "M2 총계 (평잔, 원계열)", "BBHA00"],
+      ["kr_m2_demand_savings", "수시입출식저축성예금 (평잔)", "BBHA03"],
+      ["kr_m2_time_deposits_under_2y", "만기 2년 미만 정기예적금 (평잔)", "BBHA05"],
+      ["kr_m2_mmf", "MMF (평잔)", "BBHA04"],
+      ["kr_m2_cma", "CMA (평잔)", "BBHA08"],
+    ] as const
+  ).map(([id, name, itemCode1]): IndicatorDef => ({
+    id, name, country: "KR", unit: "조원", kind: "amount", cycle: "M",
+    origin: "한국은행", featured: false, source: "ecos",
+    params: { statCode: "161Y006", cycle: "M", itemCode1 },
+    divideBy: 1_000, verified: true,
+  })),
+  ...(
+    [
+      ["kr_m2_households", "가계 및 비영리단체 M2 (평잔)", "BBHAJ1"],
+      ["kr_m2_nonfinancial_corporations", "비금융기업 M2 (평잔)", "BBHAJ2"],
+      ["kr_m2_other_financial_institutions", "기타금융기관 M2 (평잔)", "BBHAJ3"],
+    ] as const
+  ).map(([id, name, itemCode1]): IndicatorDef => ({
+    id, name, country: "KR", unit: "조원", kind: "amount", cycle: "M",
+    origin: "한국은행", featured: false, source: "ecos",
+    params: { statCode: "161Y010", cycle: "M", itemCode1 },
+    divideBy: 1_000, verified: true,
+  })),
+  ...(
+    [
+      ["kr_total_deposits", "총예금 (말잔)", "1000000"],
+      ["kr_household_deposits", "가계 예금 (말잔)", "1010000"],
+      ["kr_corporate_deposits", "기업 예금 (말잔)", "1020000"],
+    ] as const
+  ).map(([id, name, itemCode1]): IndicatorDef => ({
+    id, name, country: "KR", unit: "조원", kind: "amount", cycle: "M",
+    origin: "한국은행", featured: false, source: "ecos",
+    params: { statCode: "104Y009", cycle: "M", itemCode1 },
+    divideBy: 1_000, verified: true,
+  })),
+  // ── 노동시장 워크벤치 ─────────────────────────────
+  ...(
+    [
+      ["kr_employed_total", "취업자", "DT_1DA7001S", "T30", "0"],
+      ["kr_employed_manufacturing", "제조업 취업자", "DT_1DA7E06S_NEW", "T30", "10"],
+      ["kr_employed_construction", "건설업 취업자", "DT_1DA7E06S_NEW", "T30", "41"],
+      ["kr_employed_nonwage", "비임금근로자", "DT_1DA7010S", "T30", "05"],
+      ["kr_employed_self", "자영업자", "DT_1DA7010S", "T30", "06"],
+      ["kr_employed_unpaid_family", "무급가족종사자", "DT_1DA7010S", "T30", "22"],
+      ["kr_employed_wage", "임금근로자", "DT_1DA7010S", "T30", "30"],
+      ["kr_employed_regular", "상용근로자", "DT_1DA7010S", "T30", "41"],
+      ["kr_employed_temporary", "임시근로자", "DT_1DA7010S", "T30", "51"],
+      ["kr_employed_daily", "일용근로자", "DT_1DA7010S", "T30", "52"],
+    ] as const
+  ).map(
+    ([id, name, tblId, itmId, objL1]): IndicatorDef => ({
+      id,
+      name,
+      country: "KR",
+      unit: "천명",
+      kind: "amount",
+      cycle: "M",
+      origin: "국가데이터처",
+      featured: false,
+      source: "kosis",
+      params: { orgId: "101", tblId, itmId, objL1, prdSe: "M" },
+      verified: true,
+    })
+  ),
+  ...(
+    [
+      ["kr_sa_employment_rate", "계절조정 고용률", "T90"],
+      ["kr_sa_labor_force_participation", "계절조정 경제활동참가율", "T60"],
+    ] as const
+  ).map(
+    ([id, name, itmId]): IndicatorDef => ({
+      id,
+      name,
+      country: "KR",
+      unit: "%",
+      kind: "rate",
+      cycle: "M",
+      origin: "국가데이터처",
+      featured: false,
+      source: "kosis",
+      params: { orgId: "101", tblId: "DT_1DA9001S", itmId, objL1: "00", prdSe: "M" },
+      verified: true,
+    })
+  ),
+  // 2026년 사업체노동력조사 산업분류 개편에 따라 현행·과거 표를 이어 사용한다.
+  ...(
+    [
+      ["total", "전체 임금총액", "13103110311MD_12"],
+      ["regular", "상용 임금총액", "13103110311MD_13"],
+      ["temporary_daily", "임시일용 임금총액", "13103110311MD_17"],
+    ] as const
+  ).flatMap(([suffix, name, itmId]): IndicatorDef[] => [
+    {
+      id: `kr_wage_${suffix}`,
+      name,
+      country: "KR",
+      unit: "원",
+      kind: "amount",
+      cycle: "M",
+      origin: "고용노동부",
+      featured: false,
+      source: "kosis",
+      params: { orgId: "118", tblId: "DT_118N_MON054", itmId, objL1: "260225INDUSTRY_11S0", objL2: "size01", prdSe: "M" },
+      verified: true,
+    },
+    {
+      id: `kr_wage_${suffix}_history`,
+      name: `${name} (2025년 이전 연결계열)`,
+      country: "KR",
+      unit: "원",
+      kind: "amount",
+      cycle: "M",
+      origin: "고용노동부",
+      featured: false,
+      source: "kosis",
+      params: { orgId: "118", tblId: "DT_118N_MON051", itmId, objL1: "190326INDUSTRY_10S0", objL2: "size01", prdSe: "M" },
+      verified: true,
+    },
+  ]),
+  ...(
+    [
+      ["kr_job_opportunity_csi", "취업기회전망 CSI", "FMBE"],
+      ["kr_wage_outlook_csi", "임금수준전망 CSI", "FMFC"],
+    ] as const
+  ).map(
+    ([id, name, itemCode1]): IndicatorDef => ({
+      id,
+      name,
+      country: "KR",
+      unit: "지수",
+      kind: "index",
+      cycle: "M",
+      origin: "한국은행",
+      featured: false,
+      source: "ecos",
+      params: { statCode: "511Y002", cycle: "M", itemCode1, itemCode2: "99988" },
+      verified: true,
+    })
+  ),
   // ── 시장금리 (ECOS 817Y002 시장금리·일별 — 1콜 조회) ──────────
   // KRX 영업일 순회(1년치 40~70초 > Vercel 20초 상한) 대신 ECOS로 전환 (2026-08-01).
   // item_code는 2026-07-31 weekly_charts.py --discover-items 817Y002로 확정,
@@ -169,6 +764,67 @@ export const indicators: IndicatorDef[] = [
     params: { statCode: "403Y002", cycle: "M", itemCode1: "*AA" },
     verified: true,
   },
+  // 관세청 통관 수출입(ECOS 수록). 원자료 단위 천달러를 화면 단위 억달러로 환산한다.
+  {
+    id: "kr_daily_average_export_yoy",
+    name: "일평균 수출액 전년동월비",
+    country: "KR",
+    unit: "%",
+    kind: "rate",
+    cycle: "M",
+    origin: "관세청 월간 수출입 현황 [잠정치]",
+    featured: false,
+    source: "kcs",
+    params: { metric: "daily_average_export_yoy" },
+    verified: true,
+  },
+  ...(
+    [
+      ["kr_customs_export_amount", "통관 수출금액", "901Y118", "T002", undefined],
+      ["kr_customs_import_amount", "통관 수입금액", "901Y118", "T004", undefined],
+      ["kr_export_by_country_amount", "주요국별 수출금액", "901Y121", "T002", "?"],
+    ] as const
+  ).map(
+    ([id, name, statCode, itemCode1, itemCode2]): IndicatorDef => ({
+      id,
+      name,
+      country: "KR",
+      unit: "억달러",
+      kind: "amount",
+      cycle: "M",
+      origin: "관세청 (한국은행 ECOS 수록)",
+      featured: false,
+      source: "ecos",
+      params: {
+        statCode,
+        cycle: "M",
+        itemCode1,
+        ...(itemCode2 ? { itemCode2 } : {}),
+      },
+      divideBy: 100_000,
+      verified: true,
+    })
+  ),
+  ...(
+    [
+      ["kr_semiconductor_export_value_idx", "반도체 수출금액지수", "403Y001"],
+      ["kr_semiconductor_export_volume_idx", "반도체 수출물량지수", "403Y002"],
+    ] as const
+  ).map(
+    ([id, name, statCode]): IndicatorDef => ({
+      id,
+      name,
+      country: "KR",
+      unit: "지수",
+      kind: "index",
+      cycle: "M",
+      origin: "한국은행",
+      featured: false,
+      source: "ecos",
+      params: { statCode, cycle: "M", itemCode1: "30911AA" },
+      verified: true,
+    })
+  ),
   {
     id: "kr_ip_index",
     name: "광공업생산지수 (계절조정, 전국 총지수, 2020=100)",

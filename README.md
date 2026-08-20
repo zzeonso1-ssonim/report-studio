@@ -5,7 +5,7 @@
 
 **배포: <https://econ-cockpit.vercel.app>** (비밀번호 로그인 필요 — 아래 [접근 보호](#접근-보호))
 
-상세 스펙: [docs/PRD.md](docs/PRD.md) · 구조: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+상세 스펙: [docs/PRD.md](docs/PRD.md) · 구조: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · 경제전망 보고서 규격: [docs/outlook-report-contract.md](docs/outlook-report-contract.md)
 
 ## 기능
 
@@ -18,6 +18,7 @@
 - **공시 검색** (`/disclosures`) — DART 회사명 검색(corp_code 캐시), 기간·유형 필터
 - **내 모델 바로가기** (`/models`) — 직접 만든 경제모델·앱 링크 레지스트리(`lib/models.ts`, 현재 웹앱 5 · 저장소 2)
 - **미 유동성 프리셋** (`/liquidity`) — 지준·ON RRP·TGA 수준(기본 3년), 지준 주간 증감(기본 1년), SOFR−IORB 스프레드(기본 1년). 계열·문안은 노션 유동성 워치와 같은 `scripts/liquidity/config.json`에서 파생 ([docs/liquidity-watch.md](docs/liquidity-watch.md) '웹앱 연결')
+- **경제전망 워크벤치** (`/outlook`) — 섹터별 독립 갱신. 보고서 출력은 GitHub 보고서 규격을 단일 기준으로 사용 ([출력 계약](docs/outlook-report-contract.md))
 
 등록 지표는 `lib/indicators.ts`에 46개(한국 23 · 미국 23 — 이 중 미 유동성 12계열은 config 파생),
 전부 포털 실응답으로 코드 검증됨(2026-08-02 기준). 목록은 [docs/PRD.md 6절](docs/PRD.md) 참조.
