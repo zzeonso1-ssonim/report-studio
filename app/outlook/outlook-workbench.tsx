@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { SectorId, SectorSnapshot, SectorStatus } from "@/lib/outlook/types";
 import GrowthDashboard from "./growth-dashboard";
@@ -186,6 +187,14 @@ export default function OutlookWorkbench({
             <dd>{selected.nextReleaseAt ?? "공표일 연결 대기"}</dd>
           </div>
         </dl>
+        {hasDashboard ? (
+          <Link
+            href={`/outlook/report?sector=${selected.id}`}
+            className="outlook-sector-report-link"
+          >
+            {selected.title} 섹터로 보고서 작성 →
+          </Link>
+        ) : null}
         {selected.error && <p className="outlook-error">⚠ {selected.error}</p>}
         {requestError && <p className="outlook-error">⚠ {requestError}</p>}
         {!hasDashboard && (

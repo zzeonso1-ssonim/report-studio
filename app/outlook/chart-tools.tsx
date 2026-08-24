@@ -13,10 +13,55 @@ export interface ChartSeriesColumn {
   unit?: string;
 }
 
+interface LatestSeriesValue extends ChartSeriesColumn {
+  date: string;
+  value: number;
+}
+
+function formatChartValue(value: number, unit = "") {
+  return `${new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 2 }).format(value)}${unit}`;
+}
+
+function buildChartInsight(rows: ChartRow[], series: ChartSeriesColumn[]) {
+  const signals = series.flatMap((item) => {
+    const observed = rows
+      .filter((row) => typeof row[item.key] === "number")
+      .map((row) => ({ date: String(row.date), value: row[item.key] as number }));
+    const latest = observed.at(-1);
+    if (!latest) return [];
+    const previous = observed.at(-2);
+    if (!previous) {
+      return [`${item.label} ${latest.date} ${formatChartValue(latest.value, item.unit)}`];
+    }
+    const delta = latest.value - previous.value;
+    const direction = delta > 0 ? "상승" : delta < 0 ? "하락" : "보합";
+    const deltaUnit = item.unit === "%" ? "%p" : item.unit ?? "";
+    return [
+      `${item.label} ${latest.date} ${formatChartValue(latest.value, item.unit)}, 직전 관측 대비 ${delta > 0 ? "+" : ""}${formatChartValue(delta, deltaUnit)} ${direction}`,
+    ];
+  });
+  if (signals.length === 0) return null;
+  return {
+    signal: signals.join(" · "),
+    implication: "직전 관측 대비 변화 확인, 전망 방향 반영 전 추가 공표 검증 필요",
+    watch: "다음 공식 공표에서 최근 방향의 지속 여부 확인",
+  };
+}
+
+function latestSeriesValues(rows: ChartRow[], series: ChartSeriesColumn[]): LatestSeriesValue[] {
+  return series.flatMap((item) => {
+    const latest = [...rows].reverse().find((row) => typeof row[item.key] === "number");
+    return latest
+      ? [{ ...item, date: String(latest.date), value: latest[item.key] as number }]
+      : [];
+  });
+}
+
 async function chartToPng(
   container: HTMLElement,
   title: string,
-  series: ChartSeriesColumn[]
+  series: ChartSeriesColumn[],
+  latestValues: LatestSeriesValue[]
 ): Promise<Blob> {
   const svg =
     container.querySelector<SVGSVGElement>(".recharts-wrapper > svg") ??
@@ -64,7 +109,10 @@ async function chartToPng(
   let legendX = 10;
   let legendRow = 0;
   for (const item of series) {
-    const label = `${item.label}${item.unit ? ` (${item.unit})` : ""}`;
+    const latest = latestValues.find((value) => value.key === item.key);
+    const label = latest
+      ? `${item.label} ${latest.date} ${formatChartValue(latest.value, item.unit)}`
+      : `${item.label}${item.unit ? ` (${item.unit})` : ""}`;
     const width = context.measureText(label).width + 24;
     if (legendX > 10 && legendX + width > rect.width - 10) {
       legendX = 10;
@@ -97,7 +145,14 @@ async function chartToPng(
     context.fillStyle = color || foreground;
     context.fillRect(x, y - 4, 9, 9);
     context.fillStyle = foreground;
-    context.fillText(`${item.label}${item.unit ? ` (${item.unit})` : ""}`, x + 14, y);
+    const latest = latestValues.find((value) => value.key === item.key);
+    context.fillText(
+      latest
+        ? `${item.label} ${latest.date} ${formatChartValue(latest.value, item.unit)}`
+        : `${item.label}${item.unit ? ` (${item.unit})` : ""}`,
+      x + 14,
+      y
+    );
   }
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
   if (!blob) throw new Error("PNG 변환에 실패했습니다.");
@@ -126,12 +181,14 @@ export function ChartFrame({
   const chartRef = useRef<HTMLDivElement>(null);
   const [showTable, setShowTable] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const insight = buildChartInsight(rows, series);
+  const latestValues = latestSeriesValues(rows, series);
 
   async function download() {
     if (!chartRef.current) return;
     try {
       setError(null);
-      const blob = await chartToPng(chartRef.current, title, series);
+      const blob = await chartToPng(chartRef.current, title, series, latestValues);
       const href = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = href;
@@ -167,6 +224,16 @@ export function ChartFrame({
       >
         {children}
       </div>
+      <div className="outlook-chart-latest-values" aria-label={`${title} 최신 관측값`}>
+        {latestValues.map((item) => (
+          <div key={item.key}>
+            <span className="outlook-chart-latest-swatch" style={{ background: item.color }} aria-hidden="true" />
+            <span className="outlook-chart-latest-label">{item.label}</span>
+            <strong>{formatChartValue(item.value, item.unit)}</strong>
+            <time>{item.date}</time>
+          </div>
+        ))}
+      </div>
       <div className="outlook-chart-actions">
         <button type="button" onClick={() => void download()}>PNG 다운로드</button>
         <button
@@ -177,6 +244,12 @@ export function ChartFrame({
           데이터 표 {showTable ? "닫기" : "보기"}
         </button>
       </div>
+      {insight ? (
+        <div className="outlook-chart-insight">
+          <strong>INSIGHT</strong>
+          <p><b>신호</b> {insight.signal}. <b>판단</b> 전망 반영은 {insight.watch}</p>
+        </div>
+      ) : null}
       {error ? <p className="outlook-error" role="alert">⚠ {error}</p> : null}
       {showTable ? (
         <div className="outlook-chart-table-wrap">
@@ -205,7 +278,7 @@ export function LatestValueLabels({
   rows: ChartRow[];
   series: ChartSeriesColumn[];
 }) {
-  return series.map((item, index) => {
+  return series.map((item) => {
     const latest = [...rows].reverse().find((row) => typeof row[item.key] === "number");
     if (!latest) return null;
     const value = latest[item.key] as number;
@@ -220,14 +293,7 @@ export function LatestValueLabels({
         fill={item.color ?? "var(--foreground)"}
         stroke="var(--surface)"
         strokeWidth={1.5}
-        label={{
-          value: formatted,
-          position: index % 2 === 0 ? "top" : "bottom",
-          offset: 8 + Math.floor(index / 2) * 14,
-          fill: item.color ?? "var(--foreground)",
-          fontSize: 11,
-          fontWeight: 700,
-        }}
+        aria-label={`${item.label} 최신값 ${formatted}`}
       />
     );
   });
