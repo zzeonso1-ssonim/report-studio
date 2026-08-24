@@ -908,10 +908,26 @@ body {
 .outlook-chart-insight > strong { color: var(--report-blue); font: 700 10px/1.4 ui-monospace, SFMono-Regular, monospace; letter-spacing: .08em; }
 .outlook-report-draft-note p { margin: 0 !important; }
 .outlook-report-custom-box-list { display: grid; gap: 10px; margin: 0 0 18px; }
-.outlook-report-custom-box { position: relative; border: 1px solid var(--report-line); border-left: 3px solid var(--report-blue); padding: 16px 56px 16px 18px; background: #fff; }
+.outlook-report-global-box-list { display: grid; gap: 10px; }
+.outlook-report-paper > .outlook-report-global-box-list { padding: 16px 58px 0; }
+.outlook-report-content > .outlook-report-global-box-list { margin-top: 10px; }
+.outlook-report-custom-box { position: relative; border: 1px solid var(--report-line); border-left: 3px solid var(--report-blue); padding: 16px 112px 16px 18px; background: #fff; }
 .outlook-report-paper .outlook-report-custom-box h2 { margin: 0 0 7px; font-size: 18px; font-weight: 500; letter-spacing: -.02em; }
 .outlook-report-custom-box p { margin: 0 !important; color: var(--report-muted); font-size: 13px; line-height: 1.5; }
-.outlook-report-box-delete { position: absolute; top: 10px; right: 10px; border: 1px solid var(--report-line); padding: 4px 8px; background: #fff; color: var(--report-muted); font-size: 11px; cursor: pointer; }
+.outlook-report-item-tools { position: absolute; z-index: 3; top: 10px; right: 10px; display: flex; gap: 4px; }
+.outlook-report-item-tools button { border: 1px solid var(--report-line); padding: 4px 8px; background: rgb(255 255 255 / 94%); color: var(--report-muted); font-size: 11px; cursor: pointer; }
+.outlook-report-cover,
+.outlook-report-summary,
+.outlook-report-draft-note,
+.outlook-report-closing { position: relative; }
+.outlook-report-summary { padding-top: 58px; }
+.outlook-report-draft-note { padding-right: 112px; }
+.outlook-report-closing { padding-right: 112px; }
+.outlook-report-live-charts .outlook-growth-chart { position: relative; }
+.outlook-report-live-charts .outlook-growth-chart > header { padding-right: 96px; }
+.outlook-report-live-charts .outlook-growth-chart:has(.outlook-report-chart-hidden-marker) { display: none !important; }
+.outlook-report-hidden-items { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px; border: 1px dashed var(--report-line); padding: 10px 12px; color: var(--report-muted); font-size: 12px; }
+.outlook-report-hidden-items button { border: 1px solid var(--report-line); padding: 4px 8px; background: #fff; color: var(--report-blue); cursor: pointer; }
 
 .outlook-report-live-charts .outlook-growth-heading { display: none; }
 .outlook-report-live-charts .outlook-growth-dashboard .outlook-growth-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 6px; }
@@ -943,8 +959,12 @@ body {
   .outlook-report-cover-rail dd { font-size: 16px; overflow-wrap: anywhere; }
   .outlook-report-summary { grid-template-columns: 1fr; gap: 14px; }
   .outlook-report-content { padding: 12px 28px 35px; }
+  .outlook-report-paper > .outlook-report-global-box-list { padding: 12px 28px 0; }
   .outlook-report-draft-note { grid-template-columns: 1fr; gap: 8px; margin-left: 0; }
-  .outlook-report-custom-box { padding: 14px 52px 14px 15px; }
+  .outlook-report-custom-box { padding: 52px 15px 14px; }
+  .outlook-report-summary { padding-top: 58px; }
+  .outlook-report-draft-note,
+  .outlook-report-closing { padding-top: 52px; padding-right: 15px; }
   .outlook-report-live-charts .outlook-growth-dashboard .outlook-growth-grid { grid-template-columns: 1fr !important; }
 }
 
@@ -967,7 +987,8 @@ body {
   .outlook-report-app-header,
   .outlook-report-toolbar,
   .outlook-report-module-tools,
-  .outlook-report-box-delete,
+  .outlook-report-item-tools,
+  .outlook-report-hidden-items,
   .outlook-report-undo,
   .standalone-report-toolbar,
   .outlook-report-live-charts .outlook-chart-actions,
@@ -987,6 +1008,8 @@ body {
     line-height: 1.42;
   }
   .outlook-report-paper [contenteditable] { outline: 0 !important; background: transparent !important; }
+  .outlook-report-paper > .outlook-report-global-box-list { padding: 1.8mm 8mm 0; }
+  .outlook-report-content > .outlook-report-global-box-list { margin-top: 1.5mm; }
 
   .outlook-report-paper .outlook-report-cover {
     grid-template-columns: minmax(0, 1fr) 46mm;

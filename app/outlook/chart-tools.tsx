@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { createContext, useContext, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { ReferenceDot } from "recharts";
 
 export type ChartRow = Record<string, string | number>;
@@ -17,6 +17,14 @@ interface LatestSeriesValue extends ChartSeriesColumn {
   date: string;
   value: number;
 }
+
+export interface ReportChartControls {
+  hiddenChartIds: string[];
+  addBox: () => void;
+  removeChart: (chartId: string, title: string) => void;
+}
+
+export const ReportChartContext = createContext<ReportChartControls | null>(null);
 
 function formatChartValue(value: number, unit = "") {
   return `${new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 2 }).format(value)}${unit}`;
@@ -179,10 +187,15 @@ export function ChartFrame({
   canvasClassName?: string;
 }) {
   const chartRef = useRef<HTMLDivElement>(null);
+  const reportControls = useContext(ReportChartContext);
   const [showTable, setShowTable] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const insight = buildChartInsight(rows, series);
   const latestValues = latestSeriesValues(rows, series);
+
+  if (reportControls?.hiddenChartIds.includes(chartId)) {
+    return <span className="outlook-report-chart-hidden-marker" data-hidden-chart={chartId} hidden />;
+  }
 
   async function download() {
     if (!chartRef.current) return;
@@ -212,6 +225,20 @@ export function ChartFrame({
 
   return (
     <>
+      {reportControls ? (
+        <div className="outlook-report-item-tools" data-report-control contentEditable={false}>
+          <button type="button" data-report-item-action="add" aria-label={`${title} 뒤에 박스 추가`} onClick={reportControls.addBox}>+ 박스</button>
+          <button
+            type="button"
+            data-report-item-action="delete"
+            aria-label={`${title} 차트 삭제`}
+            onClick={(event) => {
+              event.stopPropagation();
+              reportControls.removeChart(chartId, title);
+            }}
+          >삭제</button>
+        </div>
+      ) : null}
       <div
         ref={chartRef}
         className={`outlook-growth-chart-canvas outlook-chart-download-target ${canvasClassName}`.trim()}

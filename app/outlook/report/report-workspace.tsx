@@ -10,11 +10,13 @@ import LaborDashboard from "../labor-dashboard";
 import ConstructionDashboard from "../construction-dashboard";
 import EquipmentDashboard from "../equipment-dashboard";
 import DomesticLiquidityDashboard from "../domestic-liquidity-dashboard";
+import { ReportChartContext } from "../chart-tools";
 
 interface IndicatorMetadata { name: string; unit: string; origin: string }
 type IndicatorMetadataMap = Record<string, IndicatorMetadata | null>;
 type ContentBox = { id: string; title: string; body: string };
-type ModuleDraft = { headline: string; lead: string; interpretation: string; boxes: ContentBox[] };
+type ModuleDraft = { headline: string; lead: string; interpretation: string; boxes: ContentBox[]; hiddenChartIds: string[] };
+type GlobalBoxGroup = "cover" | "summary" | "closing";
 type ReportDraft = {
   title: string;
   subtitle: string;
@@ -22,6 +24,8 @@ type ReportDraft = {
   moduleOrder: SectorId[];
   selectedSectorIds: SectorId[];
   hiddenModules: SectorId[];
+  hiddenBlockIds: string[];
+  globalBoxes: Record<GlobalBoxGroup, ContentBox[]>;
   modules: Partial<Record<SectorId, ModuleDraft>>;
 };
 
@@ -100,6 +104,7 @@ function createInitialDraft(sectors: SectorSnapshot[], metadata: IndicatorMetada
         ? `${signals.join(". ")}. 다음 공식 공표에서 최근 방향의 지속 여부 확인 필요`
         : "유효 관측값 연결 후 방향 판단 가능",
       boxes: [],
+      hiddenChartIds: [],
     };
   }
   const selectedSectorIds = initialSectorIds.length ? initialSectorIds : sectors[0] ? [sectors[0].id] : [];
@@ -110,6 +115,8 @@ function createInitialDraft(sectors: SectorSnapshot[], metadata: IndicatorMetada
     moduleOrder: sectors.map((sector) => sector.id),
     selectedSectorIds,
     hiddenModules: [],
+    hiddenBlockIds: [],
+    globalBoxes: { cover: [], summary: [], closing: [] },
     modules,
   };
 }
@@ -125,18 +132,23 @@ function EditableText({ as = "p", value, editing, className, onChange }: {
   return <Tag className={className} contentEditable={editing} suppressContentEditableWarning data-report-editable="true" onBlur={(event) => onChange(event.currentTarget.textContent?.trim() ?? "")}>{value}</Tag>;
 }
 
-function SectorDashboard({ sector }: { sector: SectorSnapshot }) {
+function ReportItemTools({ label, onAdd, onDelete }: { label: string; onAdd: () => void; onDelete: () => void }) {
+  return <div className="outlook-report-item-tools" data-report-control contentEditable={false}><button type="button" data-report-item-action="add" aria-label={`${label} 뒤에 박스 추가`} onClick={onAdd}>+ 박스</button><button type="button" data-report-item-action="delete" aria-label={`${label} 삭제`} onClick={onDelete}>삭제</button></div>;
+}
+
+function SectorDashboard({ sector, controls }: { sector: SectorSnapshot; controls: { hiddenChartIds: string[]; addBox: () => void; removeChart: (chartId: string, title: string) => void } }) {
+  let dashboard = null;
   switch (sector.id) {
-    case "growth": return <GrowthDashboard snapshot={sector} />;
-    case "trade": return <TradeDashboard snapshot={sector} />;
-    case "fiscal": return <FiscalDashboard snapshot={sector} />;
-    case "inflation": return <InflationDashboard snapshot={sector} />;
-    case "labor": return <LaborDashboard snapshot={sector} />;
-    case "equipment-investment": return <EquipmentDashboard snapshot={sector} />;
-    case "construction-investment": return <ConstructionDashboard snapshot={sector} />;
-    case "domestic-liquidity": return <DomesticLiquidityDashboard snapshot={sector} />;
-    default: return null;
+    case "growth": dashboard = <GrowthDashboard snapshot={sector} />; break;
+    case "trade": dashboard = <TradeDashboard snapshot={sector} />; break;
+    case "fiscal": dashboard = <FiscalDashboard snapshot={sector} />; break;
+    case "inflation": dashboard = <InflationDashboard snapshot={sector} />; break;
+    case "labor": dashboard = <LaborDashboard snapshot={sector} />; break;
+    case "equipment-investment": dashboard = <EquipmentDashboard snapshot={sector} />; break;
+    case "construction-investment": dashboard = <ConstructionDashboard snapshot={sector} />; break;
+    case "domestic-liquidity": dashboard = <DomesticLiquidityDashboard snapshot={sector} />; break;
   }
+  return <ReportChartContext.Provider value={controls}>{dashboard}</ReportChartContext.Provider>;
 }
 
 function collectDocumentStyles() {
@@ -150,9 +162,38 @@ function standaloneHtml(report: HTMLElement, title: string) {
   const clone = report.cloneNode(true) as HTMLElement;
   clone.contentEditable = "true";
   clone.querySelectorAll(".outlook-chart-actions, .outlook-chart-table-wrap").forEach((node) => node.remove());
-  clone.querySelectorAll<HTMLElement>(".outlook-report-module-tools, .outlook-report-box-delete").forEach((node) => { node.contentEditable = "false"; });
+  clone.querySelectorAll<HTMLElement>(".outlook-report-module-tools, .outlook-report-item-tools").forEach((node) => { node.contentEditable = "false"; });
   const safeTitle = title.replace(/[<>&"]/g, "");
-  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title><style>${collectDocumentStyles()}</style></head><body><div class="standalone-report-toolbar" data-report-control><button type="button" id="standaloneEdit">편집 완료</button><button type="button" onclick="window.print()">PDF 저장</button></div>${clone.outerHTML}<div class="outlook-report-undo" id="standaloneUndo" data-report-control hidden><span>항목 삭제됨</span><button type="button">되돌리기</button></div><script>(()=>{const report=document.querySelector('.outlook-report-paper');const undo=document.getElementById('standaloneUndo');let editing=true;let removed=null;const setEditing=(next)=>{editing=next;report.contentEditable=String(next);document.getElementById('standaloneEdit').textContent=next?'편집 완료':'전체 항목 편집';};const createBox=()=>{const box=document.createElement('section');box.className='outlook-report-custom-box';box.dataset.customBox='';box.innerHTML='<button type="button" class="outlook-report-box-delete" data-box-action="delete" data-report-control contenteditable="false">삭제</button><h2>새 분석 제목</h2><p>분석 내용 입력</p>';return box;};document.getElementById('standaloneEdit').addEventListener('click',()=>setEditing(!editing));report.addEventListener('click',(event)=>{const boxButton=event.target.closest('[data-box-action]');if(boxButton){const box=boxButton.closest('[data-custom-box]');removed={node:box,next:box.nextElementSibling,parent:box.parentElement};box.remove();undo.hidden=false;return;}const button=event.target.closest('[data-action]');if(!button)return;const module=button.closest('.outlook-report-module');if(button.dataset.action==='add-box'){module.querySelector('.outlook-report-custom-box-list').append(createBox());return;}if(button.dataset.action==='up'&&module.previousElementSibling)module.parentElement.insertBefore(module,module.previousElementSibling);if(button.dataset.action==='down'&&module.nextElementSibling)module.parentElement.insertBefore(module.nextElementSibling,module);if(button.dataset.action==='delete'){removed={node:module,next:module.nextElementSibling,parent:module.parentElement};module.remove();undo.hidden=false;}});undo.querySelector('button').addEventListener('click',()=>{if(!removed)return;removed.parent.insertBefore(removed.node,removed.next);removed=null;undo.hidden=true;});setEditing(true);})();</script></body></html>`;
+  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title><style>${collectDocumentStyles()}</style></head><body><div class="standalone-report-toolbar" data-report-control><button type="button" id="standaloneEdit">편집 완료</button><button type="button" onclick="window.print()">PDF 저장</button></div>${clone.outerHTML}<div class="outlook-report-undo" id="standaloneUndo" data-report-control hidden><span>항목 삭제됨</span><button type="button">되돌리기</button></div><script>
+(()=>{
+  const report=document.querySelector('.outlook-report-paper');
+  const undo=document.getElementById('standaloneUndo');
+  let editing=true;
+  let removed=null;
+  const setEditing=(next)=>{editing=next;report.contentEditable=String(next);document.getElementById('standaloneEdit').textContent=next?'편집 완료':'전체 항목 편집';};
+  const removeNode=(node)=>{removed={node,next:node.nextElementSibling,parent:node.parentElement};node.remove();undo.hidden=false;};
+  const createBox=()=>{const box=document.createElement('section');box.className='outlook-report-custom-box';box.dataset.customBox='';box.innerHTML='<div class="outlook-report-item-tools" data-report-control contenteditable="false"><button type="button" data-report-item-action="add">+ 박스</button><button type="button" data-report-item-action="delete">삭제</button></div><h2>새 분석 제목</h2><p>분석 내용 입력</p>';return box;};
+  document.getElementById('standaloneEdit').addEventListener('click',()=>setEditing(!editing));
+  report.addEventListener('click',(event)=>{
+    const itemButton=event.target.closest('[data-report-item-action]');
+    if(itemButton){
+      const item=itemButton.closest('[data-custom-box],.outlook-growth-chart,[data-report-block]');
+      if(itemButton.dataset.reportItemAction==='add')item.parentElement.insertBefore(createBox(),item.nextElementSibling);
+      if(itemButton.dataset.reportItemAction==='delete')removeNode(item);
+      return;
+    }
+    const button=event.target.closest('[data-action]');
+    if(!button)return;
+    const module=button.closest('.outlook-report-module');
+    if(button.dataset.action==='add-box'){module.querySelector('.outlook-report-custom-box-list').append(createBox());return;}
+    if(button.dataset.action==='up'&&module.previousElementSibling)module.parentElement.insertBefore(module,module.previousElementSibling);
+    if(button.dataset.action==='down'&&module.nextElementSibling)module.parentElement.insertBefore(module.nextElementSibling,module);
+    if(button.dataset.action==='delete')removeNode(module);
+  });
+  undo.querySelector('button').addEventListener('click',()=>{if(!removed)return;removed.parent.insertBefore(removed.node,removed.next);removed=null;undo.hidden=true;});
+  setEditing(true);
+})();
+</script></body></html>`;
 }
 
 function downloadText(contents: string, filename: string) {
@@ -168,7 +209,6 @@ function downloadText(contents: string, filename: string) {
 
 export default function OutlookReportWorkspace({ sectors, indicatorMetadata, initialSectorIds }: { sectors: SectorSnapshot[]; indicatorMetadata: IndicatorMetadataMap; initialSectorIds: SectorId[] }) {
   const boxIdPrefix = useId();
-  const boxCounterRef = useRef(0);
   const initialSelectionKey = initialSectorIds.join(",");
   const initialDraft = useMemo(
     () => createInitialDraft(sectors, indicatorMetadata, initialSelectionKey ? initialSelectionKey.split(",") as SectorId[] : []),
@@ -179,6 +219,9 @@ export default function OutlookReportWorkspace({ sectors, indicatorMetadata, ini
   const [hydrated, setHydrated] = useState(false);
   const [deleted, setDeleted] = useState<SectorId | null>(null);
   const [deletedBox, setDeletedBox] = useState<{ sectorId: SectorId; box: ContentBox; index: number } | null>(null);
+  const [deletedChart, setDeletedChart] = useState<{ sectorId: SectorId; chartId: string; title: string } | null>(null);
+  const [deletedGlobalBox, setDeletedGlobalBox] = useState<{ group: GlobalBoxGroup; box: ContentBox; index: number } | null>(null);
+  const [deletedBlock, setDeletedBlock] = useState<{ id: string; label: string } | null>(null);
   const [status, setStatus] = useState("Cockpit 저장 데이터에서 초안을 자동 구성했습니다.");
   const reportRef = useRef<HTMLElement>(null);
 
@@ -188,6 +231,23 @@ export default function OutlookReportWorkspace({ sectors, indicatorMetadata, ini
       if (saved) {
         try {
           const savedDraft = JSON.parse(saved) as ReportDraft;
+          if (!Array.isArray(savedDraft.hiddenBlockIds)) savedDraft.hiddenBlockIds = [];
+          if (!savedDraft.globalBoxes) savedDraft.globalBoxes = { cover: [], summary: [], closing: [] };
+          for (const group of ["cover", "summary", "closing"] as GlobalBoxGroup[]) {
+            if (!Array.isArray(savedDraft.globalBoxes[group])) savedDraft.globalBoxes[group] = [];
+            const seenGlobalIds = new Set<string>();
+            savedDraft.globalBoxes[group] = savedDraft.globalBoxes[group].map((box, index) => {
+              const originalId = box.id || `${group}-box-${index + 1}`;
+              let normalizedId = originalId;
+              let duplicateIndex = 1;
+              while (seenGlobalIds.has(normalizedId)) {
+                duplicateIndex += 1;
+                normalizedId = `${originalId}-${duplicateIndex}`;
+              }
+              seenGlobalIds.add(normalizedId);
+              return normalizedId === box.id ? box : { ...box, id: normalizedId };
+            });
+          }
           const requestedIds = initialSelectionKey ? initialSelectionKey.split(",") as SectorId[] : [];
           if (requestedIds.length) {
             savedDraft.selectedSectorIds = requestedIds;
@@ -200,6 +260,21 @@ export default function OutlookReportWorkspace({ sectors, indicatorMetadata, ini
               savedModule.headline = initialDraft.modules[sector.id]?.headline ?? sector.title;
             }
             if (savedModule && !Array.isArray(savedModule.boxes)) savedModule.boxes = [];
+            if (savedModule) {
+              const seenBoxIds = new Set<string>();
+              savedModule.boxes = savedModule.boxes.map((box, index) => {
+                const originalId = box.id || `${sector.id}-box-${index + 1}`;
+                let normalizedId = originalId;
+                let duplicateIndex = 1;
+                while (seenBoxIds.has(normalizedId)) {
+                  duplicateIndex += 1;
+                  normalizedId = `${originalId}-${duplicateIndex}`;
+                }
+                seenBoxIds.add(normalizedId);
+                return normalizedId === box.id ? box : { ...box, id: normalizedId };
+              });
+            }
+            if (savedModule && !Array.isArray(savedModule.hiddenChartIds)) savedModule.hiddenChartIds = [];
           }
           setDraft(savedDraft);
           setStatus("이 브라우저에 저장된 편집본을 불러왔습니다.");
@@ -231,16 +306,59 @@ export default function OutlookReportWorkspace({ sectors, indicatorMetadata, ini
 
   const updateDraft = (patch: Partial<ReportDraft>) => setDraft((current) => ({ ...current, ...patch }));
   const updateModule = (id: SectorId, patch: Partial<ModuleDraft>) => setDraft((current) => ({ ...current, modules: { ...current.modules, [id]: { ...current.modules[id]!, ...patch } } }));
-  function addBox(id: SectorId) {
-    boxCounterRef.current += 1;
-    const box: ContentBox = { id: `${boxIdPrefix}-box-${boxCounterRef.current}`, title: "새 분석 제목", body: "분석 내용 입력" };
+  function newContentBox(existingBoxes: ContentBox[], scope: string): ContentBox {
+    let sequence = existingBoxes.length + 1;
+    let nextBoxId = `${boxIdPrefix}-${scope}-box-${sequence}`;
+    while (existingBoxes.some((box) => box.id === nextBoxId)) {
+      sequence += 1;
+      nextBoxId = `${boxIdPrefix}-${scope}-box-${sequence}`;
+    }
+    return { id: nextBoxId, title: "새 분석 제목", body: "분석 내용 입력" };
+  }
+  function addBox(id: SectorId, afterBoxId?: string) {
     setDraft((current) => {
       const currentModule = current.modules[id]!;
-      return { ...current, modules: { ...current.modules, [id]: { ...currentModule, boxes: [...currentModule.boxes, box] } } };
+      const box = newContentBox(currentModule.boxes, id);
+      const boxes = [...currentModule.boxes];
+      const anchorIndex = afterBoxId ? boxes.findIndex((item) => item.id === afterBoxId) : -1;
+      boxes.splice(anchorIndex >= 0 ? anchorIndex + 1 : boxes.length, 0, box);
+      return { ...current, modules: { ...current.modules, [id]: { ...currentModule, boxes } } };
     });
     setDeleted(null);
     setDeletedBox(null);
+    setDeletedChart(null);
+    setDeletedGlobalBox(null);
+    setDeletedBlock(null);
     setStatus("편집 박스를 추가했습니다.");
+  }
+  function addGlobalBox(group: GlobalBoxGroup, afterBoxId?: string) {
+    setDraft((current) => {
+      const boxes = [...current.globalBoxes[group]];
+      const box = newContentBox(boxes, group);
+      const anchorIndex = afterBoxId ? boxes.findIndex((item) => item.id === afterBoxId) : -1;
+      boxes.splice(anchorIndex >= 0 ? anchorIndex + 1 : boxes.length, 0, box);
+      return { ...current, globalBoxes: { ...current.globalBoxes, [group]: boxes } };
+    });
+    setDeleted(null); setDeletedBox(null); setDeletedChart(null); setDeletedGlobalBox(null); setDeletedBlock(null);
+    setStatus("편집 박스를 추가했습니다.");
+  }
+  function updateGlobalBox(group: GlobalBoxGroup, boxId: string, patch: Partial<ContentBox>) {
+    setDraft((current) => ({ ...current, globalBoxes: { ...current.globalBoxes, [group]: current.globalBoxes[group].map((box) => box.id === boxId ? { ...box, ...patch } : box) } }));
+  }
+  function removeGlobalBox(group: GlobalBoxGroup, boxId: string) {
+    const boxes = draft.globalBoxes[group];
+    const index = boxes.findIndex((box) => box.id === boxId);
+    if (index < 0) return;
+    setDeleted(null); setDeletedBox(null); setDeletedChart(null); setDeletedBlock(null);
+    setDeletedGlobalBox({ group, box: boxes[index], index });
+    setDraft((current) => ({ ...current, globalBoxes: { ...current.globalBoxes, [group]: current.globalBoxes[group].filter((box) => box.id !== boxId) } }));
+    setStatus("편집 박스를 삭제했습니다.");
+  }
+  function removeBlock(id: string, label: string) {
+    setDeleted(null); setDeletedBox(null); setDeletedChart(null); setDeletedGlobalBox(null);
+    setDeletedBlock({ id, label });
+    setDraft((current) => current.hiddenBlockIds.includes(id) ? current : { ...current, hiddenBlockIds: [...current.hiddenBlockIds, id] });
+    setStatus(`${label} 박스를 보고서에서 삭제했습니다.`);
   }
   function updateBox(sectorId: SectorId, boxId: string, patch: Partial<ContentBox>) {
     setDraft((current) => {
@@ -253,9 +371,25 @@ export default function OutlookReportWorkspace({ sectors, indicatorMetadata, ini
     const index = currentModule?.boxes.findIndex((box) => box.id === boxId) ?? -1;
     if (!currentModule || index < 0) return;
     setDeleted(null);
+    setDeletedChart(null);
+    setDeletedGlobalBox(null);
+    setDeletedBlock(null);
     setDeletedBox({ sectorId, box: currentModule.boxes[index], index });
     setDraft((current) => ({ ...current, modules: { ...current.modules, [sectorId]: { ...current.modules[sectorId]!, boxes: current.modules[sectorId]!.boxes.filter((box) => box.id !== boxId) } } }));
     setStatus("편집 박스를 삭제했습니다.");
+  }
+  function removeChart(sectorId: SectorId, chartId: string, title: string) {
+    setDeleted(null);
+    setDeletedBox(null);
+    setDeletedGlobalBox(null);
+    setDeletedBlock(null);
+    setDeletedChart({ sectorId, chartId, title });
+    setDraft((current) => {
+      const currentModule = current.modules[sectorId]!;
+      if (currentModule.hiddenChartIds.includes(chartId)) return current;
+      return { ...current, modules: { ...current.modules, [sectorId]: { ...currentModule, hiddenChartIds: [...currentModule.hiddenChartIds, chartId] } } };
+    });
+    setStatus(`${title} 차트를 보고서에서 삭제했습니다. Cockpit 원본은 유지됩니다.`);
   }
   function moveModule(id: SectorId, direction: -1 | 1) {
     setDraft((current) => {
@@ -267,6 +401,9 @@ export default function OutlookReportWorkspace({ sectors, indicatorMetadata, ini
   function removeModule(id: SectorId) {
     setDraft((current) => ({ ...current, hiddenModules: [...current.hiddenModules, id] }));
     setDeletedBox(null);
+    setDeletedChart(null);
+    setDeletedGlobalBox(null);
+    setDeletedBlock(null);
     setDeleted(id); setStatus("섹터 모듈을 보고서에서 제외했습니다. 데이터 원본은 변경되지 않았습니다.");
   }
   function toggleSector(id: SectorId) {
@@ -289,15 +426,26 @@ export default function OutlookReportWorkspace({ sectors, indicatorMetadata, ini
     window.history.replaceState(null, "", `/outlook/report?sectors=${selectedSectorIds.join(",")}`);
     setStatus(`${selectedSectorIds.length}개 섹터로 보고서를 다시 구성했습니다.`);
     setDeleted(null);
+    setDeletedBox(null);
+    setDeletedChart(null);
+    setDeletedGlobalBox(null);
+    setDeletedBlock(null);
   }
   function resetDraft() {
     if (!window.confirm("편집본을 지우고 현재 Cockpit 데이터로 초안을 다시 만들까요?")) return;
-    setDraft(initialDraft); setDeleted(null); setDeletedBox(null); setStatus("현재 Cockpit 데이터로 초안을 다시 만들었습니다.");
+    setDraft(initialDraft); setDeleted(null); setDeletedBox(null); setDeletedChart(null); setDeletedGlobalBox(null); setDeletedBlock(null); setStatus("현재 Cockpit 데이터로 초안을 다시 만들었습니다.");
   }
   function saveHtml() {
     if (!reportRef.current) return;
     downloadText(standaloneHtml(reportRef.current, draft.title), `econ-outlook-${localDateStamp()}.html`);
     setStatus("차트와 편집문을 포함한 HTML을 저장했습니다.");
+  }
+  function renderGlobalBoxes(group: GlobalBoxGroup) {
+    return <div className="outlook-report-global-box-list">{draft.globalBoxes[group].map((box) => <section className="outlook-report-custom-box" data-custom-box data-box-id={box.id} key={box.id}>
+      <ReportItemTools label={box.title} onAdd={() => addGlobalBox(group, box.id)} onDelete={() => removeGlobalBox(group, box.id)} />
+      <EditableText as="h2" value={box.title} editing={editing} onChange={(title) => updateGlobalBox(group, box.id, { title })} />
+      <EditableText value={box.body} editing={editing} onChange={(body) => updateGlobalBox(group, box.id, { body })} />
+    </section>)}</div>;
   }
 
   return <>
@@ -306,6 +454,7 @@ export default function OutlookReportWorkspace({ sectors, indicatorMetadata, ini
       <div className="outlook-report-toolbar-actions">
         <button type="button" onClick={() => setEditing((value) => !value)}>{editing ? "편집 완료" : "전체 항목 편집"}</button>
         <button type="button" onClick={resetDraft}>데이터로 재작성</button>
+        {draft.hiddenBlockIds.length ? <button type="button" onClick={() => { updateDraft({ hiddenBlockIds: [] }); setDeletedBlock(null); setStatus("삭제한 공통 박스를 모두 복원했습니다."); }}>삭제 박스 복원</button> : null}
         <button type="button" onClick={saveHtml}>HTML 저장</button>
         <button type="button" className="outlook-report-primary-action" onClick={() => { setStatus("인쇄 창에서 대상을 ‘PDF로 저장’으로 선택하세요."); window.print(); }}>PDF 저장</button>
       </div>
@@ -331,12 +480,15 @@ export default function OutlookReportWorkspace({ sectors, indicatorMetadata, ini
       contentEditable={editing}
       suppressContentEditableWarning
     >
-      <header className="outlook-report-cover">
+      {!draft.hiddenBlockIds.includes("cover") ? <header className="outlook-report-cover" data-report-block="cover">
+        <ReportItemTools label="표지" onAdd={() => addGlobalBox("cover")} onDelete={() => removeBlock("cover", "표지")} />
         <div className="outlook-report-cover-main"><p className="outlook-report-kicker">ECONOMIC OUTLOOK / {localDateStamp()}</p><EditableText as="h1" value={draft.title} editing={editing} onChange={(title) => updateDraft({ title })} /><EditableText value={draft.subtitle} editing={editing} className="outlook-report-subtitle" onChange={(subtitle) => updateDraft({ subtitle })} /><p className="outlook-report-statusline">AI 데이터 초안 · 편집자 검토 대기</p></div>
         <aside className="outlook-report-cover-rail"><p>DATA COVERAGE</p><dl><div><dt>선택 섹터</dt><dd>{visibleSectors.length}</dd></div><div><dt>공식 계열</dt><dd>{sourceCount}</dd></div><div><dt>최종 관측</dt><dd>{latestDate ?? "—"}</dd></div></dl></aside>
-      </header>
+      </header> : null}
+      {renderGlobalBoxes("cover")}
 
-      <section className="outlook-report-summary">
+      {!draft.hiddenBlockIds.includes("summary") ? <section className="outlook-report-summary" data-report-block="summary">
+        <ReportItemTools label="Executive Summary" onAdd={() => addGlobalBox("summary")} onDelete={() => removeBlock("summary", "Executive Summary")} />
         <div>
           <div className="outlook-report-section-label">EXECUTIVE SUMMARY</div>
           <h2>데이터 기반 핵심 판단 초안</h2>
@@ -348,31 +500,37 @@ export default function OutlookReportWorkspace({ sectors, indicatorMetadata, ini
           <strong>{visibleSectors.length}개 섹터</strong>
           <small>공식 계열 {sourceCount}개 · 기준 {latestDate ?? "—"}</small>
         </aside>
-      </section>
+      </section> : null}
+      {renderGlobalBoxes("summary")}
 
       <div className="outlook-report-content">
       {visibleSectors.map((sector, index) => {
-        const moduleDraft = draft.modules[sector.id] ?? { headline: sector.title, lead: "", interpretation: "", boxes: [] };
+        const moduleDraft = draft.modules[sector.id] ?? { headline: sector.title, lead: "", interpretation: "", boxes: [], hiddenChartIds: [] };
         return <section className="outlook-report-module" key={sector.id} data-sector={sector.id}>
           <div className="outlook-report-module-tools" data-report-control contentEditable={false}><button type="button" data-action="add-box" aria-label={`${sector.title} 박스 추가`} onClick={() => addBox(sector.id)}>+ 박스</button><button type="button" data-action="up" aria-label={`${sector.title} 위로 이동`} onClick={() => moveModule(sector.id, -1)}>↑</button><button type="button" data-action="down" aria-label={`${sector.title} 아래로 이동`} onClick={() => moveModule(sector.id, 1)}>↓</button><button type="button" data-action="delete" aria-label={`${sector.title} 삭제`} onClick={() => removeModule(sector.id)}>삭제</button></div>
           <header className="outlook-report-module-header"><p className="outlook-report-kicker">{String(index + 1).padStart(2, "0")} · {sector.title}</p><EditableText as="h2" value={moduleDraft.headline} editing={editing} onChange={(headline) => updateModule(sector.id, { headline })} /><EditableText value={moduleDraft.lead} editing={editing} className="outlook-report-module-lead" onChange={(lead) => updateModule(sector.id, { lead })} /></header>
-          <div className="outlook-report-draft-note"><strong>DATA DRAFT</strong><EditableText value={moduleDraft.interpretation} editing={editing} onChange={(interpretation) => updateModule(sector.id, { interpretation })} /></div>
+          {!draft.hiddenBlockIds.includes(`draft:${sector.id}`) ? <div className="outlook-report-draft-note" data-report-block={`draft:${sector.id}`}><ReportItemTools label={`${sector.title} Data Draft`} onAdd={() => addBox(sector.id)} onDelete={() => removeBlock(`draft:${sector.id}`, `${sector.title} Data Draft`)} /><strong>DATA DRAFT</strong><EditableText value={moduleDraft.interpretation} editing={editing} onChange={(interpretation) => updateModule(sector.id, { interpretation })} /></div> : null}
           <div className="outlook-report-custom-box-list">
-            {moduleDraft.boxes.map((box) => <section className="outlook-report-custom-box" data-custom-box key={box.id}>
-              <button type="button" className="outlook-report-box-delete" data-box-action="delete" data-report-control contentEditable={false} aria-label={`${box.title} 박스 삭제`} onClick={() => removeBox(sector.id, box.id)}>삭제</button>
+            {moduleDraft.boxes.map((box) => <section className="outlook-report-custom-box" data-custom-box data-box-id={box.id} key={box.id}>
+              <div className="outlook-report-item-tools" data-report-control contentEditable={false}><button type="button" data-report-item-action="add" aria-label={`${box.title} 뒤에 박스 추가`} onClick={() => addBox(sector.id, box.id)}>+ 박스</button><button type="button" data-report-item-action="delete" aria-label={`${box.title} 박스 삭제`} onClick={() => removeBox(sector.id, box.id)}>삭제</button></div>
               <EditableText as="h2" value={box.title} editing={editing} onChange={(title) => updateBox(sector.id, box.id, { title })} />
               <EditableText value={box.body} editing={editing} onChange={(body) => updateBox(sector.id, box.id, { body })} />
             </section>)}
           </div>
-          <div className="outlook-report-live-charts"><SectorDashboard sector={sector} /></div>
+          {moduleDraft.hiddenChartIds.length ? <div className="outlook-report-hidden-items" data-report-control contentEditable={false}><span>삭제한 차트 {moduleDraft.hiddenChartIds.length}개</span><button type="button" onClick={() => { updateModule(sector.id, { hiddenChartIds: [] }); setDeletedChart(null); setStatus(`${sector.title} 차트를 모두 복원했습니다.`); }}>모두 복원</button></div> : null}
+          <div className="outlook-report-live-charts"><SectorDashboard sector={sector} controls={{ hiddenChartIds: moduleDraft.hiddenChartIds, addBox: () => addBox(sector.id), removeChart: (chartId, title) => removeChart(sector.id, chartId, title) }} /></div>
         </section>;
       })}
 
-      <section className="outlook-report-closing"><p className="outlook-report-kicker">EDITOR&apos;S OUTLOOK</p><h2>전망과 리스크 판단</h2><p data-report-editable="true" contentEditable={editing} suppressContentEditableWarning>자동 초안에서 확인된 방향을 바탕으로 기본 전망, 상방·하방 리스크, 다음 판정 기한 작성 필요</p></section>
+      {!draft.hiddenBlockIds.includes("closing") ? <section className="outlook-report-closing" data-report-block="closing"><ReportItemTools label="Editor’s Outlook" onAdd={() => addGlobalBox("closing")} onDelete={() => removeBlock("closing", "Editor’s Outlook")} /><p className="outlook-report-kicker">EDITOR&apos;S OUTLOOK</p><h2>전망과 리스크 판단</h2><p data-report-editable="true" contentEditable={editing} suppressContentEditableWarning>자동 초안에서 확인된 방향을 바탕으로 기본 전망, 상방·하방 리스크, 다음 판정 기한 작성 필요</p></section> : null}
+      {renderGlobalBoxes("closing")}
       </div>
     </article>
 
     {deleted ? <div className="outlook-report-undo" data-report-control><span>섹터 모듈 제외됨</span><button type="button" onClick={() => { setDraft((current) => ({ ...current, hiddenModules: current.hiddenModules.filter((id) => id !== deleted) })); setDeleted(null); setStatus("삭제한 섹터 모듈을 복원했습니다."); }}>되돌리기</button></div> : null}
     {deletedBox ? <div className="outlook-report-undo" data-report-control><span>편집 박스 삭제됨</span><button type="button" onClick={() => { const removed = deletedBox; setDraft((current) => { const currentModule = current.modules[removed.sectorId]!; const boxes = [...currentModule.boxes]; boxes.splice(removed.index, 0, removed.box); return { ...current, modules: { ...current.modules, [removed.sectorId]: { ...currentModule, boxes } } }; }); setDeletedBox(null); setStatus("삭제한 편집 박스를 복원했습니다."); }}>되돌리기</button></div> : null}
+    {deletedChart ? <div className="outlook-report-undo" data-report-control><span>{deletedChart.title} 차트 삭제됨</span><button type="button" onClick={() => { const removed = deletedChart; setDraft((current) => { const currentModule = current.modules[removed.sectorId]!; return { ...current, modules: { ...current.modules, [removed.sectorId]: { ...currentModule, hiddenChartIds: currentModule.hiddenChartIds.filter((id) => id !== removed.chartId) } } }; }); setDeletedChart(null); setStatus("삭제한 차트를 복원했습니다."); }}>되돌리기</button></div> : null}
+    {deletedGlobalBox ? <div className="outlook-report-undo" data-report-control><span>편집 박스 삭제됨</span><button type="button" onClick={() => { const removed = deletedGlobalBox; setDraft((current) => { const boxes = [...current.globalBoxes[removed.group]]; boxes.splice(removed.index, 0, removed.box); return { ...current, globalBoxes: { ...current.globalBoxes, [removed.group]: boxes } }; }); setDeletedGlobalBox(null); setStatus("삭제한 편집 박스를 복원했습니다."); }}>되돌리기</button></div> : null}
+    {deletedBlock ? <div className="outlook-report-undo" data-report-control><span>{deletedBlock.label} 삭제됨</span><button type="button" onClick={() => { const removed = deletedBlock; setDraft((current) => ({ ...current, hiddenBlockIds: current.hiddenBlockIds.filter((id) => id !== removed.id) })); setDeletedBlock(null); setStatus(`${removed.label} 박스를 복원했습니다.`); }}>되돌리기</button></div> : null}
   </>;
 }
