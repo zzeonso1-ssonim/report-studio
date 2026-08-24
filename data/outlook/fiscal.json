@@ -1,0 +1,174 @@
+{
+  "status": "partial",
+  "probeName": "GDP 대비 국가채무 비율 · 국세총액 (일반회계와 정의 다름) · 소득세 · 법인세 · 부가가치세 · 총수입 월별 진도율 · 총지출 월별 진도율 · 국고채 누계 발행 진도율",
+  "lastObservedAt": "2026-07",
+  "lastRefreshedAt": "2026-08-20T10:06:29.335Z",
+  "sourceResults": [
+    {
+      "indicatorId": "kr_national_debt_to_gdp",
+      "probeName": "GDP 대비 국가채무 비율",
+      "sourceLabel": "KOSIS",
+      "lastObservedAt": "2024",
+      "status": "success",
+      "error": null,
+      "points": [
+        {
+          "date": "2020",
+          "value": 41.1
+        },
+        {
+          "date": "2021",
+          "value": 43.7
+        },
+        {
+          "date": "2022",
+          "value": 45.9
+        },
+        {
+          "date": "2023",
+          "value": 46.8
+        },
+        {
+          "date": "2024",
+          "value": 46
+        }
+      ]
+    },
+    {
+      "indicatorId": "kr_national_tax_total",
+      "probeName": "국세총액 (일반회계와 정의 다름)",
+      "sourceLabel": "ECOS",
+      "lastObservedAt": "2024",
+      "status": "success",
+      "error": null,
+      "points": [
+        {
+          "date": "2023",
+          "value": 344.0711
+        },
+        {
+          "date": "2024",
+          "value": 336.5324
+        }
+      ]
+    },
+    {
+      "indicatorId": "kr_income_tax_revenue",
+      "probeName": "소득세",
+      "sourceLabel": "ECOS",
+      "lastObservedAt": "2024",
+      "status": "success",
+      "error": null,
+      "points": [
+        {
+          "date": "2023",
+          "value": 115.833
+        },
+        {
+          "date": "2024",
+          "value": 117.418
+        }
+      ]
+    },
+    {
+      "indicatorId": "kr_corporate_tax_revenue",
+      "probeName": "법인세",
+      "sourceLabel": "ECOS",
+      "lastObservedAt": "2024",
+      "status": "success",
+      "error": null,
+      "points": [
+        {
+          "date": "2023",
+          "value": 80.4195
+        },
+        {
+          "date": "2024",
+          "value": 62.5113
+        }
+      ]
+    },
+    {
+      "indicatorId": "kr_vat_revenue",
+      "probeName": "부가가치세",
+      "sourceLabel": "ECOS",
+      "lastObservedAt": "2024",
+      "status": "success",
+      "error": null,
+      "points": [
+        {
+          "date": "2023",
+          "value": 73.7749
+        },
+        {
+          "date": "2024",
+          "value": 82.2358
+        }
+      ]
+    },
+    {
+      "indicatorId": "kr_fiscal_total_revenue_progress",
+      "probeName": "총수입 월별 진도율",
+      "sourceLabel": "기획예산처",
+      "lastObservedAt": "2026-06",
+      "status": "success",
+      "error": null,
+      "points": [
+        {
+          "date": "2026-06",
+          "value": 54.5,
+          "provenance": {
+            "publishedAt": "2026-08",
+            "sourceUrl": "https://www.mpb.go.kr/web/main/bbs/b_0001/2474?cp=1&sortOrder=BA_REGDATE&sortDirection=DESC&bcId=b_0001&baNotice=false&baCommSelec=false&baOpenDay=false&baUse=true",
+            "title": "월간 재정동향 2026년 8월호",
+            "vintage": "해당 월호 계획 분모",
+            "note": "누계 381.9조원 / 계획 700.6조원"
+          }
+        }
+      ]
+    },
+    {
+      "indicatorId": "kr_fiscal_total_expenditure_progress",
+      "probeName": "총지출 월별 진도율",
+      "sourceLabel": "기획예산처",
+      "lastObservedAt": "2026-06",
+      "status": "success",
+      "error": null,
+      "points": [
+        {
+          "date": "2026-06",
+          "value": 56.5,
+          "provenance": {
+            "publishedAt": "2026-08",
+            "sourceUrl": "https://www.mpb.go.kr/web/main/bbs/b_0001/2474?cp=1&sortOrder=BA_REGDATE&sortDirection=DESC&bcId=b_0001&baNotice=false&baCommSelec=false&baOpenDay=false&baUse=true",
+            "title": "월간 재정동향 2026년 8월호",
+            "vintage": "해당 월호 계획 분모",
+            "note": "누계 425.8조원 / 계획 753.1조원"
+          }
+        }
+      ]
+    },
+    {
+      "indicatorId": "kr_ktb_issuance_progress",
+      "probeName": "국고채 누계 발행 진도율",
+      "sourceLabel": "기획예산처",
+      "lastObservedAt": "2026-07",
+      "status": "success",
+      "error": null,
+      "points": [
+        {
+          "date": "2026-07",
+          "value": 63.1,
+          "provenance": {
+            "publishedAt": "2026-08",
+            "sourceUrl": "https://www.mpb.go.kr/web/main/bbs/b_0001/2474?cp=1&sortOrder=BA_REGDATE&sortDirection=DESC&bcId=b_0001&baNotice=false&baCommSelec=false&baOpenDay=false&baUse=true",
+            "title": "월간 재정동향 2026년 8월호",
+            "vintage": "해당 월호 계획 분모",
+            "note": "누계 141.1조원 / 개인투자용 제외 한도 223.7조원"
+          }
+        }
+      ]
+    }
+  ],
+  "error": null
+}

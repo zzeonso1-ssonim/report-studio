@@ -1,0 +1,499 @@
+{
+  "status": "success",
+  "probeName": "실질 GDP 성장률 (전기대비) · 실질 GDP 성장률 (전년동기대비) · 제조업 생산 증가율 (전년동기대비) · 서비스업 생산 증가율 (전년동기대비) · 건설업 생산 증가율 (전년동기대비) · 민간소비 증가율 (전년동기대비) · 정부소비 증가율 (전년동기대비) · 설비투자 증가율 (전년동기대비) · 건설투자 증가율 (전년동기대비)",
+  "lastObservedAt": "2026-Q2",
+  "lastRefreshedAt": "2026-08-20T06:00:37.288Z",
+  "sourceResults": [
+    {
+      "indicatorId": "kr_real_gdp_qoq",
+      "probeName": "실질 GDP 성장률 (전기대비)",
+      "sourceLabel": "ECOS",
+      "lastObservedAt": "2026-Q2",
+      "status": "success",
+      "error": null,
+      "points": [
+        {
+          "date": "2024-Q3",
+          "value": 0.1
+        },
+        {
+          "date": "2024-Q4",
+          "value": 0.2
+        },
+        {
+          "date": "2025-Q1",
+          "value": -0.2
+        },
+        {
+          "date": "2025-Q2",
+          "value": 0.6
+        },
+        {
+          "date": "2025-Q3",
+          "value": 1.4
+        },
+        {
+          "date": "2025-Q4",
+          "value": -0.1
+        },
+        {
+          "date": "2026-Q1",
+          "value": 1.8
+        },
+        {
+          "date": "2026-Q2",
+          "value": 0.6
+        }
+      ]
+    },
+    {
+      "indicatorId": "kr_real_gdp_yoy",
+      "probeName": "실질 GDP 성장률 (전년동기대비)",
+      "sourceLabel": "ECOS",
+      "lastObservedAt": "2026-Q2",
+      "status": "success",
+      "error": null,
+      "points": [
+        {
+          "date": "2024-Q3",
+          "value": 1.6
+        },
+        {
+          "date": "2024-Q4",
+          "value": 1.1
+        },
+        {
+          "date": "2025-Q1",
+          "value": 0.2
+        },
+        {
+          "date": "2025-Q2",
+          "value": 0.7
+        },
+        {
+          "date": "2025-Q3",
+          "value": 2.1
+        },
+        {
+          "date": "2025-Q4",
+          "value": 1.6
+        },
+        {
+          "date": "2026-Q1",
+          "value": 3.8
+        },
+        {
+          "date": "2026-Q2",
+          "value": 3.7
+        }
+      ]
+    },
+    {
+      "indicatorId": "kr_manufacturing_gdp_yoy",
+      "probeName": "제조업 생산 증가율 (전년동기대비)",
+      "sourceLabel": "ECOS",
+      "lastObservedAt": "2026-Q2",
+      "status": "success",
+      "error": null,
+      "points": [
+        {
+          "date": "2023-Q3",
+          "value": 1.4
+        },
+        {
+          "date": "2023-Q4",
+          "value": 7.5
+        },
+        {
+          "date": "2024-Q1",
+          "value": 7
+        },
+        {
+          "date": "2024-Q2",
+          "value": 6.1
+        },
+        {
+          "date": "2024-Q3",
+          "value": 4.2
+        },
+        {
+          "date": "2024-Q4",
+          "value": 2.5
+        },
+        {
+          "date": "2025-Q1",
+          "value": 0.4
+        },
+        {
+          "date": "2025-Q2",
+          "value": 2.6
+        },
+        {
+          "date": "2025-Q3",
+          "value": 3.9
+        },
+        {
+          "date": "2025-Q4",
+          "value": 2.4
+        },
+        {
+          "date": "2026-Q1",
+          "value": 7.2
+        },
+        {
+          "date": "2026-Q2",
+          "value": 6.5
+        }
+      ]
+    },
+    {
+      "indicatorId": "kr_services_gdp_yoy",
+      "probeName": "서비스업 생산 증가율 (전년동기대비)",
+      "sourceLabel": "ECOS",
+      "lastObservedAt": "2026-Q2",
+      "status": "success",
+      "error": null,
+      "points": [
+        {
+          "date": "2023-Q3",
+          "value": 2.7
+        },
+        {
+          "date": "2023-Q4",
+          "value": 1.8
+        },
+        {
+          "date": "2024-Q1",
+          "value": 2.3
+        },
+        {
+          "date": "2024-Q2",
+          "value": 1.7
+        },
+        {
+          "date": "2024-Q3",
+          "value": 1.4
+        },
+        {
+          "date": "2024-Q4",
+          "value": 1.3
+        },
+        {
+          "date": "2025-Q1",
+          "value": 1
+        },
+        {
+          "date": "2025-Q2",
+          "value": 1.3
+        },
+        {
+          "date": "2025-Q3",
+          "value": 2.3
+        },
+        {
+          "date": "2025-Q4",
+          "value": 2.4
+        },
+        {
+          "date": "2026-Q1",
+          "value": 3.2
+        },
+        {
+          "date": "2026-Q2",
+          "value": 3.5
+        }
+      ]
+    },
+    {
+      "indicatorId": "kr_construction_gdp_yoy",
+      "probeName": "건설업 생산 증가율 (전년동기대비)",
+      "sourceLabel": "ECOS",
+      "lastObservedAt": "2026-Q2",
+      "status": "success",
+      "error": null,
+      "points": [
+        {
+          "date": "2023-Q3",
+          "value": 0.4
+        },
+        {
+          "date": "2023-Q4",
+          "value": -4.5
+        },
+        {
+          "date": "2024-Q1",
+          "value": 2.1
+        },
+        {
+          "date": "2024-Q2",
+          "value": -1.5
+        },
+        {
+          "date": "2024-Q3",
+          "value": -6.3
+        },
+        {
+          "date": "2024-Q4",
+          "value": -6.2
+        },
+        {
+          "date": "2025-Q1",
+          "value": -12.4
+        },
+        {
+          "date": "2025-Q2",
+          "value": -10.4
+        },
+        {
+          "date": "2025-Q3",
+          "value": -6.9
+        },
+        {
+          "date": "2025-Q4",
+          "value": -7.6
+        },
+        {
+          "date": "2026-Q1",
+          "value": -3.9
+        },
+        {
+          "date": "2026-Q2",
+          "value": -3.8
+        }
+      ]
+    },
+    {
+      "indicatorId": "kr_private_consumption_yoy",
+      "probeName": "민간소비 증가율 (전년동기대비)",
+      "sourceLabel": "ECOS",
+      "lastObservedAt": "2026-Q2",
+      "status": "success",
+      "error": null,
+      "points": [
+        {
+          "date": "2023-Q3",
+          "value": 0.8
+        },
+        {
+          "date": "2023-Q4",
+          "value": 1.1
+        },
+        {
+          "date": "2024-Q1",
+          "value": 1.4
+        },
+        {
+          "date": "2024-Q2",
+          "value": 1.2
+        },
+        {
+          "date": "2024-Q3",
+          "value": 1.6
+        },
+        {
+          "date": "2024-Q4",
+          "value": 1.1
+        },
+        {
+          "date": "2025-Q1",
+          "value": 0.5
+        },
+        {
+          "date": "2025-Q2",
+          "value": 1
+        },
+        {
+          "date": "2025-Q3",
+          "value": 2
+        },
+        {
+          "date": "2025-Q4",
+          "value": 2.4
+        },
+        {
+          "date": "2026-Q1",
+          "value": 2.7
+        },
+        {
+          "date": "2026-Q2",
+          "value": 2.5
+        }
+      ]
+    },
+    {
+      "indicatorId": "kr_government_consumption_yoy",
+      "probeName": "정부소비 증가율 (전년동기대비)",
+      "sourceLabel": "ECOS",
+      "lastObservedAt": "2026-Q2",
+      "status": "success",
+      "error": null,
+      "points": [
+        {
+          "date": "2023-Q3",
+          "value": 1.8
+        },
+        {
+          "date": "2023-Q4",
+          "value": -0.1
+        },
+        {
+          "date": "2024-Q1",
+          "value": -0.1
+        },
+        {
+          "date": "2024-Q2",
+          "value": 2.7
+        },
+        {
+          "date": "2024-Q3",
+          "value": 3.2
+        },
+        {
+          "date": "2024-Q4",
+          "value": 3.2
+        },
+        {
+          "date": "2025-Q1",
+          "value": 2.1
+        },
+        {
+          "date": "2025-Q2",
+          "value": 2.5
+        },
+        {
+          "date": "2025-Q3",
+          "value": 2.9
+        },
+        {
+          "date": "2025-Q4",
+          "value": 3.6
+        },
+        {
+          "date": "2026-Q1",
+          "value": 3.1
+        },
+        {
+          "date": "2026-Q2",
+          "value": 2.2
+        }
+      ]
+    },
+    {
+      "indicatorId": "kr_equipment_investment_yoy",
+      "probeName": "설비투자 증가율 (전년동기대비)",
+      "sourceLabel": "ECOS",
+      "lastObservedAt": "2026-Q2",
+      "status": "success",
+      "error": null,
+      "points": [
+        {
+          "date": "2023-Q3",
+          "value": -5.1
+        },
+        {
+          "date": "2023-Q4",
+          "value": -1.5
+        },
+        {
+          "date": "2024-Q1",
+          "value": -1.4
+        },
+        {
+          "date": "2024-Q2",
+          "value": -2.9
+        },
+        {
+          "date": "2024-Q3",
+          "value": 5.6
+        },
+        {
+          "date": "2024-Q4",
+          "value": 3.1
+        },
+        {
+          "date": "2025-Q1",
+          "value": 4.7
+        },
+        {
+          "date": "2025-Q2",
+          "value": 2.7
+        },
+        {
+          "date": "2025-Q3",
+          "value": 0.7
+        },
+        {
+          "date": "2025-Q4",
+          "value": -1.9
+        },
+        {
+          "date": "2026-Q1",
+          "value": 4.4
+        },
+        {
+          "date": "2026-Q2",
+          "value": 6.3
+        }
+      ]
+    },
+    {
+      "indicatorId": "kr_construction_investment_yoy",
+      "probeName": "건설투자 증가율 (전년동기대비)",
+      "sourceLabel": "ECOS",
+      "lastObservedAt": "2026-Q2",
+      "status": "success",
+      "error": null,
+      "points": [
+        {
+          "date": "2023-Q3",
+          "value": 1.1
+        },
+        {
+          "date": "2023-Q4",
+          "value": -3.1
+        },
+        {
+          "date": "2024-Q1",
+          "value": 1.6
+        },
+        {
+          "date": "2024-Q2",
+          "value": -0.2
+        },
+        {
+          "date": "2024-Q3",
+          "value": -4.5
+        },
+        {
+          "date": "2024-Q4",
+          "value": -4.5
+        },
+        {
+          "date": "2025-Q1",
+          "value": -12.7
+        },
+        {
+          "date": "2025-Q2",
+          "value": -11.3
+        },
+        {
+          "date": "2025-Q3",
+          "value": -7.9
+        },
+        {
+          "date": "2025-Q4",
+          "value": -7.2
+        },
+        {
+          "date": "2026-Q1",
+          "value": -1.9
+        },
+        {
+          "date": "2026-Q2",
+          "value": -1.3
+        }
+      ]
+    }
+  ],
+  "error": null
+}

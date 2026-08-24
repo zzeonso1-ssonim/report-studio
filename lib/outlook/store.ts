@@ -1,5 +1,6 @@
 import { dataPath, readJsonFile, writeJsonFile } from "@/lib/data-dir";
 import { getSectorManifest, sectorManifest } from "./sector-manifest";
+import { getBundledOutlookState } from "./seed";
 import type { SectorId, SectorSnapshot, SectorSourceResult, SectorStatus } from "./types";
 
 interface MutableSectorState {
@@ -49,8 +50,9 @@ function stateFile(id: SectorId): string {
 
 async function readState(id: SectorId): Promise<MutableSectorState> {
   // 매번 파일을 다시 읽어 공유 DATA_DIR을 쓰는 다중 인스턴스에서도 최신 상태를 본다.
-  // 파일이 없는 서버리스 임시 저장소에서는 현재 프로세스의 상태를 fallback으로 사용한다.
-  const fallback = sectorState.get(id) ?? initialState(id);
+  // 파일이 없는 새 서버리스 인스턴스에서는 검증 완료 배포 시드를 사용한다.
+  // 현재 프로세스에서 갱신한 상태가 있으면 시드보다 우선한다.
+  const fallback = sectorState.get(id) ?? getBundledOutlookState(id) ?? initialState(id);
   const stored = await readJsonFile<MutableSectorState>(stateFile(id), fallback);
   const normalized: MutableSectorState = {
     ...initialState(id),

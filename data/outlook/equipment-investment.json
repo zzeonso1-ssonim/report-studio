@@ -1,0 +1,2139 @@
+{
+  "status": "success",
+  "probeName": "설비투자 전년동기비 · 기계류 투자 전년동기비 · 운송장비 투자 전년동기비 · 제조업 평균가동률 수준의 전년동월 대비 증감률 · 반도체제조용기계 설비투자지수 전년동월비 · 반도체 제조용 장비 수입액 전년동월비 · 대기업 설비투자전망 BSI · 제조업 설비투자전망 BSI · 중소기업 설비투자전망 BSI",
+  "lastObservedAt": "2026-08",
+  "lastRefreshedAt": "2026-08-20T07:54:32.252Z",
+  "sourceResults": [
+    {
+      "indicatorId": "kr_equipment_investment_na_yoy",
+      "probeName": "설비투자 전년동기비",
+      "sourceLabel": "ECOS",
+      "lastObservedAt": "2026-Q1",
+      "status": "success",
+      "error": null,
+      "points": [
+        {
+          "date": "2021-Q2",
+          "value": 16.83702922511725
+        },
+        {
+          "date": "2021-Q3",
+          "value": 5.86514911700502
+        },
+        {
+          "date": "2021-Q4",
+          "value": 4.91344403076337
+        },
+        {
+          "date": "2022-Q1",
+          "value": -5.036743125910004
+        },
+        {
+          "date": "2022-Q2",
+          "value": -5.522121483530007
+        },
+        {
+          "date": "2022-Q3",
+          "value": 4.793661946528172
+        },
+        {
+          "date": "2022-Q4",
+          "value": 4.940144688881909
+        },
+        {
+          "date": "2023-Q1",
+          "value": 3.611515267060672
+        },
+        {
+          "date": "2023-Q2",
+          "value": 2.4795801456185096
+        },
+        {
+          "date": "2023-Q3",
+          "value": -5.107916546822889
+        },
+        {
+          "date": "2023-Q4",
+          "value": -1.49937408537123
+        },
+        {
+          "date": "2024-Q1",
+          "value": -1.411994398507821
+        },
+        {
+          "date": "2024-Q2",
+          "value": -2.9432448905254316
+        },
+        {
+          "date": "2024-Q3",
+          "value": 5.580390747792441
+        },
+        {
+          "date": "2024-Q4",
+          "value": 3.0592518606824104
+        },
+        {
+          "date": "2025-Q1",
+          "value": 4.728870866658408
+        },
+        {
+          "date": "2025-Q2",
+          "value": 2.6759637036541717
+        },
+        {
+          "date": "2025-Q3",
+          "value": 0.7487076332815423
+        },
+        {
+          "date": "2025-Q4",
+          "value": -1.9490861596124676
+        },
+        {
+          "date": "2026-Q1",
+          "value": 4.4427477765625945
+        }
+      ]
+    },
+    {
+      "indicatorId": "kr_machinery_investment_na_yoy",
+      "probeName": "기계류 투자 전년동기비",
+      "sourceLabel": "ECOS",
+      "lastObservedAt": "2026-Q1",
+      "status": "success",
+      "error": null,
+      "points": [
+        {
+          "date": "2021-Q2",
+          "value": 19.32440177080825
+        },
+        {
+          "date": "2021-Q3",
+          "value": 12.567599809129959
+        },
+        {
+          "date": "2021-Q4",
+          "value": 5.476273142238597
+        },
+        {
+          "date": "2022-Q1",
+          "value": -2.795641365075452
+        },
+        {
+          "date": "2022-Q2",
+          "value": -3.6980062136156677
+        },
+        {
+          "date": "2022-Q3",
+          "value": 3.9001410479941656
+        },
+        {
+          "date": "2022-Q4",
+          "value": 10.342507363993025
+        },
+        {
+          "date": "2023-Q1",
+          "value": 4.747434405876105
+        },
+        {
+          "date": "2023-Q2",
+          "value": 5.591601995899298
+        },
+        {
+          "date": "2023-Q3",
+          "value": -4.407736244948712
+        },
+        {
+          "date": "2023-Q4",
+          "value": -5.73822632652613
+        },
+        {
+          "date": "2024-Q1",
+          "value": -1.8950364821757049
+        },
+        {
+          "date": "2024-Q2",
+          "value": -6.461932327687514
+        },
+        {
+          "date": "2024-Q3",
+          "value": 4.29138319115101
+        },
+        {
+          "date": "2024-Q4",
+          "value": 4.193330696018438
+        },
+        {
+          "date": "2025-Q1",
+          "value": 0.8359504561155973
+        },
+        {
+          "date": "2025-Q2",
+          "value": 2.0627459207345433
+        },
+        {
+          "date": "2025-Q3",
+          "value": 2.032310398082404
+        },
+        {
+          "date": "2025-Q4",
+          "value": -0.22110552763818792
+        },
+        {
+          "date": "2026-Q1",
+          "value": 8.522175035071179
+        }
+      ]
+    },
+    {
+      "indicatorId": "kr_transport_equipment_investment_na_yoy",
+      "probeName": "운송장비 투자 전년동기비",
+      "sourceLabel": "ECOS",
+      "lastObservedAt": "2026-Q1",
+      "status": "success",
+      "error": null,
+      "points": [
+        {
+          "date": "2021-Q2",
+          "value": 9.88568106956016
+        },
+        {
+          "date": "2021-Q3",
+          "value": -13.608935042636272
+        },
+        {
+          "date": "2021-Q4",
+          "value": 3.1234052893766906
+        },
+        {
+          "date": "2022-Q1",
+          "value": -13.422782186588133
+        },
+        {
+          "date": "2022-Q2",
+          "value": -11.077726054450565
+        },
+        {
+          "date": "2022-Q3",
+          "value": 8.197410539391337
+        },
+        {
+          "date": "2022-Q4",
+          "value": -12.539372088821853
+        },
+        {
+          "date": "2023-Q1",
+          "value": -1.3576085929379311
+        },
+        {
+          "date": "2023-Q2",
+          "value": -7.722448720592667
+        },
+        {
+          "date": "2023-Q3",
+          "value": -7.639048342370669
+        },
+        {
+          "date": "2023-Q4",
+          "value": 15.921398870198566
+        },
+        {
+          "date": "2024-Q1",
+          "value": 1.0473879167198996
+        },
+        {
+          "date": "2024-Q2",
+          "value": 10.11793223194486
+        },
+        {
+          "date": "2024-Q3",
+          "value": 10.349575460873561
+        },
+        {
+          "date": "2024-Q4",
+          "value": -0.8847569242688369
+        },
+        {
+          "date": "2025-Q1",
+          "value": 21.484852315341495
+        },
+        {
+          "date": "2025-Q2",
+          "value": 4.498512985036185
+        },
+        {
+          "date": "2025-Q3",
+          "value": -3.718979620130314
+        },
+        {
+          "date": "2025-Q4",
+          "value": -7.874434274190389
+        },
+        {
+          "date": "2026-Q1",
+          "value": -9.836293007769148
+        }
+      ]
+    },
+    {
+      "indicatorId": "kr_manufacturing_utilization_rate_yoy",
+      "probeName": "제조업 평균가동률 수준의 전년동월 대비 증감률",
+      "sourceLabel": "KOSIS",
+      "lastObservedAt": "2026-06",
+      "status": "success",
+      "error": null,
+      "points": [
+        {
+          "date": "2021-07",
+          "value": 7.428571428571429
+        },
+        {
+          "date": "2021-08",
+          "value": 7.020057306590277
+        },
+        {
+          "date": "2021-09",
+          "value": 1.5027322404371546
+        },
+        {
+          "date": "2021-10",
+          "value": 1.9021739130434812
+        },
+        {
+          "date": "2021-11",
+          "value": 3.663500678426046
+        },
+        {
+          "date": "2021-12",
+          "value": 7.297297297297312
+        },
+        {
+          "date": "2022-01",
+          "value": 8.15217391304348
+        },
+        {
+          "date": "2022-02",
+          "value": 3.162055335968361
+        },
+        {
+          "date": "2022-03",
+          "value": 4.81283422459895
+        },
+        {
+          "date": "2022-04",
+          "value": 3.9242219215155583
+        },
+        {
+          "date": "2022-05",
+          "value": 2.8649386084584005
+        },
+        {
+          "date": "2022-06",
+          "value": 3.125000000000022
+        },
+        {
+          "date": "2022-07",
+          "value": -0.13297872340426453
+        },
+        {
+          "date": "2022-08",
+          "value": -3.07898259705488
+        },
+        {
+          "date": "2022-09",
+          "value": -2.960969044414541
+        },
+        {
+          "date": "2022-10",
+          "value": -5.600000000000005
+        },
+        {
+          "date": "2022-11",
+          "value": -6.675392670157077
+        },
+        {
+          "date": "2022-12",
+          "value": -13.602015113350141
+        },
+        {
+          "date": "2023-01",
+          "value": -10.929648241206014
+        },
+        {
+          "date": "2023-02",
+          "value": -10.727969348658995
+        },
+        {
+          "date": "2023-03",
+          "value": -7.525510204081643
+        },
+        {
+          "date": "2023-04",
+          "value": -6.9010416666666625
+        },
+        {
+          "date": "2023-05",
+          "value": -1.8567639257294544
+        },
+        {
+          "date": "2023-06",
+          "value": -5.665349143610032
+        },
+        {
+          "date": "2023-07",
+          "value": -6.657789613848209
+        },
+        {
+          "date": "2023-08",
+          "value": 0.2762430939226457
+        },
+        {
+          "date": "2023-09",
+          "value": 1.664355062413314
+        },
+        {
+          "date": "2023-10",
+          "value": 3.5310734463276816
+        },
+        {
+          "date": "2023-11",
+          "value": 3.0855539971949453
+        },
+        {
+          "date": "2023-12",
+          "value": 4.37317784256559
+        },
+        {
+          "date": "2024-01",
+          "value": 2.115655853314524
+        },
+        {
+          "date": "2024-02",
+          "value": 5.293276108726741
+        },
+        {
+          "date": "2024-03",
+          "value": -1.6551724137931045
+        },
+        {
+          "date": "2024-04",
+          "value": 3.356643356643363
+        },
+        {
+          "date": "2024-05",
+          "value": -0.8108108108108025
+        },
+        {
+          "date": "2024-06",
+          "value": 1.5363128491620248
+        },
+        {
+          "date": "2024-07",
+          "value": 0.42796005706136064
+        },
+        {
+          "date": "2024-08",
+          "value": 0.826446280991755
+        },
+        {
+          "date": "2024-09",
+          "value": -0.9549795361528002
+        },
+        {
+          "date": "2024-10",
+          "value": -0.27285129604366354
+        },
+        {
+          "date": "2024-11",
+          "value": -2.857142857142847
+        },
+        {
+          "date": "2024-12",
+          "value": 1.9553072625698498
+        },
+        {
+          "date": "2025-01",
+          "value": -0.2762430939226568
+        },
+        {
+          "date": "2025-02",
+          "value": -1.494565217391297
+        },
+        {
+          "date": "2025-03",
+          "value": 3.6465638148667656
+        },
+        {
+          "date": "2025-04",
+          "value": -0.4059539918809363
+        },
+        {
+          "date": "2025-05",
+          "value": -2.043596730245234
+        },
+        {
+          "date": "2025-06",
+          "value": 0.5502063273727487
+        },
+        {
+          "date": "2025-07",
+          "value": 2.556818181818188
+        },
+        {
+          "date": "2025-08",
+          "value": 0.6830601092896238
+        },
+        {
+          "date": "2025-09",
+          "value": 1.1019283746556585
+        },
+        {
+          "date": "2025-10",
+          "value": -3.6935704514363787
+        },
+        {
+          "date": "2025-11",
+          "value": -0.7002801120448154
+        },
+        {
+          "date": "2025-12",
+          "value": -0.2739726027397249
+        },
+        {
+          "date": "2026-01",
+          "value": -1.939058171745156
+        },
+        {
+          "date": "2026-02",
+          "value": 2.6206896551724146
+        },
+        {
+          "date": "2026-03",
+          "value": 0.9472259810554551
+        },
+        {
+          "date": "2026-04",
+          "value": -0.5434782608695565
+        },
+        {
+          "date": "2026-05",
+          "value": -1.3908205841446475
+        },
+        {
+          "date": "2026-06",
+          "value": 2.4623803009576006
+        }
+      ]
+    },
+    {
+      "indicatorId": "kr_semiconductor_machinery_investment_index_yoy",
+      "probeName": "반도체제조용기계 설비투자지수 전년동월비",
+      "sourceLabel": "KOSIS",
+      "lastObservedAt": "2026-06",
+      "status": "success",
+      "error": null,
+      "points": [
+        {
+          "date": "2021-07",
+          "value": 47.06896551724138
+        },
+        {
+          "date": "2021-08",
+          "value": 60.88235294117648
+        },
+        {
+          "date": "2021-09",
+          "value": 47.79706275033377
+        },
+        {
+          "date": "2021-10",
+          "value": 59.56790123456792
+        },
+        {
+          "date": "2021-11",
+          "value": 31.562819203268646
+        },
+        {
+          "date": "2021-12",
+          "value": 8.585546633724528
+        },
+        {
+          "date": "2022-01",
+          "value": -18.629807692307686
+        },
+        {
+          "date": "2022-02",
+          "value": -18.874907475943747
+        },
+        {
+          "date": "2022-03",
+          "value": -21.50715071507152
+        },
+        {
+          "date": "2022-04",
+          "value": -38.60275369709332
+        },
+        {
+          "date": "2022-05",
+          "value": 11.523178807947021
+        },
+        {
+          "date": "2022-06",
+          "value": 14.587332053742784
+        },
+        {
+          "date": "2022-07",
+          "value": -15.240328253223911
+        },
+        {
+          "date": "2022-08",
+          "value": 31.53564899451553
+        },
+        {
+          "date": "2022-09",
+          "value": 17.07317073170731
+        },
+        {
+          "date": "2022-10",
+          "value": 14.313346228239832
+        },
+        {
+          "date": "2022-11",
+          "value": 29.891304347826075
+        },
+        {
+          "date": "2022-12",
+          "value": 26.336746302616596
+        },
+        {
+          "date": "2023-01",
+          "value": -22.3042836041359
+        },
+        {
+          "date": "2023-02",
+          "value": 10.58394160583942
+        },
+        {
+          "date": "2023-03",
+          "value": 22.284512964260706
+        },
+        {
+          "date": "2023-04",
+          "value": 44.85049833887042
+        },
+        {
+          "date": "2023-05",
+          "value": -5.106888361045126
+        },
+        {
+          "date": "2023-06",
+          "value": -14.517029592406471
+        },
+        {
+          "date": "2023-07",
+          "value": -21.715076071922535
+        },
+        {
+          "date": "2023-08",
+          "value": -31.827658095899935
+        },
+        {
+          "date": "2023-09",
+          "value": -10.262345679012341
+        },
+        {
+          "date": "2023-10",
+          "value": -20.389170896785114
+        },
+        {
+          "date": "2023-11",
+          "value": -33.11416616855948
+        },
+        {
+          "date": "2023-12",
+          "value": -18.235029266096358
+        },
+        {
+          "date": "2024-01",
+          "value": 27.376425855513297
+        },
+        {
+          "date": "2024-02",
+          "value": 12.953795379537958
+        },
+        {
+          "date": "2024-03",
+          "value": -19.19770773638968
+        },
+        {
+          "date": "2024-04",
+          "value": -25.630733944954144
+        },
+        {
+          "date": "2024-05",
+          "value": -28.47309136420526
+        },
+        {
+          "date": "2024-06",
+          "value": -6.727629000653157
+        },
+        {
+          "date": "2024-07",
+          "value": 6.360424028268552
+        },
+        {
+          "date": "2024-08",
+          "value": 3.975535168195732
+        },
+        {
+          "date": "2024-09",
+          "value": 56.49183147033534
+        },
+        {
+          "date": "2024-10",
+          "value": 61.53028692879916
+        },
+        {
+          "date": "2024-11",
+          "value": 64.78999106344952
+        },
+        {
+          "date": "2024-12",
+          "value": 31.99339207048457
+        },
+        {
+          "date": "2025-01",
+          "value": -6.567164179104479
+        },
+        {
+          "date": "2025-02",
+          "value": 11.979547114682255
+        },
+        {
+          "date": "2025-03",
+          "value": 71.63120567375887
+        },
+        {
+          "date": "2025-04",
+          "value": 14.494988434849665
+        },
+        {
+          "date": "2025-05",
+          "value": 10.936132983377078
+        },
+        {
+          "date": "2025-06",
+          "value": 16.176470588235283
+        },
+        {
+          "date": "2025-07",
+          "value": 15.199335548172744
+        },
+        {
+          "date": "2025-08",
+          "value": 8.039215686274503
+        },
+        {
+          "date": "2025-09",
+          "value": 0.9340659340659307
+        },
+        {
+          "date": "2025-10",
+          "value": -8.552631578947366
+        },
+        {
+          "date": "2025-11",
+          "value": -7.375271149674623
+        },
+        {
+          "date": "2025-12",
+          "value": -14.810179390905297
+        },
+        {
+          "date": "2026-01",
+          "value": 50.798722044728436
+        },
+        {
+          "date": "2026-02",
+          "value": 33.26810176125243
+        },
+        {
+          "date": "2026-03",
+          "value": 2.0247933884297575
+        },
+        {
+          "date": "2026-04",
+          "value": 40.673400673400685
+        },
+        {
+          "date": "2026-05",
+          "value": 75.63091482649841
+        },
+        {
+          "date": "2026-06",
+          "value": 58.46895720313441
+        }
+      ]
+    },
+    {
+      "indicatorId": "kr_semiconductor_equipment_import_amount_yoy",
+      "probeName": "반도체 제조용 장비 수입액 전년동월비",
+      "sourceLabel": "K-stat",
+      "lastObservedAt": "2026-07",
+      "status": "success",
+      "error": null,
+      "points": [
+        {
+          "date": "2021-08",
+          "value": 54.36333941475513
+        },
+        {
+          "date": "2021-09",
+          "value": 48.38382035100657
+        },
+        {
+          "date": "2021-10",
+          "value": 43.52561615230541
+        },
+        {
+          "date": "2021-11",
+          "value": 44.545493961372685
+        },
+        {
+          "date": "2021-12",
+          "value": 10.227684047739348
+        },
+        {
+          "date": "2022-01",
+          "value": -34.53083043007559
+        },
+        {
+          "date": "2022-02",
+          "value": -13.433611418060732
+        },
+        {
+          "date": "2022-03",
+          "value": -29.051372922495876
+        },
+        {
+          "date": "2022-04",
+          "value": -31.208142550670537
+        },
+        {
+          "date": "2022-05",
+          "value": 4.605872659508359
+        },
+        {
+          "date": "2022-06",
+          "value": 7.022081752095644
+        },
+        {
+          "date": "2022-07",
+          "value": -12.812735829445677
+        },
+        {
+          "date": "2022-08",
+          "value": 12.970001103682073
+        },
+        {
+          "date": "2022-09",
+          "value": 0.02177653668966606
+        },
+        {
+          "date": "2022-10",
+          "value": 3.346474637627006
+        },
+        {
+          "date": "2022-11",
+          "value": -7.3882712703629005
+        },
+        {
+          "date": "2022-12",
+          "value": 10.931776618423772
+        },
+        {
+          "date": "2023-01",
+          "value": -4.657365802391766
+        },
+        {
+          "date": "2023-02",
+          "value": -19.686463255503984
+        },
+        {
+          "date": "2023-03",
+          "value": 14.885158016049482
+        },
+        {
+          "date": "2023-04",
+          "value": 26.443132330164552
+        },
+        {
+          "date": "2023-05",
+          "value": -9.413953335154035
+        },
+        {
+          "date": "2023-06",
+          "value": -0.6354517283219341
+        },
+        {
+          "date": "2023-07",
+          "value": -15.806328406317682
+        },
+        {
+          "date": "2023-08",
+          "value": -31.509982677967365
+        },
+        {
+          "date": "2023-09",
+          "value": -1.75207613158751
+        },
+        {
+          "date": "2023-10",
+          "value": -18.30126952589419
+        },
+        {
+          "date": "2023-11",
+          "value": -29.008000278775093
+        },
+        {
+          "date": "2023-12",
+          "value": -25.608026449162246
+        },
+        {
+          "date": "2024-01",
+          "value": 4.082263693348209
+        },
+        {
+          "date": "2024-02",
+          "value": 12.81671375214044
+        },
+        {
+          "date": "2024-03",
+          "value": -23.626175482007227
+        },
+        {
+          "date": "2024-04",
+          "value": -34.89873705138065
+        },
+        {
+          "date": "2024-05",
+          "value": -24.938785017665143
+        },
+        {
+          "date": "2024-06",
+          "value": -23.136854583731882
+        },
+        {
+          "date": "2024-07",
+          "value": -10.810138736302832
+        },
+        {
+          "date": "2024-08",
+          "value": 15.111957562076107
+        },
+        {
+          "date": "2024-09",
+          "value": 65.03369730860607
+        },
+        {
+          "date": "2024-10",
+          "value": 50.22900357039184
+        },
+        {
+          "date": "2024-11",
+          "value": 81.09965655766777
+        },
+        {
+          "date": "2024-12",
+          "value": 42.49675454227355
+        },
+        {
+          "date": "2025-01",
+          "value": 1.6105995671235718
+        },
+        {
+          "date": "2025-02",
+          "value": 34.65606429364749
+        },
+        {
+          "date": "2025-03",
+          "value": 87.1438646536192
+        },
+        {
+          "date": "2025-04",
+          "value": 26.808996350363667
+        },
+        {
+          "date": "2025-05",
+          "value": 24.46014457374619
+        },
+        {
+          "date": "2025-06",
+          "value": 35.75834141969598
+        },
+        {
+          "date": "2025-07",
+          "value": 29.188424511636146
+        },
+        {
+          "date": "2025-08",
+          "value": 8.825593406505083
+        },
+        {
+          "date": "2025-09",
+          "value": 11.559853700979161
+        },
+        {
+          "date": "2025-10",
+          "value": 2.0548348357777746
+        },
+        {
+          "date": "2025-11",
+          "value": -8.1644626693969
+        },
+        {
+          "date": "2025-12",
+          "value": -1.0899049674261918
+        },
+        {
+          "date": "2026-01",
+          "value": 63.78676775519083
+        },
+        {
+          "date": "2026-02",
+          "value": 34.50401328446069
+        },
+        {
+          "date": "2026-03",
+          "value": 8.342885199582284
+        },
+        {
+          "date": "2026-04",
+          "value": 55.01812001640602
+        },
+        {
+          "date": "2026-05",
+          "value": 56.16215294251108
+        },
+        {
+          "date": "2026-06",
+          "value": 44.63286334553693
+        },
+        {
+          "date": "2026-07",
+          "value": 58.19101723566027
+        }
+      ]
+    },
+    {
+      "indicatorId": "kr_equipment_investment_outlook_bsi_large",
+      "probeName": "대기업 설비투자전망 BSI",
+      "sourceLabel": "ECOS",
+      "lastObservedAt": "2026-08",
+      "status": "success",
+      "error": null,
+      "points": [
+        {
+          "date": "2021-09",
+          "value": 100,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2021-10",
+          "value": 104,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2021-11",
+          "value": 102,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2021-12",
+          "value": 100,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-01",
+          "value": 103,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-02",
+          "value": 102,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-03",
+          "value": 104,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-04",
+          "value": 100,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-05",
+          "value": 101,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-06",
+          "value": 103,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-07",
+          "value": 100,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-08",
+          "value": 97,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-09",
+          "value": 96,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-10",
+          "value": 95,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-11",
+          "value": 91,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-12",
+          "value": 91,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-01",
+          "value": 92,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-02",
+          "value": 90,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-03",
+          "value": 89,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-04",
+          "value": 88,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-05",
+          "value": 89,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-06",
+          "value": 87,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-07",
+          "value": 88,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-08",
+          "value": 89,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-09",
+          "value": 82,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-10",
+          "value": 89,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-11",
+          "value": 93,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-12",
+          "value": 92,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-01",
+          "value": 93,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-02",
+          "value": 94,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-03",
+          "value": 96,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-04",
+          "value": 94,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-05",
+          "value": 98,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-06",
+          "value": 96,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-07",
+          "value": 96,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-08",
+          "value": 96,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-09",
+          "value": 93,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-10",
+          "value": 94,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-11",
+          "value": 92,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-12",
+          "value": 90,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-01",
+          "value": 90,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-02",
+          "value": 91,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-03",
+          "value": 93,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-04",
+          "value": 94,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-05",
+          "value": 94,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-06",
+          "value": 97,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-07",
+          "value": 95,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-08",
+          "value": 91,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-09",
+          "value": 92,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-10",
+          "value": 94,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-11",
+          "value": 94,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-12",
+          "value": 96,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2026-01",
+          "value": 94,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2026-02",
+          "value": 96,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2026-03",
+          "value": 101,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2026-04",
+          "value": 96,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2026-05",
+          "value": 97,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2026-06",
+          "value": 99,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2026-07",
+          "value": 99,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2026-08",
+          "value": 103,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        }
+      ]
+    },
+    {
+      "indicatorId": "kr_equipment_investment_outlook_bsi_manufacturing",
+      "probeName": "제조업 설비투자전망 BSI",
+      "sourceLabel": "ECOS",
+      "lastObservedAt": "2026-08",
+      "status": "success",
+      "error": null,
+      "points": [
+        {
+          "date": "2021-09",
+          "value": 98,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2021-10",
+          "value": 99,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2021-11",
+          "value": 98,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2021-12",
+          "value": 98,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-01",
+          "value": 99,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-02",
+          "value": 99,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-03",
+          "value": 101,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-04",
+          "value": 98,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-05",
+          "value": 98,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-06",
+          "value": 99,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-07",
+          "value": 98,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-08",
+          "value": 95,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-09",
+          "value": 95,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-10",
+          "value": 96,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-11",
+          "value": 92,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-12",
+          "value": 92,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-01",
+          "value": 91,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-02",
+          "value": 90,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-03",
+          "value": 88,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-04",
+          "value": 90,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-05",
+          "value": 91,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-06",
+          "value": 88,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-07",
+          "value": 90,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-08",
+          "value": 90,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-09",
+          "value": 86,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-10",
+          "value": 88,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-11",
+          "value": 92,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-12",
+          "value": 91,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-01",
+          "value": 90,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-02",
+          "value": 92,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-03",
+          "value": 94,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-04",
+          "value": 94,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-05",
+          "value": 95,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-06",
+          "value": 94,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-07",
+          "value": 94,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-08",
+          "value": 93,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-09",
+          "value": 93,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-10",
+          "value": 93,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-11",
+          "value": 91,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-12",
+          "value": 90,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-01",
+          "value": 88,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-02",
+          "value": 89,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-03",
+          "value": 90,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-04",
+          "value": 90,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-05",
+          "value": 90,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-06",
+          "value": 92,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-07",
+          "value": 91,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-08",
+          "value": 88,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-09",
+          "value": 89,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-10",
+          "value": 90,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-11",
+          "value": 92,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-12",
+          "value": 92,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2026-01",
+          "value": 92,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2026-02",
+          "value": 93,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2026-03",
+          "value": 95,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2026-04",
+          "value": 94,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2026-05",
+          "value": 93,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2026-06",
+          "value": 94,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2026-07",
+          "value": 95,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2026-08",
+          "value": 98,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        }
+      ]
+    },
+    {
+      "indicatorId": "kr_equipment_investment_outlook_bsi_sme",
+      "probeName": "중소기업 설비투자전망 BSI",
+      "sourceLabel": "ECOS",
+      "lastObservedAt": "2026-08",
+      "status": "success",
+      "error": null,
+      "points": [
+        {
+          "date": "2021-09",
+          "value": 96,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2021-10",
+          "value": 93,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2021-11",
+          "value": 94,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2021-12",
+          "value": 95,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-01",
+          "value": 95,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-02",
+          "value": 97,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-03",
+          "value": 97,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-04",
+          "value": 95,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-05",
+          "value": 95,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-06",
+          "value": 95,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-07",
+          "value": 95,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-08",
+          "value": 92,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-09",
+          "value": 93,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-10",
+          "value": 96,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-11",
+          "value": 94,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2022-12",
+          "value": 92,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-01",
+          "value": 89,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-02",
+          "value": 90,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-03",
+          "value": 87,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-04",
+          "value": 92,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-05",
+          "value": 92,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-06",
+          "value": 90,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-07",
+          "value": 92,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-08",
+          "value": 90,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-09",
+          "value": 90,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-10",
+          "value": 87,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-11",
+          "value": 92,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2023-12",
+          "value": 89,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-01",
+          "value": 87,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-02",
+          "value": 91,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-03",
+          "value": 91,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-04",
+          "value": 93,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-05",
+          "value": 92,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-06",
+          "value": 91,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-07",
+          "value": 92,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-08",
+          "value": 90,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-09",
+          "value": 92,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-10",
+          "value": 93,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-11",
+          "value": 90,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2024-12",
+          "value": 90,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-01",
+          "value": 87,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-02",
+          "value": 87,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-03",
+          "value": 87,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-04",
+          "value": 86,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-05",
+          "value": 86,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-06",
+          "value": 86,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-07",
+          "value": 87,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-08",
+          "value": 85,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-09",
+          "value": 87,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-10",
+          "value": 86,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-11",
+          "value": 89,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2025-12",
+          "value": 88,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2026-01",
+          "value": 89,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2026-02",
+          "value": 89,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2026-03",
+          "value": 88,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2026-04",
+          "value": 91,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2026-05",
+          "value": 89,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2026-06",
+          "value": 89,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2026-07",
+          "value": 90,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        },
+        {
+          "date": "2026-08",
+          "value": 92,
+          "dimensionCode": "BI",
+          "dimensionName": "설비투자전망BSI 5)"
+        }
+      ]
+    }
+  ],
+  "error": null
+}
