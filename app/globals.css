@@ -133,6 +133,13 @@ body {
   padding: 8px 12px;
 }
 
+.outlook-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .outlook-workbench {
   display: grid;
   grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.8fr);
@@ -385,6 +392,83 @@ body {
   height: 280px;
 }
 
+.outlook-chart-download-target {
+  cursor: download;
+  border-radius: 8px;
+  outline: none;
+}
+
+.outlook-chart-download-target:focus-visible {
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.outlook-chart-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.outlook-chart-actions button {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: var(--surface);
+  color: var(--foreground);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+}
+
+.outlook-chart-actions button:hover,
+.outlook-chart-actions button:focus-visible {
+  border-color: var(--primary);
+  outline: none;
+}
+
+.outlook-chart-table-wrap {
+  overflow-x: auto;
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.outlook-chart-table {
+  width: 100%;
+  min-width: 420px;
+  border-collapse: collapse;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.outlook-chart-table caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.outlook-chart-table th,
+.outlook-chart-table td {
+  border-bottom: 1px solid var(--border);
+  padding: 7px 9px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.outlook-chart-table th:first-child,
+.outlook-chart-table td:first-child {
+  position: sticky;
+  left: 0;
+  background: var(--surface);
+  text-align: left;
+}
+
+.outlook-chart-table tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
 .outlook-growth-chart-wide .outlook-growth-chart-canvas {
   height: 320px;
 }
@@ -489,5 +573,224 @@ body {
   .outlook-growth-chart,
   .outlook-growth-chart-canvas {
     min-width: 0;
+  }
+}
+
+/* 경제전망 보고서 편집·인쇄 작업공간 */
+.outlook-report-shell {
+  min-height: 100vh;
+  padding: 32px clamp(16px, 4vw, 48px) 64px;
+  background: #e9edf2;
+  color: #17202d;
+}
+
+.outlook-report-app-header,
+.outlook-report-toolbar {
+  width: min(1120px, 100%);
+  margin: 0 auto 18px;
+}
+
+.outlook-report-app-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.outlook-report-app-header h1 {
+  margin-top: 4px;
+  font-size: clamp(24px, 4vw, 36px);
+}
+
+.outlook-report-app-header > div > p:last-child {
+  margin-top: 8px;
+  color: #657082;
+}
+
+.outlook-report-toolbar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px 20px;
+  border: 1px solid #cbd3dd;
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgb(34 48 66 / 8%);
+}
+
+.outlook-report-toolbar > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.outlook-report-toolbar span,
+.outlook-report-toolbar > p {
+  color: #657082;
+  font-size: 12px;
+}
+
+.outlook-report-toolbar > p {
+  grid-column: 1 / -1;
+  min-height: 18px;
+  margin: 0;
+}
+
+.outlook-report-toolbar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.outlook-report-toolbar button {
+  border: 1px solid #b9c4d1;
+  border-radius: 9px;
+  padding: 8px 13px;
+  background: #fff;
+  color: #173b67;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.outlook-report-toolbar .outlook-report-primary-action {
+  border-color: #173b67;
+  background: #173b67;
+  color: #fff;
+}
+
+.outlook-report-paper {
+  box-sizing: border-box;
+  width: min(210mm, 100%);
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 18mm 16mm;
+  background: #fff;
+  box-shadow: 0 18px 60px rgb(30 45 65 / 16%);
+  color: #17202d;
+  line-height: 1.6;
+  outline: none;
+}
+
+.outlook-report-paper:focus {
+  box-shadow: 0 18px 60px rgb(30 45 65 / 16%), 0 0 0 3px rgb(38 112 184 / 28%);
+}
+
+.outlook-report-cover {
+  border-bottom: 3px solid #173b67;
+  padding-bottom: 12mm;
+}
+
+.outlook-report-cover h1 {
+  margin: 2mm 0 3mm;
+  font-size: 28px;
+}
+
+.outlook-report-paper h2 {
+  margin: 12mm 0 4mm;
+  border-top: 2px solid #173b67;
+  padding-top: 4mm;
+  font-size: 19px;
+}
+
+.outlook-report-paper h3 {
+  margin: 6mm 0 2mm;
+  font-size: 15px;
+}
+
+.outlook-report-paper p {
+  margin: 0 0 3mm;
+}
+
+.outlook-report-paper .report-muted {
+  color: #657082;
+  font-size: 12px;
+}
+
+.outlook-report-paper .report-callout {
+  border-left: 3px solid #2670b8;
+  padding: 4mm;
+  background: #f4f7fb;
+}
+
+.outlook-report-paper table {
+  width: 100%;
+  margin: 3mm 0 6mm;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.outlook-report-paper th,
+.outlook-report-paper td {
+  border-bottom: 1px solid #d9dee7;
+  padding: 2.5mm 2mm;
+  text-align: left;
+  vertical-align: top;
+}
+
+.outlook-report-paper th {
+  background: #eef3f8;
+}
+
+@media (max-width: 640px) {
+  .outlook-report-shell {
+    padding: 22px 12px 40px;
+  }
+
+  .outlook-report-app-header {
+    flex-direction: column;
+  }
+
+  .outlook-report-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .outlook-report-toolbar-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .outlook-report-paper {
+    min-height: 0;
+    padding: 24px 18px;
+    overflow-x: auto;
+  }
+}
+
+@page {
+  size: A4;
+  margin: 12mm;
+}
+
+@media print {
+  body {
+    background: #fff !important;
+  }
+
+  .outlook-report-shell {
+    min-height: 0;
+    padding: 0;
+    background: #fff;
+  }
+
+  .outlook-report-app-header,
+  .outlook-report-toolbar {
+    display: none !important;
+  }
+
+  .outlook-report-paper,
+  .outlook-report-paper:focus {
+    width: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .outlook-report-paper h2,
+  .outlook-report-paper h3 {
+    break-after: avoid;
+  }
+
+  .outlook-report-paper table,
+  .outlook-report-paper .report-callout {
+    break-inside: avoid;
   }
 }

@@ -11,6 +11,7 @@ import {
   YAxis,
 } from "recharts";
 import type { SectorSnapshot } from "@/lib/outlook/types";
+import { ChartFrame, LatestValueLabels } from "./chart-tools";
 
 const COLORS = [
   "var(--series-1)",
@@ -184,9 +185,9 @@ export default function FiscalDashboard({ snapshot }: { snapshot: SectorSnapshot
               </header>
 
               {rows.length > 0 ? (
-                <div className="outlook-growth-chart-canvas">
+                <ChartFrame title={spec.title} chartId={`fiscal-${spec.id}`} rows={rows} series={spec.series.map((series, index) => ({ key: series.indicatorId, label: series.label, unit: spec.unit, color: COLORS[index % COLORS.length] }))}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={rows} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
+                    <ComposedChart data={rows} margin={{ top: 24, right: 12, bottom: 4, left: 0 }}>
                       <CartesianGrid stroke="var(--grid)" vertical={false} />
                       <XAxis
                         dataKey="date"
@@ -227,9 +228,10 @@ export default function FiscalDashboard({ snapshot }: { snapshot: SectorSnapshot
                           isAnimationActive={false}
                         />
                       ))}
+                      <LatestValueLabels rows={rows} series={spec.series.map((series, index) => ({ key: series.indicatorId, label: series.label, unit: spec.unit, color: COLORS[index % COLORS.length] }))} />
                     </ComposedChart>
                   </ResponsiveContainer>
-                </div>
+                </ChartFrame>
               ) : (
                 <div className="outlook-growth-chart-empty">
                   {spec.pendingReason ?? "재정 섹터의 데이터 업데이트를 실행하면 차트가 표시됩니다."}

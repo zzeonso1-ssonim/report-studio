@@ -21,9 +21,14 @@ export default async function OutlookPage() {
             제공하지 않습니다.
           </p>
         </div>
-        <Link href="/" className="outlook-home-link">
-          ← 통합조회로
-        </Link>
+        <nav className="outlook-header-actions" aria-label="경제전망 메뉴">
+          <Link href="/outlook/report" className="outlook-home-link">
+            보고서 작업공간
+          </Link>
+          <Link href="/" className="outlook-home-link">
+            ← 통합조회로
+          </Link>
+        </nav>
       </header>
       <OutlookWorkbench initialSectors={await listSectorSnapshots()} />
     </main>

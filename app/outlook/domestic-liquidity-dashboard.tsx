@@ -13,6 +13,7 @@ import {
   YAxis,
 } from "recharts";
 import type { SectorSnapshot } from "@/lib/outlook/types";
+import { ChartFrame, LatestValueLabels } from "./chart-tools";
 
 const COLORS = [
   "var(--series-1)",
@@ -146,9 +147,9 @@ function ChartCard({ snapshot, spec }: { snapshot: SectorSnapshot; spec: ChartSp
     <article className={`outlook-growth-chart outlook-trade-chart-${spec.span}`}>
       <header><div><h3>{spec.title}</h3><p>{spec.description}</p></div><span>단위 {spec.unit}</span></header>
       {rows.length ? (
-        <div className="outlook-growth-chart-canvas">
+        <ChartFrame title={spec.title} chartId={`liquidity-${spec.id}`} rows={rows} series={spec.series.map((item, index) => ({ key: item.indicatorId, label: item.label, unit: spec.unit, color: COLORS[index % COLORS.length] }))}>
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={rows} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
+            <ComposedChart data={rows} margin={{ top: 24, right: 12, bottom: 4, left: 0 }}>
               <CartesianGrid stroke="var(--grid)" vertical={false} />
               <XAxis dataKey="date" tick={{ fill: "var(--axis)", fontSize: 11 }} tickLine={false} axisLine={{ stroke: "var(--grid)" }} minTickGap={28} tickFormatter={formatTick} />
               <YAxis tick={{ fill: "var(--axis)", fontSize: 11 }} tickLine={false} axisLine={false} width={48} domain={spec.unit === "%" ? [(min: number) => Math.min(0, min), (max: number) => Math.max(0, max)] : [0, "auto"]} tickFormatter={(value) => new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 0 }).format(Number(value))} />
@@ -160,9 +161,10 @@ function ChartCard({ snapshot, spec }: { snapshot: SectorSnapshot; spec: ChartSp
               ) : (
                 <Line key={item.indicatorId} type="linear" dataKey={item.indicatorId} name={item.label} stroke={COLORS[index % COLORS.length]} strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false} />
               ))}
+              <LatestValueLabels rows={rows} series={spec.series.map((item, index) => ({ key: item.indicatorId, label: item.label, unit: spec.unit, color: COLORS[index % COLORS.length] }))} />
             </ComposedChart>
           </ResponsiveContainer>
-        </div>
+        </ChartFrame>
       ) : <div className="outlook-growth-chart-empty">국내 유동성 섹터의 데이터 업데이트를 실행하면 차트가 표시됩니다.</div>}
       {errors.map((error) => <p key={error.indicatorId} className="outlook-error">⚠ {error.probeName}: {error.error}</p>)}
       <footer>출처 한국은행 ECOS · 기준월 {observedAt(snapshot, spec.series) ?? "업데이트 대기"} · {spec.basis}</footer>
@@ -204,8 +206,8 @@ export default function DomesticLiquidityDashboard({ snapshot }: { snapshot: Sec
       <div className="outlook-growth-grid">
         <article className="outlook-growth-chart outlook-trade-chart-12">
           <header><div><h3>국내 M2 규모와 증가율</h3><p>2023년~ · 월별 평잔</p></div><span>좌 조원 · 우 %</span></header>
-          {m2Rows.length ? <div className="outlook-growth-chart-canvas outlook-liquidity-hero-canvas">
-            <ResponsiveContainer width="100%" height="100%"><ComposedChart data={m2Rows} margin={{ top: 8, right: 8, bottom: 4, left: 0 }}>
+          {m2Rows.length ? <ChartFrame title="국내 M2 규모와 증가율" chartId="liquidity-m2-level-yoy" rows={m2Rows} canvasClassName="outlook-liquidity-hero-canvas" series={m2Series.map((item, index) => ({ key: item.indicatorId, label: item.label, unit: index === 0 ? "조원" : "%", color: COLORS[index], yAxisId: index === 0 ? "level" : "yoy" }))}>
+            <ResponsiveContainer width="100%" height="100%"><ComposedChart data={m2Rows} margin={{ top: 24, right: 8, bottom: 4, left: 0 }}>
               <CartesianGrid stroke="var(--grid)" vertical={false} />
               <XAxis dataKey="date" tick={{ fill: "var(--axis)", fontSize: 11 }} tickLine={false} axisLine={{ stroke: "var(--grid)" }} minTickGap={32} tickFormatter={formatTick} />
               <YAxis yAxisId="level" tick={{ fill: "var(--axis)", fontSize: 11 }} tickLine={false} axisLine={false} width={58} domain={["dataMin - 80", "dataMax + 30"]} tickFormatter={(value) => new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 0 }).format(Number(value))} />
@@ -214,8 +216,9 @@ export default function DomesticLiquidityDashboard({ snapshot }: { snapshot: Sec
               <Legend wrapperStyle={{ fontSize: 12 }} />
               <Bar yAxisId="level" dataKey="kr_m2_sa_average" name="M2 규모" fill={COLORS[0]} isAnimationActive={false} />
               <Line yAxisId="yoy" type="linear" dataKey="kr_m2_total_original_yoy" name="M2 전년비" stroke={COLORS[1]} strokeWidth={2.5} dot={false} connectNulls={false} isAnimationActive={false} />
+              <LatestValueLabels rows={m2Rows} series={m2Series.map((item, index) => ({ key: item.indicatorId, label: item.label, unit: index === 0 ? "조원" : "%", color: COLORS[index], yAxisId: index === 0 ? "level" : "yoy" }))} />
             </ComposedChart></ResponsiveContainer>
-          </div> : <div className="outlook-growth-chart-empty">국내 유동성 데이터 업데이트 후 표시됩니다.</div>}
+          </ChartFrame> : <div className="outlook-growth-chart-empty">국내 유동성 데이터 업데이트 후 표시됩니다.</div>}
           <footer>출처 한국은행 ECOS · 기준월 {observedAt(snapshot, m2Series) ?? "업데이트 대기"} · 규모는 계절조정 평잔, 증가율은 원계열 평잔</footer>
         </article>
 
@@ -223,16 +226,17 @@ export default function DomesticLiquidityDashboard({ snapshot }: { snapshot: Sec
 
         <article className="outlook-growth-chart outlook-trade-chart-12">
           <header><div><h3>M2 내 상품별·경제주체별 비중</h3><p>직전 2개 연말과 최신월 · 총 M2 대비</p></div><span>단위 %</span></header>
-          {rowsFor(snapshot, SHARE_SERIES).length ? <div className="outlook-growth-chart-canvas outlook-liquidity-share-canvas">
-            <ResponsiveContainer width="100%" height="100%"><ComposedChart data={rowsFor(snapshot, SHARE_SERIES)} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
+          {rowsFor(snapshot, SHARE_SERIES).length ? <ChartFrame title="M2 내 상품별·경제주체별 비중" chartId="liquidity-m2-shares" rows={rowsFor(snapshot, SHARE_SERIES)} canvasClassName="outlook-liquidity-share-canvas" series={SHARE_SERIES.map((item, index) => ({ key: item.indicatorId, label: item.label, unit: "%", color: COLORS[index % COLORS.length] }))}>
+            <ResponsiveContainer width="100%" height="100%"><ComposedChart data={rowsFor(snapshot, SHARE_SERIES)} margin={{ top: 58, right: 12, bottom: 4, left: 0 }}>
               <CartesianGrid stroke="var(--grid)" vertical={false} />
               <XAxis dataKey="date" tick={{ fill: "var(--axis)", fontSize: 11 }} tickLine={false} axisLine={{ stroke: "var(--grid)" }} tickFormatter={(value) => String(value).endsWith("-12") ? String(value).slice(0, 4) + "년말" : String(value)} />
               <YAxis tick={{ fill: "var(--axis)", fontSize: 11 }} tickLine={false} axisLine={false} width={44} unit="%" />
               <Tooltip contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground)", fontSize: 12 }} formatter={(value) => typeof value === "number" ? `${value.toFixed(1)}%` : "—"} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               {SHARE_SERIES.map((item, index) => <Bar key={item.indicatorId} dataKey={item.indicatorId} name={item.label} fill={COLORS[index % COLORS.length]} isAnimationActive={false} />)}
+              <LatestValueLabels rows={rowsFor(snapshot, SHARE_SERIES)} series={SHARE_SERIES.map((item, index) => ({ key: item.indicatorId, label: item.label, unit: "%", color: COLORS[index % COLORS.length] }))} />
             </ComposedChart></ResponsiveContainer>
-          </div> : <div className="outlook-growth-chart-empty">국내 유동성 데이터 업데이트 후 표시됩니다.</div>}
+          </ChartFrame> : <div className="outlook-growth-chart-empty">국내 유동성 데이터 업데이트 후 표시됩니다.</div>}
           <footer>출처 한국은행 ECOS · 기준월 {observedAt(snapshot, SHARE_SERIES) ?? "업데이트 대기"} · 각 월 세부 계열 ÷ 동일월 M2 총계, 평잔·원계열</footer>
         </article>
 
