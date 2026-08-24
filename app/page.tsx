@@ -785,6 +785,8 @@ export default function Home() {
   }, [chatInput, chatLoading, runLoad]);
 
   /** 주기가 섞이면 가장 성긴 주기로 평균 환산해 날짜 키를 맞춘다 */
+  // React Compiler가 이 기존 도메인 메모화의 객체 정체성을 보존하지 못하므로 수동 메모화를 유지한다.
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const { alignedSeries, alignNote } = useMemo(() => {
     const entries = Object.entries(series);
     const cycles = new Set(entries.map(([, s]) => s.indicator.cycle));
@@ -1064,7 +1066,7 @@ export default function Home() {
             한국·미국 공공 경제데이터 통합 조회 — 원천기관 우선
           </p>
         </div>
-        <nav className="flex gap-2 text-sm">
+        <nav className="flex flex-wrap justify-end gap-2 text-sm">
           <a
             href="/calendar"
             className="rounded-lg border px-3 py-1.5"
@@ -1085,6 +1087,13 @@ export default function Home() {
             style={{ borderColor: "var(--border)", color: "var(--primary)" }}
           >
             경제전망
+          </a>
+          <a
+            href="/reports"
+            className="rounded-lg border px-3 py-1.5"
+            style={{ borderColor: "var(--border)", color: "var(--primary)" }}
+          >
+            보고서작성
           </a>
           <a
             href="/liquidity"

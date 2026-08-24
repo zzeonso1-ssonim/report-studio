@@ -119,8 +119,12 @@ export default function CalendarPage() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setFetchError(null);
+    queueMicrotask(() => {
+      if (!cancelled) {
+        setLoading(true);
+        setFetchError(null);
+      }
+    });
     fetch(`/api/calendar?days=${days}`)
       .then(async (r) => {
         const json = await r.json();
