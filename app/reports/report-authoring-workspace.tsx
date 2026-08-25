@@ -304,7 +304,9 @@ function TextBlockEditor({ block, preview, onChange }: {
               </button>
             ))}
           </div>
-          <textarea className="report-authoring-textarea" value={block.body} onChange={(event) => onChange({ body: event.target.value })} aria-label="텍스트 박스 본문" rows={5} />
+          <div className={`report-authoring-text-editor report-authoring-text-editor-${block.style}`}>
+            <textarea className="report-authoring-textarea" value={block.body} onChange={(event) => onChange({ body: event.target.value })} aria-label="텍스트 박스 본문" rows={5} />
+          </div>
         </>
       )}
     </div>
