@@ -283,6 +283,17 @@ function TextBlockEditor({ block, preview, onChange }: {
   preview: boolean;
   onChange: (patch: Partial<TextBlock>) => void;
 }) {
+  const bulletEditorRef = useRef<HTMLUListElement>(null);
+  const bulletLines = block.body.split(/\r?\n/);
+
+  function focusBullet(index: number, position?: number) {
+    window.requestAnimationFrame(() => {
+      const input = bulletEditorRef.current?.querySelectorAll("input")[index];
+      input?.focus();
+      if (input && position !== undefined) input.setSelectionRange(position, position);
+    });
+  }
+
   return (
     <div className="report-authoring-block-body">
       {preview ? (
@@ -304,9 +315,39 @@ function TextBlockEditor({ block, preview, onChange }: {
               </button>
             ))}
           </div>
-          <div className={`report-authoring-text-editor report-authoring-text-editor-${block.style}`}>
-            <textarea className="report-authoring-textarea" value={block.body} onChange={(event) => onChange({ body: event.target.value })} aria-label="텍스트 박스 본문" rows={5} />
-          </div>
+          {block.style === "bullet" ? (
+            <ul ref={bulletEditorRef} className="report-authoring-bullet-editor" aria-label="불릿 본문 편집">
+              {bulletLines.map((line, index) => (
+                <li key={index}>
+                  <input
+                    value={line}
+                    onChange={(event) => onChange({ body: bulletLines.map((item, itemIndex) => itemIndex === index ? event.target.value : item).join("\n") })}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        const cursor = event.currentTarget.selectionStart ?? line.length;
+                        const nextLines = [...bulletLines];
+                        nextLines.splice(index, 1, line.slice(0, cursor), line.slice(cursor));
+                        onChange({ body: nextLines.join("\n") });
+                        focusBullet(index + 1, 0);
+                      } else if (event.key === "Backspace" && line === "" && bulletLines.length > 1) {
+                        event.preventDefault();
+                        const nextLines = bulletLines.filter((_, itemIndex) => itemIndex !== index);
+                        const previousLength = nextLines[Math.max(0, index - 1)]?.length ?? 0;
+                        onChange({ body: nextLines.join("\n") });
+                        focusBullet(Math.max(0, index - 1), previousLength);
+                      }
+                    }}
+                    aria-label={`${index + 1}번 불릿`}
+                  />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className={`report-authoring-text-editor report-authoring-text-editor-${block.style}`}>
+              <textarea className="report-authoring-textarea" value={block.body} onChange={(event) => onChange({ body: event.target.value })} aria-label="텍스트 박스 본문" rows={5} />
+            </div>
+          )}
         </>
       )}
     </div>
