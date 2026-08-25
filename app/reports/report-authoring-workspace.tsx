@@ -23,6 +23,7 @@ type ReportDraft = {
   templateName: string;
   rangeTitle?: string;
   ranges?: { label: string; value: string; unit: string }[];
+  showRanges?: boolean;
   blocks: ReportBlock[];
 };
 type DraftMap = Record<ReportKind, ReportDraft>;
@@ -110,6 +111,7 @@ function createTemplates(): DraftMap {
       title: "주간채권전략",
       subtitle: "금리·커브·수급·이벤트를 연결한 주간 전략 판단",
       rangeTitle: "WEEKLY RANGE",
+      showRanges: true,
       ranges: [
         { label: "국고 3년", value: "—", unit: "%" },
         { label: "국고 10년", value: "—", unit: "%" },
@@ -247,6 +249,7 @@ function normalizeDrafts(value: Partial<DraftMap>, templates: DraftMap): DraftMa
       ...base,
       ...saved,
       ranges: saved?.ranges?.map((range, index) => ({ ...base.ranges?.[index], ...range })) ?? base.ranges,
+      showRanges: saved?.showRanges ?? base.showRanges,
       blocks: saved?.blocks?.map((block) => normalizeBlock(block)) ?? base.blocks,
     };
     return result;
@@ -494,7 +497,7 @@ function ChartBlockEditor({ block, preview, onChange, onStatus }: {
 
 export default function ReportAuthoringWorkspace() {
   const templates = useMemo(() => cloneTemplates(), []);
-  const [reportKind, setReportKind] = useState<ReportKind>("weekly");
+  const reportKind: ReportKind = "weekly";
   const [drafts, setDrafts] = useState<DraftMap>(templates);
   const [hydrated, setHydrated] = useState(false);
   const [preview, setPreview] = useState(false);
@@ -517,7 +520,7 @@ export default function ReportAuthoringWorkspace() {
       setHydrated(true);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, []);
+  }, [templates]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -571,28 +574,27 @@ export default function ReportAuthoringWorkspace() {
       blocks.splice(deleted.index, 0, deleted.block);
       return { ...current, [deleted.report]: { ...report, blocks } };
     });
-    setReportKind(deleted.report);
     setDeleted(null);
     setStatus("삭제한 박스를 복원했습니다.");
   }
 
   function resetTemplate() {
-    if (!window.confirm(`${REPORT_LABELS[reportKind]} 작업본을 지우고 기본 양식을 다시 적용할까요?`)) return;
+    if (!window.confirm("현재 작업본을 지우고 기본 보고서 양식을 다시 적용할까요?")) return;
     setDrafts((current) => ({ ...current, [reportKind]: structuredClone(templates[reportKind]) }));
     setDeleted(null);
-    setStatus(`${REPORT_LABELS[reportKind]} 기본 양식을 다시 적용했습니다.`);
+    setStatus("기본 보고서 양식을 다시 적용했습니다.");
   }
 
   function saveHtml() {
     if (!reportRef.current) return;
-    downloadBlob(standaloneDocument(reportRef.current, draft.title), "text/html;charset=utf-8", `${reportKind}-report-${localDateStamp()}.html`);
+    downloadBlob(standaloneDocument(reportRef.current, draft.title), "text/html;charset=utf-8", `report-${localDateStamp()}.html`);
     setStatus("현재 작업본을 자체 포함 HTML로 저장했습니다.");
   }
 
   function saveWord() {
     if (!reportRef.current) return;
     const html = standaloneDocument(reportRef.current, draft.title);
-    downloadBlob(html, "application/msword;charset=utf-8", `${reportKind}-report-${localDateStamp()}.doc`);
+    downloadBlob(html, "application/msword;charset=utf-8", `report-${localDateStamp()}.doc`);
     setStatus("현재 작업본을 Word 호환 문서로 저장했습니다.");
   }
 
@@ -604,18 +606,10 @@ export default function ReportAuthoringWorkspace() {
 
   return (
     <>
-      <nav className="report-authoring-tabs" aria-label="보고서 유형">
-        {(Object.keys(REPORT_LABELS) as ReportKind[]).map((kind) => (
-          <button type="button" key={kind} aria-pressed={reportKind === kind} onClick={() => { setReportKind(kind); setPreview(false); setDeleted(null); setStatus(`${REPORT_LABELS[kind]} 작업공간으로 전환했습니다.`); }}>
-            {REPORT_LABELS[kind]}
-          </button>
-        ))}
-      </nav>
-
       <div className="report-authoring-toolbar" data-report-control>
         <div>
-          <strong>{REPORT_LABELS[reportKind]} 양식 자동 적용</strong>
-          <span>IBM × Coinbase 인쇄형 규격 · 리포트별 독립 자동저장</span>
+          <strong>보고서 기본 양식</strong>
+          <span>IBM × Coinbase 인쇄형 규격 · 단일 양식 자동저장</span>
           <p aria-live="polite">{status}</p>
         </div>
         <div className="report-authoring-toolbar-actions">
@@ -632,6 +626,7 @@ export default function ReportAuthoringWorkspace() {
           <aside className="report-authoring-palette" data-report-control>
             <p>CONTENT BOX</p>
             <h2>박스 추가</h2>
+            <button type="button" aria-pressed={Boolean(draft.showRanges)} onClick={() => { updateDraft({ showRanges: !draft.showRanges }); setStatus(draft.showRanges ? "주간채권전략 금리 박스를 삭제했습니다." : "제목과 발행일 아래에 주간채권전략 금리 박스를 추가했습니다."); }}><strong>주간채권전략 금리 박스</strong><span>{draft.showRanges ? "현재 표시 중 · 누르면 삭제" : "국고 3년·10년·커브"}</span></button>
             <button type="button" onClick={() => addBlock("text")}><strong>텍스트</strong><span>제목·본문·전망 메모</span></button>
             <button type="button" onClick={() => addBlock("image")}><strong>이미지</strong><span>로컬 파일·외부 URL</span></button>
             <button type="button" onClick={() => addBlock("table")}><strong>표</strong><span>직접 편집·CSV 붙여넣기</span></button>
@@ -639,7 +634,7 @@ export default function ReportAuthoringWorkspace() {
           </aside>
         ) : null}
 
-        <article ref={reportRef} className="report-authoring-paper" aria-label={`${REPORT_LABELS[reportKind]} 편집 문서`}>
+        <article ref={reportRef} className="report-authoring-paper" aria-label="보고서 편집 문서">
           <header className="report-authoring-cover">
             <div>
               {preview ? <p className="report-authoring-kicker">{draft.kicker}</p> : <input className="report-authoring-kicker-input" value={draft.kicker} onChange={(event) => updateDraft({ kicker: event.target.value })} aria-label="보고서 영문 머리말" />}
@@ -660,8 +655,9 @@ export default function ReportAuthoringWorkspace() {
             </aside>
           </header>
 
-          {draft.ranges ? (
+          {draft.showRanges && draft.ranges ? (
             <section className="report-authoring-ranges">
+              {!preview ? <div className="report-authoring-range-tools" data-report-control><span>주간채권전략 금리 박스</span><button type="button" onClick={() => { updateDraft({ showRanges: false }); setStatus("주간채권전략 금리 박스를 삭제했습니다."); }}>삭제</button></div> : null}
               {preview ? <p>{draft.rangeTitle}</p> : <input className="report-authoring-range-title" value={draft.rangeTitle ?? ""} onChange={(event) => updateDraft({ rangeTitle: event.target.value })} aria-label="범위 제목" />}
               <div>
                 {draft.ranges.map((range, index) => (
@@ -692,6 +688,11 @@ export default function ReportAuthoringWorkspace() {
               </section>
             ))}
           </div>
+          <footer className="report-authoring-footer-logo">
+            {/* 로고 원본 비율을 유지하기 위해 next/image 최적화 대신 정적 이미지를 그대로 사용한다. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/daishin-asset-management.png" alt="Daishin Asset Management" />
+          </footer>
         </article>
       </div>
 
