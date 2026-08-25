@@ -13,7 +13,7 @@ export default function ReportsPage() {
         <div>
           <p className="report-authoring-eyebrow">ECON COCKPIT REPORTS</p>
           <h1>보고서작성</h1>
-          <p>GitHub 보고서 양식을 적용해 텍스트·이미지·표를 한 화면에서 편집</p>
+          <p>GitHub 보고서 양식을 적용해 텍스트·차트·이미지·표를 한 화면에서 편집</p>
         </div>
         <div className="report-authoring-header-links">
           <Link href="/outlook/report?sectors=growth,trade">경제전망 데이터 초안</Link>

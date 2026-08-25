@@ -3,21 +3,33 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type ReportKind = "outlook" | "weekly" | "issue";
-type TextBlock = { id: string; type: "text"; title: string; body: string };
-type ImageBlock = { id: string; type: "image"; title: string; src: string; caption: string; source: string };
-type TableBlock = { id: string; type: "table"; title: string; columns: string[]; rows: string[][] };
-type ReportBlock = TextBlock | ImageBlock | TableBlock;
+type TextStyle = "plain" | "bullet" | "bar";
+type InsightFields = { insightLabel: string; insightTitle: string; insightBody: string };
+type TextBlock = { id: string; type: "text"; title: string; body: string; style: TextStyle };
+type ImageBlock = { id: string; type: "image"; title: string; src: string; caption: string; source: string } & InsightFields;
+type TableBlock = { id: string; type: "table"; title: string; columns: string[]; rows: string[][] } & InsightFields;
+type ChartItem = { id: string; title: string; src: string; caption: string; source: string } & InsightFields;
+type ChartBlock = { id: string; type: "chart"; title: string; columns: 1 | 2 | 3; charts: ChartItem[] };
+type ReportBlock = TextBlock | ImageBlock | TableBlock | ChartBlock;
 type ReportDraft = {
   kicker: string;
   title: string;
   subtitle: string;
-  ranges?: { label: string; value: string; unit: "%" | "bp" }[];
+  date: string;
+  desk: string;
+  workspaceLabel: string;
+  templateLabel: string;
+  reportTypeLabel: string;
+  templateName: string;
+  rangeTitle?: string;
+  ranges?: { label: string; value: string; unit: string }[];
   blocks: ReportBlock[];
 };
 type DraftMap = Record<ReportKind, ReportDraft>;
 type DeletedBlock = { report: ReportKind; block: ReportBlock; index: number };
 
-const STORAGE_KEY = "econ-cockpit:report-authoring-drafts:v1";
+const STORAGE_KEY = "econ-cockpit:report-authoring-drafts:v2";
+const LEGACY_STORAGE_KEY = "econ-cockpit:report-authoring-drafts:v1";
 const REPORT_LABELS: Record<ReportKind, string> = {
   outlook: "경제전망",
   weekly: "주간채권전략",
@@ -29,20 +41,55 @@ function blockId(type: ReportBlock["type"]) {
 }
 
 function textBlock(title: string, body: string): TextBlock {
-  return { id: blockId("text"), type: "text", title, body };
+  return { id: blockId("text"), type: "text", title, body, style: "plain" };
 }
 
 function imageBlock(title = "근거 이미지"): ImageBlock {
-  return { id: blockId("image"), type: "image", title, src: "", caption: "이미지 설명 입력", source: "자료 출처 입력" };
+  return {
+    id: blockId("image"), type: "image", title, src: "", caption: "이미지 설명 입력", source: "자료 출처 입력",
+    insightLabel: "INSIGHT", insightTitle: "핵심 해석 입력", insightBody: "차트가 말하는 방향과 시장 함의를 입력",
+  };
 }
 
 function tableBlock(title: string, columns: string[], rows: string[][]): TableBlock {
-  return { id: blockId("table"), type: "table", title, columns, rows };
+  return {
+    id: blockId("table"), type: "table", title, columns, rows,
+    insightLabel: "INSIGHT", insightTitle: "표의 핵심 판단 입력", insightBody: "수치 비교에서 확인되는 결론과 전략 함의를 입력",
+  };
+}
+
+function chartItem(index: number): ChartItem {
+  return {
+    id: `${blockId("chart")}-${index}`,
+    title: `차트 ${index + 1} 제목`,
+    src: "",
+    caption: "차트 설명 입력",
+    source: "자료 출처 입력",
+    insightLabel: "INSIGHT",
+    insightTitle: "핵심 해석 입력",
+    insightBody: "차트가 말하는 방향과 시장 함의를 입력",
+  };
+}
+
+function chartBlock(columns: 1 | 2 | 3 = 2): ChartBlock {
+  return { id: blockId("chart"), type: "chart", title: "근거 차트", columns, charts: Array.from({ length: columns }, (_, index) => chartItem(index)) };
+}
+
+function reportMeta() {
+  return {
+    date: localDateStamp(),
+    desk: "채권전략팀",
+    workspaceLabel: "LIVE REPORT WORKSPACE",
+    templateLabel: "TEMPLATE",
+    templateName: "GitHub bond-strategy-reports",
+  };
 }
 
 function createTemplates(): DraftMap {
   return {
     outlook: {
+      ...reportMeta(),
+      reportTypeLabel: "경제전망",
       kicker: "ECONOMIC OUTLOOK · LIVE REPORT",
       title: "한국 경제전망",
       subtitle: "공식 통계 기반 섹터 점검과 전망 판단",
@@ -57,9 +104,12 @@ function createTemplates(): DraftMap {
       ],
     },
     weekly: {
+      ...reportMeta(),
+      reportTypeLabel: "주간채권전략",
       kicker: "WEEKLY STRATEGY · PRINT EDITION",
       title: "주간채권전략",
       subtitle: "금리·커브·수급·이벤트를 연결한 주간 전략 판단",
+      rangeTitle: "WEEKLY RANGE",
       ranges: [
         { label: "국고 3년", value: "—", unit: "%" },
         { label: "국고 10년", value: "—", unit: "%" },
@@ -77,6 +127,8 @@ function createTemplates(): DraftMap {
       ],
     },
     issue: {
+      ...reportMeta(),
+      reportTypeLabel: "이슈리포트",
       kicker: "FIXED INCOME ISSUE NOTE",
       title: "이슈리포트",
       subtitle: "핵심 이슈의 근거·전개·시장 함의를 한 흐름으로 구성",
@@ -84,7 +136,7 @@ function createTemplates(): DraftMap {
         textBlock("한 문장 이슈 정의", "핵심 쟁점을 한 문장으로 입력"),
         textBlock("왜 지금 중요한가", "현재 시점의 중요성과 확인된 사실 입력"),
         textBlock("메커니즘·전달 경로", "이슈가 금리·커브·수급으로 전달되는 경로 입력"),
-        imageBlock("근거 차트·타임라인"),
+        chartBlock(2),
         tableBlock("시나리오와 시장 함의", ["구분", "전개 조건", "시장 영향", "전략 대응"], [
           ["Base", "작성 필요", "작성 필요", "작성 필요"],
           ["Upside", "작성 필요", "작성 필요", "작성 필요"],
@@ -117,15 +169,29 @@ function collectDocumentStyles() {
 
 function cleanExportClone(report: HTMLElement) {
   const clone = report.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll<HTMLElement>(".report-authoring-insight-editor").forEach((editor) => {
+    const inputs = editor.querySelectorAll<HTMLInputElement>("input");
+    const textarea = editor.querySelector<HTMLTextAreaElement>("textarea");
+    const insight = document.createElement("div");
+    insight.className = "report-authoring-insight";
+    const strong = document.createElement("strong");
+    strong.textContent = `${inputs[0]?.value ?? "INSIGHT"}${inputs[1]?.value ? ` · ${inputs[1].value}` : ""}`;
+    const paragraph = document.createElement("p");
+    paragraph.textContent = textarea?.value ?? "";
+    insight.append(strong, paragraph);
+    editor.replaceWith(insight);
+  });
   clone.querySelectorAll("[data-report-control]").forEach((node) => node.remove());
   clone.querySelectorAll("input").forEach((node) => {
     const span = document.createElement("span");
     span.textContent = (node as HTMLInputElement).value;
+    span.className = (node as HTMLInputElement).className;
     node.replaceWith(span);
   });
   clone.querySelectorAll("textarea").forEach((node) => {
     const paragraph = document.createElement("p");
     paragraph.textContent = (node as HTMLTextAreaElement).value;
+    paragraph.className = (node as HTMLTextAreaElement).className;
     node.replaceWith(paragraph);
   });
   return clone;
@@ -157,6 +223,58 @@ function parseDelimited(value: string) {
   return cells.map((row) => [...row, ...Array(Math.max(0, width - row.length)).fill("")]);
 }
 
+function normalizeBlock(block: ReportBlock): ReportBlock {
+  if (block.type === "text") {
+    return { ...block, style: (["plain", "bullet", "bar"] as TextStyle[]).includes(block.style) ? block.style : "plain" };
+  }
+  if (block.type === "image") {
+    return { ...imageBlock(block.title), ...block };
+  }
+  if (block.type === "table") {
+    return { ...tableBlock(block.title, block.columns, block.rows), ...block };
+  }
+  const columns = ([1, 2, 3] as const).includes(block.columns) ? block.columns : 2;
+  const charts = [...(block.charts ?? [])].slice(0, columns).map((item, index) => ({ ...chartItem(index), ...item }));
+  while (charts.length < columns) charts.push(chartItem(charts.length));
+  return { ...block, columns, charts };
+}
+
+function normalizeDrafts(value: Partial<DraftMap>, templates: DraftMap): DraftMap {
+  return (Object.keys(REPORT_LABELS) as ReportKind[]).reduce((result, kind) => {
+    const saved = value[kind];
+    const base = templates[kind];
+    result[kind] = {
+      ...base,
+      ...saved,
+      ranges: saved?.ranges?.map((range, index) => ({ ...base.ranges?.[index], ...range })) ?? base.ranges,
+      blocks: saved?.blocks?.map((block) => normalizeBlock(block)) ?? base.blocks,
+    };
+    return result;
+  }, {} as DraftMap);
+}
+
+function InsightEditor({ insight, preview, onChange }: {
+  insight: InsightFields;
+  preview: boolean;
+  onChange: (patch: Partial<InsightFields>) => void;
+}) {
+  if (preview) {
+    return (
+      <div className="report-authoring-insight">
+        <strong><span>{insight.insightLabel}</span>{insight.insightTitle ? ` · ${insight.insightTitle}` : ""}</strong>
+        <p>{insight.insightBody}</p>
+      </div>
+    );
+  }
+  return (
+    <div className="report-authoring-insight-editor">
+      <input value={insight.insightLabel} onChange={(event) => onChange({ insightLabel: event.target.value })} aria-label="인사이트 라벨" />
+      <input value={insight.insightTitle} onChange={(event) => onChange({ insightTitle: event.target.value })} aria-label="인사이트 제목" />
+      <textarea value={insight.insightBody} onChange={(event) => onChange({ insightBody: event.target.value })} aria-label="인사이트 설명" rows={3} />
+    </div>
+  );
+}
+
 function TextBlockEditor({ block, preview, onChange }: {
   block: TextBlock;
   preview: boolean;
@@ -167,11 +285,22 @@ function TextBlockEditor({ block, preview, onChange }: {
       {preview ? (
         <>
           <h2>{block.title}</h2>
-          <p className="report-authoring-body-copy">{block.body}</p>
+          {block.style === "bullet" ? (
+            <ul className="report-authoring-body-copy report-authoring-bullets">
+              {block.body.split(/\r?\n/).filter(Boolean).map((line, index) => <li key={index}>{line}</li>)}
+            </ul>
+          ) : <p className={`report-authoring-body-copy${block.style === "bar" ? " report-authoring-left-bar" : ""}`}>{block.body}</p>}
         </>
       ) : (
         <>
           <input className="report-authoring-title-input" value={block.title} onChange={(event) => onChange({ title: event.target.value })} aria-label="텍스트 박스 제목" />
+          <div className="report-authoring-text-style" data-report-control aria-label="문장 스타일">
+            {(["plain", "bullet", "bar"] as TextStyle[]).map((style) => (
+              <button type="button" key={style} aria-pressed={block.style === style} onClick={() => onChange({ style })}>
+                {style === "plain" ? "본문" : style === "bullet" ? "• 불릿" : "▌ 좌측 바"}
+              </button>
+            ))}
+          </div>
           <textarea className="report-authoring-textarea" value={block.body} onChange={(event) => onChange({ body: event.target.value })} aria-label="텍스트 박스 본문" rows={5} />
         </>
       )}
@@ -229,6 +358,7 @@ function ImageBlockEditor({ block, preview, onChange, onStatus }: {
           <input value={block.source} onChange={(event) => onChange({ source: event.target.value })} aria-label="이미지 출처" />
         </div>
       )}
+      <InsightEditor insight={block} preview={preview} onChange={onChange} />
     </div>
   );
 }
@@ -288,6 +418,76 @@ function TableBlockEditor({ block, preview, onChange, onStatus }: {
         </table>
       </div>
       {!preview ? <div className="report-authoring-table-actions" data-report-control><button type="button" onClick={addRow}>행 추가</button><button type="button" onClick={addColumn}>열 추가</button><button type="button" onClick={pasteTable}>CSV·표 붙여넣기</button></div> : null}
+      <InsightEditor insight={block} preview={preview} onChange={onChange} />
+    </div>
+  );
+}
+
+function ChartBlockEditor({ block, preview, onChange, onStatus }: {
+  block: ChartBlock;
+  preview: boolean;
+  onChange: (patch: Partial<ChartBlock>) => void;
+  onStatus: (message: string) => void;
+}) {
+  function setColumns(columns: 1 | 2 | 3) {
+    const charts = block.charts.slice(0, columns);
+    while (charts.length < columns) charts.push(chartItem(charts.length));
+    onChange({ columns, charts });
+  }
+
+  function updateChart(index: number, patch: Partial<ChartItem>) {
+    onChange({ charts: block.charts.map((chart, itemIndex) => itemIndex === index ? { ...chart, ...patch } : chart) });
+  }
+
+  function loadFile(index: number, file: File | undefined) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      onStatus("이미지 파일만 차트로 추가할 수 있습니다.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      updateChart(index, { src: String(reader.result), source: file.name });
+      onStatus(`차트 ${index + 1} 이미지를 넣었습니다.`);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  return (
+    <div className="report-authoring-block-body">
+      {preview ? <h2>{block.title}</h2> : (
+        <>
+          <input className="report-authoring-title-input" value={block.title} onChange={(event) => onChange({ title: event.target.value })} aria-label="차트 묶음 제목" />
+          <div className="report-authoring-chart-layout" data-report-control>
+            <span>한 줄 차트 수</span>
+            {([1, 2, 3] as const).map((columns) => <button type="button" key={columns} aria-pressed={block.columns === columns} onClick={() => setColumns(columns)}>{columns}개</button>)}
+          </div>
+        </>
+      )}
+      <div className={`report-authoring-chart-grid columns-${block.columns}`}>
+        {block.charts.map((chart, index) => (
+          <figure className="report-authoring-chart-card" key={chart.id}>
+            {preview ? <h3>{chart.title}</h3> : <input className="report-authoring-chart-title" value={chart.title} onChange={(event) => updateChart(index, { title: event.target.value })} aria-label={`${index + 1}번 차트 제목`} />}
+            {chart.src ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={chart.src} alt={chart.caption || chart.title} />
+            ) : <div className="report-authoring-chart-empty">차트 {index + 1} 이미지 선택</div>}
+            {!preview ? (
+              <>
+                <div className="report-authoring-chart-inputs" data-report-control>
+                  <label><span>로컬 차트</span><input type="file" accept="image/*" onChange={(event) => loadFile(index, event.target.files?.[0])} /></label>
+                  <label><span>외부 URL</span><input type="url" value={chart.src.startsWith("data:") ? "" : chart.src} placeholder="https://…" onChange={(event) => updateChart(index, { src: event.target.value })} /></label>
+                </div>
+                <div className="report-authoring-chart-meta">
+                  <input className="report-authoring-chart-meta-value" value={chart.caption} onChange={(event) => updateChart(index, { caption: event.target.value })} aria-label={`${index + 1}번 차트 설명`} />
+                  <input className="report-authoring-chart-meta-value" value={chart.source} onChange={(event) => updateChart(index, { source: event.target.value })} aria-label={`${index + 1}번 차트 출처`} />
+                </div>
+              </>
+            ) : <figcaption><span>{chart.caption}</span><small>{chart.source}</small></figcaption>}
+            <InsightEditor insight={chart} preview={preview} onChange={(patch) => updateChart(index, patch)} />
+          </figure>
+        ))}
+      </div>
     </div>
   );
 }
@@ -305,10 +505,10 @@ export default function ReportAuthoringWorkspace() {
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
-      const saved = window.localStorage.getItem(STORAGE_KEY);
+      const saved = window.localStorage.getItem(STORAGE_KEY) ?? window.localStorage.getItem(LEGACY_STORAGE_KEY);
       if (saved) {
         try {
-          setDrafts(JSON.parse(saved) as DraftMap);
+          setDrafts(normalizeDrafts(JSON.parse(saved) as Partial<DraftMap>, templates));
           setStatus("이 브라우저에 저장된 리포트별 작업본을 불러왔습니다.");
         } catch {
           setStatus("저장본을 읽지 못해 기본 양식을 적용했습니다.");
@@ -341,9 +541,11 @@ export default function ReportAuthoringWorkspace() {
       ? textBlock("새 분석 제목", "분석 내용 입력")
       : type === "image"
         ? imageBlock()
-        : tableBlock("새 표", ["구분", "값", "판단"], [["", "", ""]]);
+        : type === "table"
+          ? tableBlock("새 표", ["구분", "값", "판단"], [["", "", ""]])
+          : chartBlock(2);
     updateDraft({ blocks: [...draft.blocks, block] });
-    setStatus(`${type === "text" ? "텍스트" : type === "image" ? "이미지" : "표"} 박스를 추가했습니다.`);
+    setStatus(`${type === "text" ? "텍스트" : type === "image" ? "이미지" : type === "table" ? "표" : "차트 묶음"} 박스를 추가했습니다.`);
   }
 
   function moveBlock(index: number, direction: -1 | 1) {
@@ -433,32 +635,39 @@ export default function ReportAuthoringWorkspace() {
             <button type="button" onClick={() => addBlock("text")}><strong>텍스트</strong><span>제목·본문·전망 메모</span></button>
             <button type="button" onClick={() => addBlock("image")}><strong>이미지</strong><span>로컬 파일·외부 URL</span></button>
             <button type="button" onClick={() => addBlock("table")}><strong>표</strong><span>직접 편집·CSV 붙여넣기</span></button>
+            <button type="button" onClick={() => addBlock("chart")}><strong>차트 묶음</strong><span>한 줄에 1·2·3개 배치</span></button>
           </aside>
         ) : null}
 
         <article ref={reportRef} className="report-authoring-paper" aria-label={`${REPORT_LABELS[reportKind]} 편집 문서`}>
           <header className="report-authoring-cover">
             <div>
-              <p className="report-authoring-kicker">{draft.kicker}</p>
+              {preview ? <p className="report-authoring-kicker">{draft.kicker}</p> : <input className="report-authoring-kicker-input" value={draft.kicker} onChange={(event) => updateDraft({ kicker: event.target.value })} aria-label="보고서 영문 머리말" />}
               {preview ? <h1>{draft.title}</h1> : <input className="report-authoring-cover-title" value={draft.title} onChange={(event) => updateDraft({ title: event.target.value })} aria-label="보고서 제목" />}
               {preview ? <p className="report-authoring-subtitle">{draft.subtitle}</p> : <textarea className="report-authoring-cover-subtitle" value={draft.subtitle} onChange={(event) => updateDraft({ subtitle: event.target.value })} aria-label="보고서 부제" rows={2} />}
-              <p className="report-authoring-cover-meta">{localDateStamp()} · 채권전략팀 · LIVE REPORT WORKSPACE</p>
+              {preview ? <p className="report-authoring-cover-meta">{draft.date} · {draft.desk} · {draft.workspaceLabel}</p> : (
+                <div className="report-authoring-cover-meta-inputs">
+                  <input value={draft.date} onChange={(event) => updateDraft({ date: event.target.value })} aria-label="보고서 날짜" />
+                  <input value={draft.desk} onChange={(event) => updateDraft({ desk: event.target.value })} aria-label="작성 부서" />
+                  <input value={draft.workspaceLabel} onChange={(event) => updateDraft({ workspaceLabel: event.target.value })} aria-label="작업공간 표기" />
+                </div>
+              )}
             </div>
             <aside>
-              <span>TEMPLATE</span>
-              <strong>{REPORT_LABELS[reportKind]}</strong>
-              <small>GitHub bond-strategy-reports</small>
+              {preview ? <span>{draft.templateLabel}</span> : <input value={draft.templateLabel} onChange={(event) => updateDraft({ templateLabel: event.target.value })} aria-label="양식 라벨" />}
+              {preview ? <strong>{draft.reportTypeLabel}</strong> : <input className="report-authoring-template-kind" value={draft.reportTypeLabel} onChange={(event) => updateDraft({ reportTypeLabel: event.target.value })} aria-label="보고서 유형" />}
+              {preview ? <small>{draft.templateName}</small> : <input value={draft.templateName} onChange={(event) => updateDraft({ templateName: event.target.value })} aria-label="양식 출처" />}
             </aside>
           </header>
 
           {draft.ranges ? (
             <section className="report-authoring-ranges">
-              <p>WEEKLY RANGE</p>
+              {preview ? <p>{draft.rangeTitle}</p> : <input className="report-authoring-range-title" value={draft.rangeTitle ?? ""} onChange={(event) => updateDraft({ rangeTitle: event.target.value })} aria-label="범위 제목" />}
               <div>
                 {draft.ranges.map((range, index) => (
-                  <label key={range.label}>
-                    <span>{range.label}</span>
-                    {preview ? <strong>{range.value} {range.unit}</strong> : <span className="report-authoring-range-input"><input value={range.value} onChange={(event) => updateDraft({ ranges: draft.ranges!.map((item, itemIndex) => itemIndex === index ? { ...item, value: event.target.value } : item) })} aria-label={`${range.label} 범위`} /><b>{range.unit}</b></span>}
+                  <label key={index}>
+                    {preview ? <span>{range.label}</span> : <input className="report-authoring-range-label-input" value={range.label} onChange={(event) => updateDraft({ ranges: draft.ranges!.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item) })} aria-label={`${index + 1}번 범위 이름`} />}
+                    {preview ? <strong>{range.value} {range.unit}</strong> : <span className="report-authoring-range-input"><input value={range.value} onChange={(event) => updateDraft({ ranges: draft.ranges!.map((item, itemIndex) => itemIndex === index ? { ...item, value: event.target.value } : item) })} aria-label={`${range.label} 범위`} /><input className="report-authoring-range-unit-input" value={range.unit} onChange={(event) => updateDraft({ ranges: draft.ranges!.map((item, itemIndex) => itemIndex === index ? { ...item, unit: event.target.value } : item) })} aria-label={`${range.label} 단위`} /></span>}
                   </label>
                 ))}
               </div>
@@ -470,7 +679,7 @@ export default function ReportAuthoringWorkspace() {
               <section className={`report-authoring-block report-authoring-block-${block.type}`} key={block.id}>
                 {!preview ? (
                   <div className="report-authoring-block-tools" data-report-control>
-                    <span>{block.type === "text" ? "텍스트" : block.type === "image" ? "이미지" : "표"}</span>
+                    <span>{block.type === "text" ? "텍스트" : block.type === "image" ? "이미지" : block.type === "table" ? "표" : "차트"}</span>
                     <button type="button" onClick={() => moveBlock(index, -1)} aria-label="위로 이동">↑</button>
                     <button type="button" onClick={() => moveBlock(index, 1)} aria-label="아래로 이동">↓</button>
                     <button type="button" onClick={() => removeBlock(index)}>삭제</button>
@@ -479,6 +688,7 @@ export default function ReportAuthoringWorkspace() {
                 {block.type === "text" ? <TextBlockEditor block={block} preview={preview} onChange={(patch) => updateBlock(block.id, patch)} /> : null}
                 {block.type === "image" ? <ImageBlockEditor block={block} preview={preview} onChange={(patch) => updateBlock(block.id, patch)} onStatus={setStatus} /> : null}
                 {block.type === "table" ? <TableBlockEditor block={block} preview={preview} onChange={(patch) => updateBlock(block.id, patch)} onStatus={setStatus} /> : null}
+                {block.type === "chart" ? <ChartBlockEditor block={block} preview={preview} onChange={(patch) => updateBlock(block.id, patch)} onStatus={setStatus} /> : null}
               </section>
             ))}
           </div>
