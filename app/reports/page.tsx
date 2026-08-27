@@ -16,6 +16,7 @@ export default function ReportsPage() {
           <p>GitHub 보고서 양식을 적용해 텍스트·차트·이미지·표를 한 화면에서 편집</p>
         </div>
         <div className="report-authoring-header-links">
+          <Link href="/reports/team">본부 공용 작성 페이지</Link>
           <Link href="/outlook/report?sectors=growth,trade">경제전망 데이터 초안</Link>
           <Link href="/">← 통합조회로</Link>
         </div>

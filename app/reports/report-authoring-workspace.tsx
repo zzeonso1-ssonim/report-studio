@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type ReportKind = "outlook" | "weekly" | "issue";
 type TextStyle = "plain" | "bullet" | "bar";
@@ -31,6 +31,7 @@ type DeletedBlock = { report: ReportKind; block: ReportBlock; index: number };
 
 const STORAGE_KEY = "econ-cockpit:report-authoring-drafts:v2";
 const LEGACY_STORAGE_KEY = "econ-cockpit:report-authoring-drafts:v1";
+const IMPORT_SCRIPT_ID = "econ-cockpit-report-draft";
 const REPORT_LABELS: Record<ReportKind, string> = {
   outlook: "경제전망",
   weekly: "주간채권전략",
@@ -199,10 +200,11 @@ function cleanExportClone(report: HTMLElement) {
   return clone;
 }
 
-function standaloneDocument(report: HTMLElement, title: string) {
+function standaloneDocument(report: HTMLElement, title: string, drafts: DraftMap) {
   const clone = cleanExportClone(report);
   const safeTitle = title.replace(/[<>&"]/g, "");
-  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title><style>${collectDocumentStyles()}</style></head><body class="report-authoring-export">${clone.outerHTML}</body></html>`;
+  const editableDraft = JSON.stringify({ version: 1, drafts }).replace(/</g, "\\u003c");
+  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title><style>${collectDocumentStyles()}</style></head><body class="report-authoring-export">${clone.outerHTML}<script type="application/json" id="${IMPORT_SCRIPT_ID}">${editableDraft}</script></body></html>`;
 }
 
 function downloadBlob(contents: BlobPart, type: string, filename: string) {
@@ -429,6 +431,7 @@ function TableBlockEditor({ block, preview, onChange, onStatus }: {
 
   function addRow() {
     onChange({ rows: [...block.rows, Array(block.columns.length).fill("")] });
+    onStatus("표에 행을 하나 추가했습니다.");
   }
 
   function addColumn() {
@@ -436,6 +439,28 @@ function TableBlockEditor({ block, preview, onChange, onStatus }: {
       columns: [...block.columns, "새 열"],
       rows: block.rows.map((row) => [...row, ""]),
     });
+    onStatus("표에 열을 하나 추가했습니다.");
+  }
+
+  function removeRow() {
+    if (block.rows.length <= 1) {
+      onStatus("표에는 행이 최소 하나 필요합니다.");
+      return;
+    }
+    onChange({ rows: block.rows.slice(0, -1) });
+    onStatus("표의 마지막 행을 삭제했습니다.");
+  }
+
+  function removeColumn() {
+    if (block.columns.length <= 1) {
+      onStatus("표에는 열이 최소 하나 필요합니다.");
+      return;
+    }
+    onChange({
+      columns: block.columns.slice(0, -1),
+      rows: block.rows.map((row) => row.slice(0, -1)),
+    });
+    onStatus("표의 마지막 열을 삭제했습니다.");
   }
 
   function pasteTable() {
@@ -463,7 +488,15 @@ function TableBlockEditor({ block, preview, onChange, onStatus }: {
           </tbody>
         </table>
       </div>
-      {!preview ? <div className="report-authoring-table-actions" data-report-control><button type="button" onClick={addRow}>행 추가</button><button type="button" onClick={addColumn}>열 추가</button><button type="button" onClick={pasteTable}>CSV·표 붙여넣기</button></div> : null}
+      {!preview ? (
+        <div className="report-authoring-table-actions" data-report-control>
+          <button type="button" onClick={addRow}>행 추가</button>
+          <button type="button" onClick={removeRow} disabled={block.rows.length <= 1}>마지막 행 삭제</button>
+          <button type="button" onClick={addColumn}>열 추가</button>
+          <button type="button" onClick={removeColumn} disabled={block.columns.length <= 1}>마지막 열 삭제</button>
+          <button type="button" onClick={pasteTable}>CSV·표 붙여넣기</button>
+        </div>
+      ) : null}
       <InsightEditor insight={block} preview={preview} onChange={onChange} />
     </div>
   );
@@ -538,24 +571,31 @@ function ChartBlockEditor({ block, preview, onChange, onStatus }: {
   );
 }
 
-export default function ReportAuthoringWorkspace() {
+export default function ReportAuthoringWorkspace({
+  storageKey = STORAGE_KEY,
+  legacyStorageKey = LEGACY_STORAGE_KEY,
+}: {
+  storageKey?: string;
+  legacyStorageKey?: string | null;
+} = {}) {
   const templates = useMemo(() => cloneTemplates(), []);
   const reportKind: ReportKind = "weekly";
   const [drafts, setDrafts] = useState<DraftMap>(templates);
   const [hydrated, setHydrated] = useState(false);
   const [preview, setPreview] = useState(false);
-  const [status, setStatus] = useState("GitHub bond-strategy-reports 양식을 자동 적용했습니다.");
+  const [compactPrint, setCompactPrint] = useState(true);
+  const [status, setStatus] = useState("");
   const [deleted, setDeleted] = useState<DeletedBlock | null>(null);
   const reportRef = useRef<HTMLElement>(null);
+  const htmlImportRef = useRef<HTMLInputElement>(null);
   const draft = drafts[reportKind];
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
-      const saved = window.localStorage.getItem(STORAGE_KEY) ?? window.localStorage.getItem(LEGACY_STORAGE_KEY);
+      const saved = window.localStorage.getItem(storageKey) ?? (legacyStorageKey ? window.localStorage.getItem(legacyStorageKey) : null);
       if (saved) {
         try {
           setDrafts(normalizeDrafts(JSON.parse(saved) as Partial<DraftMap>, templates));
-          setStatus("이 브라우저에 저장된 리포트별 작업본을 불러왔습니다.");
         } catch {
           setStatus("저장본을 읽지 못해 기본 양식을 적용했습니다.");
         }
@@ -563,16 +603,16 @@ export default function ReportAuthoringWorkspace() {
       setHydrated(true);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [templates]);
+  }, [legacyStorageKey, storageKey, templates]);
 
   useEffect(() => {
     if (!hydrated) return;
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts));
+      window.localStorage.setItem(storageKey, JSON.stringify(drafts));
     } catch {
       window.setTimeout(() => setStatus("이미지 용량이 커 자동저장 한도를 넘었습니다. HTML 또는 Word로 먼저 저장하세요."), 0);
     }
-  }, [drafts, hydrated]);
+  }, [drafts, hydrated, storageKey]);
 
   function updateDraft(patch: Partial<ReportDraft>) {
     setDrafts((current) => ({ ...current, [reportKind]: { ...current[reportKind], ...patch } }));
@@ -630,37 +670,133 @@ export default function ReportAuthoringWorkspace() {
 
   function saveHtml() {
     if (!reportRef.current) return;
-    downloadBlob(standaloneDocument(reportRef.current, draft.title), "text/html;charset=utf-8", `report-${localDateStamp()}.html`);
-    setStatus("현재 작업본을 자체 포함 HTML로 저장했습니다.");
+    downloadBlob(standaloneDocument(reportRef.current, draft.title, drafts), "text/html;charset=utf-8", `report-${localDateStamp()}.html`);
+    setStatus("편집 데이터가 포함된 HTML 작업본을 저장했습니다.");
   }
 
   function saveWord() {
     if (!reportRef.current) return;
-    const html = standaloneDocument(reportRef.current, draft.title);
+    const html = standaloneDocument(reportRef.current, draft.title, drafts);
     downloadBlob(html, "application/msword;charset=utf-8", `report-${localDateStamp()}.doc`);
     setStatus("현재 작업본을 Word 호환 문서로 저장했습니다.");
+  }
+
+  async function importHtml(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (file.size > 25 * 1024 * 1024) {
+      setStatus("HTML 작업본은 25MB 이하 파일만 가져올 수 있습니다.");
+      return;
+    }
+    try {
+      const documentNode = new DOMParser().parseFromString(await file.text(), "text/html");
+      const payloadNode = documentNode.getElementById(IMPORT_SCRIPT_ID);
+      if (!payloadNode?.textContent) throw new Error("editable draft not found");
+      const payload = JSON.parse(payloadNode.textContent) as { version?: number; drafts?: Partial<DraftMap> };
+      if (payload.version !== 1 || !payload.drafts) throw new Error("unsupported draft");
+      setDrafts(normalizeDrafts(payload.drafts, templates));
+      setPreview(false);
+      setDeleted(null);
+      setStatus(`${file.name} 작업본을 불러왔습니다. 바로 이어서 편집할 수 있습니다.`);
+    } catch {
+      setStatus("편집 데이터가 포함된 Econ Cockpit HTML 작업본이 아닙니다.");
+    }
   }
 
   function printPdf() {
     setPreview(true);
     setStatus("인쇄 창에서 대상을 ‘PDF로 저장’으로 선택하세요.");
-    window.setTimeout(() => window.print(), 0);
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+      const report = reportRef.current;
+      if (!report) return;
+      document.querySelector(".report-authoring-paginated-print")?.remove();
+      const host = document.createElement("div");
+      host.className = "report-authoring-paginated-print";
+      document.body.append(host);
+
+      const sourceBlocks = report.querySelector<HTMLElement>(":scope > .report-authoring-blocks");
+      let pageArticle: HTMLElement;
+      let pageBlocks: HTMLElement;
+      let pageContent: HTMLElement;
+      let pageHasLead = false;
+
+      const createPage = (includeLead: boolean) => {
+        pageHasLead = includeLead;
+        const page = document.createElement("section");
+        page.className = "report-authoring-print-page";
+        pageContent = document.createElement("div");
+        pageContent.className = "report-authoring-print-page-content";
+        pageArticle = report.cloneNode(false) as HTMLElement;
+        pageArticle.removeAttribute("aria-label");
+        if (includeLead) {
+          report.querySelectorAll<HTMLElement>(":scope > .report-authoring-cover, :scope > .report-authoring-ranges")
+            .forEach((element) => pageArticle.append(element.cloneNode(true)));
+        }
+        pageBlocks = (sourceBlocks?.cloneNode(false) as HTMLElement | undefined) ?? document.createElement("div");
+        pageBlocks.classList.add("report-authoring-blocks");
+        pageArticle.append(pageBlocks);
+        pageContent.append(pageArticle);
+        page.append(pageContent);
+        const footer = document.createElement("footer");
+        footer.className = "report-authoring-print-page-footer";
+        const footerLogo = document.createElement("img");
+        footerLogo.src = "/daishin-asset-management.png";
+        footerLogo.alt = "";
+        footer.append(footerLogo);
+        page.append(footer);
+        host.append(page);
+      };
+
+      createPage(true);
+      sourceBlocks?.querySelectorAll<HTMLElement>(":scope > .report-authoring-block").forEach((block) => {
+        const clone = block.cloneNode(true) as HTMLElement;
+        pageBlocks.append(clone);
+        if (pageArticle.scrollHeight > pageContent.clientHeight && (pageBlocks.children.length > 1 || pageHasLead)) {
+          clone.remove();
+          createPage(false);
+          pageBlocks.append(clone);
+        }
+      });
+
+      const cleanup = () => {
+        document.body.classList.remove("report-authoring-printing");
+        host.remove();
+      };
+      window.addEventListener("afterprint", cleanup, { once: true });
+      document.body.classList.add("report-authoring-printing");
+      window.print();
+    }));
   }
 
   return (
     <>
       <div className="report-authoring-toolbar" data-report-control>
-        <div>
-          <strong>보고서 기본 양식</strong>
-          <span>IBM × Coinbase 인쇄형 규격 · 단일 양식 자동저장</span>
-          <p aria-live="polite">{status}</p>
+        <div className="report-authoring-usage-guide">
+          <strong>사용 방법</strong>
+          <span>① 내용을 직접 편집하고 필요한 텍스트·이미지·표·차트 박스를 추가합니다.</span>
+          <span>② 작업을 넘길 때는 HTML 저장, 이어받을 때는 HTML 가져오기를 사용합니다.</span>
+          <span>③ 미리보기로 확인한 뒤 PDF 저장을 누르면 페이지별 로고가 포함됩니다.</span>
+          {status ? <p aria-live="polite">{status}</p> : null}
         </div>
         <div className="report-authoring-toolbar-actions">
           <button type="button" onClick={() => setPreview((value) => !value)}>{preview ? "편집으로" : "미리보기"}</button>
+          <button
+            type="button"
+            aria-pressed={compactPrint}
+            onClick={() => {
+              setCompactPrint((value) => !value);
+              setStatus(compactPrint ? "PDF 빈 공간 최소화를 껐습니다." : "PDF 빈 공간 최소화를 적용했습니다.");
+            }}
+          >
+            빈 공간 최소화 {compactPrint ? "ON" : "OFF"}
+          </button>
           <button type="button" onClick={resetTemplate}>양식 초기화</button>
+          <button type="button" onClick={() => htmlImportRef.current?.click()}>HTML 가져오기</button>
           <button type="button" onClick={saveHtml}>HTML 저장</button>
           <button type="button" onClick={saveWord}>Word 저장</button>
           <button type="button" className="report-authoring-primary" onClick={printPdf}>PDF 저장</button>
+          <input ref={htmlImportRef} type="file" accept=".html,.htm,text/html" onChange={importHtml} hidden />
         </div>
       </div>
 
@@ -677,7 +813,7 @@ export default function ReportAuthoringWorkspace() {
           </aside>
         ) : null}
 
-        <article ref={reportRef} className="report-authoring-paper" aria-label="보고서 편집 문서">
+        <article ref={reportRef} className={`report-authoring-paper${compactPrint ? " report-authoring-print-compact" : ""}`} aria-label="보고서 편집 문서">
           <header className="report-authoring-cover">
             <div>
               {preview ? <p className="report-authoring-kicker">{draft.kicker}</p> : <input className="report-authoring-kicker-input" value={draft.kicker} onChange={(event) => updateDraft({ kicker: event.target.value })} aria-label="보고서 영문 머리말" />}
@@ -731,7 +867,7 @@ export default function ReportAuthoringWorkspace() {
               </section>
             ))}
           </div>
-          <footer className="report-authoring-footer-logo">
+          <footer className="report-authoring-footer-logo report-authoring-footer-logo-screen">
             {/* 로고 원본 비율을 유지하기 위해 next/image 최적화 대신 정적 이미지를 그대로 사용한다. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/daishin-asset-management.png" alt="Daishin Asset Management" />
