@@ -200,11 +200,61 @@ function cleanExportClone(report: HTMLElement) {
   return clone;
 }
 
-function standaloneDocument(report: HTMLElement, title: string, drafts: DraftMap) {
+function standaloneDocument(report: HTMLElement, title: string, drafts: DraftMap, reportKind: ReportKind) {
   const clone = cleanExportClone(report);
   const safeTitle = title.replace(/[<>&"]/g, "");
-  const editableDraft = JSON.stringify({ version: 1, drafts }).replace(/</g, "\\u003c");
+  const editableDraft = JSON.stringify({ version: 1, reportKind, drafts }).replace(/</g, "\\u003c");
   return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title><style>${collectDocumentStyles()}</style></head><body class="report-authoring-export">${clone.outerHTML}<script type="application/json" id="${IMPORT_SCRIPT_ID}">${editableDraft}</script></body></html>`;
+}
+
+function nodeText(root: ParentNode, selector: string) {
+  return root.querySelector(selector)?.textContent?.trim() ?? "";
+}
+
+function parseLegacyExport(documentNode: Document, templates: DraftMap) {
+  const report = documentNode.querySelector<HTMLElement>(".report-authoring-paper");
+  if (!report) return null;
+  const kicker = nodeText(report, ".report-authoring-kicker-input, .report-authoring-kicker");
+  const reportType = nodeText(report, ".report-authoring-template-kind");
+  const marker = `${kicker} ${reportType}`.toLowerCase();
+  const kind: ReportKind = marker.includes("weekly") || marker.includes("주간") ? "weekly" : marker.includes("issue") || marker.includes("이슈") ? "issue" : "outlook";
+  const base = structuredClone(templates[kind]);
+  const meta = [...report.querySelectorAll<HTMLElement>(".report-authoring-cover-meta-inputs > *")].map((node) => node.textContent?.trim() ?? "");
+  const aside = [...report.querySelectorAll<HTMLElement>(".report-authoring-cover aside > *")].map((node) => node.textContent?.trim() ?? "");
+  const blocks = [...report.querySelectorAll<HTMLElement>(".report-authoring-block")].flatMap<ReportBlock>((block): ReportBlock[] => {
+    const title = nodeText(block, ".report-authoring-title-input");
+    if (block.classList.contains("report-authoring-block-text")) {
+      const bullets = [...block.querySelectorAll<HTMLElement>(".report-authoring-bullet-editor li")].map((node) => node.textContent?.trim() ?? "").filter(Boolean);
+      const body = bullets.length ? bullets.join("\n") : nodeText(block, ".report-authoring-textarea");
+      const style: TextStyle = bullets.length ? "bullet" : block.querySelector(".report-authoring-text-editor-bar") ? "bar" : "plain";
+      return [{ id: blockId("text"), type: "text", title, body, style } satisfies TextBlock];
+    }
+    if (block.classList.contains("report-authoring-block-image")) {
+      const metaNodes = [...block.querySelectorAll<HTMLElement>(".report-authoring-image-meta > *")];
+      const insight = nodeText(block, ".report-authoring-insight strong").split("·").map((value) => value.trim());
+      return [{ ...imageBlock(title), title, src: block.querySelector<HTMLImageElement>("img")?.getAttribute("src") ?? "", caption: metaNodes[0]?.textContent?.trim() ?? "", source: metaNodes[1]?.textContent?.trim() ?? "", insightLabel: insight[0] || "INSIGHT", insightTitle: insight.slice(1).join(" · "), insightBody: nodeText(block, ".report-authoring-insight p") } satisfies ImageBlock];
+    }
+    if (block.classList.contains("report-authoring-block-table")) {
+      const columns = [...block.querySelectorAll<HTMLElement>("table thead th")].map((node) => node.textContent?.trim() ?? "");
+      const rows = [...block.querySelectorAll<HTMLTableRowElement>("table tbody tr")].map((row) => [...row.cells].map((cell) => cell.textContent?.trim() ?? ""));
+      const insight = nodeText(block, ".report-authoring-insight strong").split("·").map((value) => value.trim());
+      return [{ ...tableBlock(title, columns, rows), insightLabel: insight[0] || "INSIGHT", insightTitle: insight.slice(1).join(" · "), insightBody: nodeText(block, ".report-authoring-insight p") } satisfies TableBlock];
+    }
+    if (block.classList.contains("report-authoring-block-chart")) {
+      const grid = block.querySelector<HTMLElement>(".report-authoring-chart-grid");
+      const cards = [...(grid?.querySelectorAll<HTMLElement>(".report-authoring-chart-card") ?? [])];
+      const columns = Math.min(3, Math.max(1, Number(grid?.className.match(/columns-(\d)/)?.[1]) || cards.length || 1)) as 1 | 2 | 3;
+      const charts = cards.map((card, index) => {
+        const metaNodes = [...card.querySelectorAll<HTMLElement>(".report-authoring-image-meta > *")];
+        const insight = nodeText(card, ".report-authoring-insight strong").split("·").map((value) => value.trim());
+        return { ...chartItem(index), title: nodeText(card, ".report-authoring-chart-title"), src: card.querySelector<HTMLImageElement>("img")?.getAttribute("src") ?? "", caption: metaNodes[0]?.textContent?.trim() ?? "", source: metaNodes[1]?.textContent?.trim() ?? "", insightLabel: insight[0] || "INSIGHT", insightTitle: insight.slice(1).join(" · "), insightBody: nodeText(card, ".report-authoring-insight p") };
+      });
+      return [{ id: blockId("chart"), type: "chart", title, columns, charts } satisfies ChartBlock];
+    }
+    return [];
+  });
+  const ranges = [...report.querySelectorAll<HTMLElement>(".report-authoring-ranges label")].map((range) => ({ label: nodeText(range, ".report-authoring-range-label-input, span:first-child"), value: nodeText(range, ".report-authoring-range-input > span:first-child, strong"), unit: nodeText(range, ".report-authoring-range-unit-input, .report-authoring-range-input > span:last-child") }));
+  return { kind, draft: { ...base, kicker: kicker || base.kicker, title: nodeText(report, ".report-authoring-cover-title, .report-authoring-cover h1") || base.title, subtitle: nodeText(report, ".report-authoring-cover-subtitle, .report-authoring-subtitle") || base.subtitle, date: meta[0] || base.date, desk: meta[1] || base.desk, workspaceLabel: meta[2] ?? base.workspaceLabel, templateLabel: aside[0] ?? base.templateLabel, reportTypeLabel: reportType || base.reportTypeLabel, templateName: aside[2] ?? base.templateName, rangeTitle: nodeText(report, ".report-authoring-range-title, .report-authoring-ranges > p") || base.rangeTitle, ranges: ranges.length ? ranges : base.ranges, showRanges: ranges.length > 0, blocks: blocks.length ? blocks : base.blocks } satisfies ReportDraft };
 }
 
 function downloadBlob(contents: BlobPart, type: string, filename: string) {
@@ -579,7 +629,7 @@ export default function ReportAuthoringWorkspace({
   legacyStorageKey?: string | null;
 } = {}) {
   const templates = useMemo(() => cloneTemplates(), []);
-  const reportKind: ReportKind = "weekly";
+  const [reportKind, setReportKind] = useState<ReportKind>("weekly");
   const [drafts, setDrafts] = useState<DraftMap>(templates);
   const [hydrated, setHydrated] = useState(false);
   const [preview, setPreview] = useState(false);
@@ -670,13 +720,13 @@ export default function ReportAuthoringWorkspace({
 
   function saveHtml() {
     if (!reportRef.current) return;
-    downloadBlob(standaloneDocument(reportRef.current, draft.title, drafts), "text/html;charset=utf-8", `report-${localDateStamp()}.html`);
+    downloadBlob(standaloneDocument(reportRef.current, draft.title, drafts, reportKind), "text/html;charset=utf-8", `report-${localDateStamp()}.html`);
     setStatus("편집 데이터가 포함된 HTML 작업본을 저장했습니다.");
   }
 
   function saveWord() {
     if (!reportRef.current) return;
-    const html = standaloneDocument(reportRef.current, draft.title, drafts);
+    const html = standaloneDocument(reportRef.current, draft.title, drafts, reportKind);
     downloadBlob(html, "application/msword;charset=utf-8", `report-${localDateStamp()}.doc`);
     setStatus("현재 작업본을 Word 호환 문서로 저장했습니다.");
   }
@@ -692,15 +742,22 @@ export default function ReportAuthoringWorkspace({
     try {
       const documentNode = new DOMParser().parseFromString(await file.text(), "text/html");
       const payloadNode = documentNode.getElementById(IMPORT_SCRIPT_ID);
-      if (!payloadNode?.textContent) throw new Error("editable draft not found");
-      const payload = JSON.parse(payloadNode.textContent) as { version?: number; drafts?: Partial<DraftMap> };
-      if (payload.version !== 1 || !payload.drafts) throw new Error("unsupported draft");
-      setDrafts(normalizeDrafts(payload.drafts, templates));
+      if (payloadNode?.textContent) {
+        const payload = JSON.parse(payloadNode.textContent) as { version?: number; reportKind?: ReportKind; drafts?: Partial<DraftMap> };
+        if (payload.version !== 1 || !payload.drafts) throw new Error("unsupported draft");
+        setDrafts(normalizeDrafts(payload.drafts, templates));
+        if (payload.reportKind && payload.reportKind in REPORT_LABELS) setReportKind(payload.reportKind);
+      } else {
+        const legacy = parseLegacyExport(documentNode, templates);
+        if (!legacy) throw new Error("editable draft not found");
+        setDrafts((current) => ({ ...current, [legacy.kind]: legacy.draft }));
+        setReportKind(legacy.kind);
+      }
       setPreview(false);
       setDeleted(null);
       setStatus(`${file.name} 작업본을 불러왔습니다. 바로 이어서 편집할 수 있습니다.`);
     } catch {
-      setStatus("편집 데이터가 포함된 Econ Cockpit HTML 작업본이 아닙니다.");
+      setStatus("지원하는 보고서 HTML 작업본이 아니거나 파일이 손상되었습니다.");
     }
   }
 
@@ -771,6 +828,11 @@ export default function ReportAuthoringWorkspace({
 
   return (
     <>
+      <div className="report-authoring-tabs" data-report-control>
+        {(Object.keys(REPORT_LABELS) as ReportKind[]).map((kind) => (
+          <button key={kind} type="button" aria-pressed={reportKind === kind} onClick={() => setReportKind(kind)}>{REPORT_LABELS[kind]}</button>
+        ))}
+      </div>
       <div className="report-authoring-toolbar" data-report-control>
         <div className="report-authoring-usage-guide">
           <strong>사용 방법</strong>
