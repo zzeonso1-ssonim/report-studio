@@ -763,62 +763,10 @@ export default function ReportAuthoringWorkspace({
 
   function printPdf() {
     setPreview(true);
-    setStatus("인쇄 창에서 대상을 ‘PDF로 저장’으로 선택하세요.");
+    setStatus("인쇄 창에서 대상을 ‘PDF로 저장’으로 선택하세요. 브라우저의 ‘머리글과 바닥글’은 끄는 것을 권장합니다.");
     window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
-      const report = reportRef.current;
-      if (!report) return;
-      document.querySelector(".report-authoring-paginated-print")?.remove();
-      const host = document.createElement("div");
-      host.className = "report-authoring-paginated-print";
-      document.body.append(host);
-
-      const sourceBlocks = report.querySelector<HTMLElement>(":scope > .report-authoring-blocks");
-      let pageArticle: HTMLElement;
-      let pageBlocks: HTMLElement;
-      let pageContent: HTMLElement;
-      let pageHasLead = false;
-
-      const createPage = (includeLead: boolean) => {
-        pageHasLead = includeLead;
-        const page = document.createElement("section");
-        page.className = "report-authoring-print-page";
-        pageContent = document.createElement("div");
-        pageContent.className = "report-authoring-print-page-content";
-        pageArticle = report.cloneNode(false) as HTMLElement;
-        pageArticle.removeAttribute("aria-label");
-        if (includeLead) {
-          report.querySelectorAll<HTMLElement>(":scope > .report-authoring-cover, :scope > .report-authoring-ranges")
-            .forEach((element) => pageArticle.append(element.cloneNode(true)));
-        }
-        pageBlocks = (sourceBlocks?.cloneNode(false) as HTMLElement | undefined) ?? document.createElement("div");
-        pageBlocks.classList.add("report-authoring-blocks");
-        pageArticle.append(pageBlocks);
-        pageContent.append(pageArticle);
-        page.append(pageContent);
-        const footer = document.createElement("footer");
-        footer.className = "report-authoring-print-page-footer";
-        const footerLogo = document.createElement("img");
-        footerLogo.src = "/daishin-asset-management.png";
-        footerLogo.alt = "";
-        footer.append(footerLogo);
-        page.append(footer);
-        host.append(page);
-      };
-
-      createPage(true);
-      sourceBlocks?.querySelectorAll<HTMLElement>(":scope > .report-authoring-block").forEach((block) => {
-        const clone = block.cloneNode(true) as HTMLElement;
-        pageBlocks.append(clone);
-        if (pageArticle.scrollHeight > pageContent.clientHeight && (pageBlocks.children.length > 1 || pageHasLead)) {
-          clone.remove();
-          createPage(false);
-          pageBlocks.append(clone);
-        }
-      });
-
       const cleanup = () => {
         document.body.classList.remove("report-authoring-printing");
-        host.remove();
       };
       window.addEventListener("afterprint", cleanup, { once: true });
       document.body.classList.add("report-authoring-printing");

@@ -971,6 +971,18 @@ body {
 @page {
   size: A4;
   margin: 10mm 10mm 18mm;
+
+  @bottom-right {
+    content: "Daishin\A Asset Management";
+    white-space: pre;
+    vertical-align: middle;
+    color: #525252;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 8pt;
+    font-weight: 700;
+    line-height: 1.05;
+    text-align: right;
+  }
 }
 
 @media print {
@@ -1230,11 +1242,9 @@ body {
 .report-authoring-paginated-print { position: fixed; left: -300vw; top: 0; visibility: hidden; width: 190mm; }
 .report-authoring-print-page { position: relative; width: 190mm; height: 269mm; overflow: hidden; background: #fff; }
 .report-authoring-print-page-content { height: 257mm; overflow: hidden; }
-.report-authoring-print-page-footer { position: absolute; right: 0; bottom: 0; display: flex; justify-content: flex-end; align-items: flex-end; width: 32mm; height: 12mm; background: #fff; }
-.report-authoring-print-page-footer img { display: block; width: 32mm; height: auto; object-fit: contain; }
+.report-authoring-print-page-footer { position: absolute; right: 0; bottom: 0; display: flex; justify-content: flex-end; align-items: flex-end; width: 30mm; height: 12mm; background: #fff; }
+.report-authoring-print-page-footer img { display: block; width: 30mm; height: auto; object-fit: contain; }
 body.report-authoring-printing { display: block !important; background: #fff !important; }
-body.report-authoring-printing > :not(.report-authoring-paginated-print) { display: none !important; }
-body.report-authoring-printing .report-authoring-paginated-print { position: static; display: block; visibility: visible; width: 190mm; margin: 0 auto; }
 .report-authoring-paginated-print .report-authoring-paper { position: relative; width: 100%; min-height: 0; margin: 0; overflow: visible; box-shadow: none; }
 .report-authoring-paginated-print .report-authoring-cover { grid-template-columns: minmax(0, 1fr) 46mm; min-height: 68mm; padding: 6mm 8mm 5mm; border-top-width: 2.5mm; }
 .report-authoring-paginated-print .report-authoring-cover h1 { font-size: 28pt; }
@@ -1248,11 +1258,11 @@ body.report-authoring-printing .report-authoring-paginated-print { position: sta
 .report-authoring-paginated-print .report-authoring-body-copy { font-size: 10pt; line-height: 1.42; }
 .report-authoring-paginated-print .report-authoring-table-wrap { overflow: visible; }
 .report-authoring-paginated-print .report-authoring-table-wrap table { font-size: 9pt; }
-.report-authoring-paginated-print .report-authoring-image { max-height: 105mm; }
+.report-authoring-paginated-print .report-authoring-image { max-height: 86mm; }
 .report-authoring-paginated-print .report-authoring-chart-grid { gap: 2mm; }
 .report-authoring-paginated-print .report-authoring-chart-card { padding: 2mm; }
 .report-authoring-paginated-print .report-authoring-chart-card > img,
-.report-authoring-paginated-print .report-authoring-chart-grid.columns-3 .report-authoring-chart-card > img { height: 45mm; }
+.report-authoring-paginated-print .report-authoring-chart-grid.columns-3 .report-authoring-chart-card > img { height: 36mm; }
 
 .report-authoring-palette {
   position: sticky;
@@ -1497,7 +1507,6 @@ body.report-authoring-printing .report-authoring-paginated-print { position: sta
   .report-authoring-ranges > div { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .report-authoring-blocks { padding: 2mm 8mm 0; }
   .report-authoring-footer-logo { display: none; }
-  .report-authoring-footer-logo img { width: 32mm; }
   .report-authoring-block { padding: 5mm 0 3mm; break-inside: auto; }
   .report-authoring-block-body > h2 { margin-bottom: 2mm; font-size: 18pt; }
   .report-authoring-body-copy { font-size: 10pt; line-height: 1.42; }
@@ -1529,6 +1538,11 @@ body.report-authoring-printing .report-authoring-paginated-print { position: sta
   .report-authoring-print-compact .report-authoring-block-chart,
   .report-authoring-print-compact .report-authoring-table-wrap,
   .report-authoring-print-compact .report-authoring-chart-grid { break-inside: auto; page-break-inside: auto; }
+  .report-authoring-print-compact .report-authoring-block { orphans: 2; widows: 2; }
+  .report-authoring-print-compact .report-authoring-body-copy { orphans: 3; widows: 3; }
+  .report-authoring-print-compact .report-authoring-image { max-height: 86mm; }
+  .report-authoring-print-compact .report-authoring-chart-card > img,
+  .report-authoring-print-compact .report-authoring-chart-grid.columns-3 .report-authoring-chart-card > img { height: 36mm; }
   .report-authoring-print-compact .report-authoring-block-body > h2,
   .report-authoring-print-compact .report-authoring-chart-card h3 { break-after: avoid; page-break-after: avoid; }
 }
