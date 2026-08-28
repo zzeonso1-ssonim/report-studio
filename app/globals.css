@@ -972,6 +972,12 @@ body {
   size: A4;
   margin: 10mm 10mm 18mm;
 
+  @top-left { content: ""; }
+  @top-center { content: ""; }
+  @top-right { content: ""; }
+  @bottom-left { content: ""; }
+  @bottom-center { content: ""; }
+
   @bottom-right {
     content: image-set(url("/daishin-asset-management.png") 10x);
     vertical-align: middle;

@@ -763,7 +763,7 @@ export default function ReportAuthoringWorkspace({
 
   function printPdf() {
     setPreview(true);
-    setStatus("인쇄 창에서 대상을 ‘PDF로 저장’으로 선택하세요. 브라우저의 ‘머리글과 바닥글’은 끄는 것을 권장합니다.");
+    setStatus("인쇄 창에서 대상을 ‘PDF로 저장’으로 선택하세요. 브라우저 제목·주소는 제외되고 회사 로고만 표시됩니다.");
     window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
       const cleanup = () => {
         document.body.classList.remove("report-authoring-printing");
