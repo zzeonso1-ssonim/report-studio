@@ -1212,6 +1212,21 @@ body {
 .report-authoring-toolbar span { color: var(--author-muted); font-size: 12px; }
 .report-authoring-toolbar p { margin: 2px 0 0; color: var(--author-muted); font-size: 11px; }
 .report-authoring-toolbar-actions { display: flex; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
+.report-authoring-import-label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--author-line);
+  padding: 7px 10px;
+  background: #fff;
+  color: var(--author-ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  overflow: hidden;
+}
+.report-authoring-import-label span { color: inherit; font-size: inherit; }
+.report-authoring-import-label input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 .report-authoring-toolbar button,
 .report-authoring-table-actions button,
 .report-authoring-block-tools button {

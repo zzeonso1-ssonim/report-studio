@@ -637,7 +637,6 @@ export default function ReportAuthoringWorkspace({
   const [status, setStatus] = useState("");
   const [deleted, setDeleted] = useState<DeletedBlock | null>(null);
   const reportRef = useRef<HTMLElement>(null);
-  const htmlImportRef = useRef<HTMLInputElement>(null);
   const draft = drafts[reportKind];
 
   useEffect(() => {
@@ -802,11 +801,13 @@ export default function ReportAuthoringWorkspace({
             빈 공간 최소화 {compactPrint ? "ON" : "OFF"}
           </button>
           <button type="button" onClick={resetTemplate}>양식 초기화</button>
-          <button type="button" onClick={() => htmlImportRef.current?.click()}>HTML 가져오기</button>
+          <label className="report-authoring-import-label">
+            <span>HTML 가져오기</span>
+            <input type="file" accept=".html,.htm,text/html" onChange={importHtml} aria-label="HTML 가져오기" />
+          </label>
           <button type="button" onClick={saveHtml}>HTML 저장</button>
           <button type="button" onClick={saveWord}>Word 저장</button>
           <button type="button" className="report-authoring-primary" onClick={printPdf}>PDF 저장</button>
-          <input ref={htmlImportRef} type="file" accept=".html,.htm,text/html" onChange={importHtml} hidden />
         </div>
       </div>
 
