@@ -745,7 +745,11 @@ export default function ReportAuthoringWorkspace({
         const payload = JSON.parse(payloadNode.textContent) as { version?: number; reportKind?: ReportKind; drafts?: Partial<DraftMap> };
         if (payload.version !== 1 || !payload.drafts) throw new Error("unsupported draft");
         setDrafts(normalizeDrafts(payload.drafts, templates));
-        if (payload.reportKind && payload.reportKind in REPORT_LABELS) setReportKind(payload.reportKind);
+        const renderedTitle = nodeText(documentNode, ".report-authoring-cover-title, .report-authoring-cover h1") || documentNode.title.trim();
+        const titleMatchedKind = (Object.keys(REPORT_LABELS) as ReportKind[]).find((kind) => payload.drafts?.[kind]?.title?.trim() === renderedTitle);
+        const inferredKind = parseLegacyExport(documentNode, templates)?.kind;
+        const importedKind = payload.reportKind && payload.reportKind in REPORT_LABELS ? payload.reportKind : titleMatchedKind ?? inferredKind;
+        if (importedKind) setReportKind(importedKind);
       } else {
         const legacy = parseLegacyExport(documentNode, templates);
         if (!legacy) throw new Error("editable draft not found");
