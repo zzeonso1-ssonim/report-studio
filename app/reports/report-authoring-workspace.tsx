@@ -257,6 +257,164 @@ function parseLegacyExport(documentNode: Document, templates: DraftMap) {
   return { kind, draft: { ...base, kicker: kicker || base.kicker, title: nodeText(report, ".report-authoring-cover-title, .report-authoring-cover h1") || base.title, subtitle: nodeText(report, ".report-authoring-cover-subtitle, .report-authoring-subtitle") || base.subtitle, date: meta[0] || base.date, desk: meta[1] || base.desk, workspaceLabel: meta[2] ?? base.workspaceLabel, templateLabel: aside[0] ?? base.templateLabel, reportTypeLabel: reportType || base.reportTypeLabel, templateName: aside[2] ?? base.templateName, rangeTitle: nodeText(report, ".report-authoring-range-title, .report-authoring-ranges > p") || base.rangeTitle, ranges: ranges.length ? ranges : base.ranges, showRanges: ranges.length > 0, blocks: blocks.length ? blocks : base.blocks } satisfies ReportDraft };
 }
 
+function compactText(value: string | null | undefined) {
+  return (value ?? "").replace(/\s+/g, " ").trim();
+}
+
+function elementText(node: Element | null | undefined) {
+  if (!node) return "";
+  const clone = node.cloneNode(true) as Element;
+  clone.querySelectorAll("br").forEach((lineBreak) => lineBreak.replaceWith(" "));
+  return compactText(clone.textContent);
+}
+
+function linesFrom(root: ParentNode, selector: string) {
+  return [...root.querySelectorAll<HTMLElement>(selector)].map((node) => compactText(node.textContent)).filter(Boolean);
+}
+
+function structuredLinesFrom(root: ParentNode, selector: string) {
+  return [...root.querySelectorAll<HTMLElement>(selector)].map((node) => {
+    const parts = [...node.children].map((child) => elementText(child)).filter(Boolean);
+    return parts.length ? parts.join(" · ") : elementText(node);
+  }).filter(Boolean);
+}
+
+function svgDataUrl(svg: SVGElement | null) {
+  if (!svg) return "";
+  const markup = new XMLSerializer().serializeToString(svg);
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`;
+}
+
+function splitRange(value: string) {
+  const normalized = compactText(value);
+  const match = normalized.match(/^(.*?)(%|bp)$/i);
+  return { value: compactText(match?.[1] ?? normalized) || "—", unit: match?.[2] ?? "" };
+}
+
+function inferHouseReportKind(documentNode: Document, report: HTMLElement): ReportKind {
+  const marker = `${documentNode.title} ${compactText(report.querySelector(".eyebrow")?.textContent)} ${compactText(report.querySelector(".hero-meta")?.textContent)} ${compactText(report.querySelector(".toolbar-brand")?.textContent)}`.toLowerCase();
+  if (report.querySelector(".ranges, .weekly-range") || marker.includes("weekly") || marker.includes("주간채권")) return "weekly";
+  if (marker.includes("economic outlook") || marker.includes("경제전망") || marker.includes("경제 전망")) return "outlook";
+  return "issue";
+}
+
+function chartInsight(card: HTMLElement) {
+  const direct = card.querySelector<HTMLElement>(".insight");
+  if (direct) {
+    return {
+      insightLabel: compactText(direct.querySelector("strong")?.textContent) || "INSIGHT",
+      insightTitle: "",
+      insightBody: compactText(direct.querySelector("span, p")?.textContent),
+    } satisfies InsightFields;
+  }
+  const notes = [...card.querySelectorAll<HTMLElement>(".chart-note")];
+  const insightNote = notes.find((note) => !/^(출처|source)$/i.test(compactText(note.querySelector("strong")?.textContent))) ?? notes[0];
+  return {
+    insightLabel: compactText(insightNote?.querySelector("strong")?.textContent) || "INSIGHT",
+    insightTitle: "",
+    insightBody: compactText(insightNote?.querySelector("span, p")?.textContent),
+  } satisfies InsightFields;
+}
+
+function parseHouseStyleReport(documentNode: Document, templates: DraftMap) {
+  const report = documentNode.querySelector<HTMLElement>("main.report, #report.report, article.report");
+  if (!report || !report.querySelector(".hero") || !report.querySelector("[data-module], .module")) return null;
+  const kind = inferHouseReportKind(documentNode, report);
+  const base = structuredClone(templates[kind]);
+  const hero = report.querySelector<HTMLElement>(".hero") ?? report;
+  const dateMatch = compactText(hero.querySelector(".hero-meta")?.textContent).match(/20\d{2}[.\/-]\d{2}[.\/-]\d{2}/)?.[0];
+  const footerDesk = compactText(report.querySelector(".report-footer strong")?.textContent);
+  const blocks: ReportBlock[] = [];
+  let missingCharts = 0;
+
+  const summary = report.querySelector<HTMLElement>(".summary");
+  if (summary) {
+    const summaryTitle = compactText(summary.querySelector("h2")?.textContent) || "핵심 판단";
+    const summaryLines = linesFrom(summary, "li");
+    const readoutLines = structuredLinesFrom(report, ".readout > .readout-item");
+    const centralCall = elementText(summary.querySelector(".summary-call, .call"));
+    const body = [...summaryLines, ...readoutLines, centralCall].filter(Boolean).join("\n");
+    if (body) blocks.push({ ...textBlock(summaryTitle, body), style: "bullet" });
+  }
+
+  const moduleNodes = [...report.querySelectorAll<HTMLElement>("[data-module], .module")].filter((module, index, modules) => modules.indexOf(module) === index);
+  moduleNodes.forEach((module) => {
+    const title = compactText(module.querySelector("h2")?.textContent) || compactText(module.querySelector(".section-kicker")?.textContent) || "분석";
+    const narrative = [
+      compactText(module.querySelector(".section-lead")?.textContent),
+      ...linesFrom(module, ":scope > .bullet-list li, :scope > ul:not(.module-tools) > li"),
+      ...structuredLinesFrom(module, ":scope > .metrics .metric, :scope > .strategy-bar .strategy-cell, :scope > .action-grid .action, :scope > .outlook-body p, :scope > .callout"),
+    ].filter(Boolean);
+    if (narrative.length) blocks.push({ ...textBlock(title, narrative.join("\n")), style: narrative.length > 1 ? "bullet" : "plain" });
+
+    const cards = [...module.querySelectorAll<HTMLElement>(".chart-card")];
+    for (let offset = 0; offset < cards.length; offset += 3) {
+      const group = cards.slice(offset, offset + 3);
+      const charts = group.map((card, index) => {
+        const titleValue = compactText(card.querySelector(".chart-title")?.textContent) || `차트 ${index + 1}`;
+        const meta = compactText(card.querySelector(".chart-meta")?.textContent);
+        const sourceNote = [...card.querySelectorAll<HTMLElement>(".chart-note")].find((note) => /^(출처|source)$/i.test(compactText(note.querySelector("strong")?.textContent)));
+        const image = card.querySelector<HTMLImageElement>("img")?.getAttribute("src") ?? "";
+        const inlineSvg = svgDataUrl(card.querySelector<SVGElement>("svg"));
+        const src = image || inlineSvg;
+        if (!src) missingCharts += 1;
+        return {
+          ...chartItem(index),
+          title: titleValue,
+          src,
+          caption: meta || "원본 HTML의 차트 설명",
+          source: compactText(sourceNote?.querySelector("span, p")?.textContent) || compactText(module.querySelector(".source-note")?.textContent) || "원본 HTML",
+          ...chartInsight(card),
+        } satisfies ChartItem;
+      });
+      if (charts.length) blocks.push({ id: blockId("chart"), type: "chart", title, columns: Math.min(3, Math.max(1, charts.length)) as 1 | 2 | 3, charts });
+    }
+
+    [...module.querySelectorAll<HTMLTableElement>("table")].forEach((table) => {
+      const columns = [...table.querySelectorAll<HTMLElement>("thead th")].map((cell) => compactText(cell.textContent));
+      const rows = [...table.querySelectorAll<HTMLTableRowElement>("tbody tr")].map((row) => [...row.cells].map((cell) => compactText(cell.textContent)));
+      if (columns.length && rows.length) {
+        blocks.push({
+          ...tableBlock(title, columns, rows),
+          insightTitle: "원본 표의 핵심 판단",
+          insightBody: compactText(module.querySelector(".insight span, .insight p")?.textContent) || "표 수치와 전략 함의 점검 필요",
+        });
+      }
+    });
+
+    if (!narrative.length && !cards.length && !module.querySelector("table")) {
+      const fallback = linesFrom(module, "[data-editable]").join("\n");
+      if (fallback) blocks.push(textBlock(title, fallback));
+    }
+  });
+
+  const ranges = [...report.querySelectorAll<HTMLElement>(".ranges .range, .hero-side .hero-side-row")].map((range) => {
+    const parsed = splitRange(compactText(range.querySelector("strong")?.textContent));
+    return { label: compactText(range.querySelector("span")?.textContent), value: parsed.value, unit: parsed.unit };
+  }).filter((range) => range.label || range.value);
+  const kicker = compactText(hero.querySelector(".eyebrow")?.textContent) || base.kicker;
+  const title = elementText(hero.querySelector("h1")) || documentNode.title.split("|")[0].trim() || base.title;
+  const subtitle = compactText(hero.querySelector(".hero-subtitle")?.textContent) || base.subtitle;
+  return {
+    kind,
+    missingCharts,
+    draft: {
+      ...base,
+      kicker,
+      title,
+      subtitle,
+      date: dateMatch?.replaceAll(".", "-").replaceAll("/", "-") || base.date,
+      desk: footerDesk || base.desk,
+      reportTypeLabel: REPORT_LABELS[kind],
+      templateName: "가져온 기존 보고서 HTML",
+      rangeTitle: compactText(report.querySelector(".ranges-title, .hero-side-title")?.textContent) || base.rangeTitle,
+      ranges: ranges.length ? ranges : base.ranges,
+      showRanges: kind === "weekly" && (ranges.length > 0 || Boolean(base.showRanges)),
+      blocks: blocks.length ? blocks : base.blocks,
+    } satisfies ReportDraft,
+  };
+}
+
 function downloadBlob(contents: BlobPart, type: string, filename: string) {
   const url = URL.createObjectURL(new Blob([contents], { type }));
   const anchor = document.createElement("a");
@@ -751,10 +909,17 @@ export default function ReportAuthoringWorkspace({
         const importedKind = payload.reportKind && payload.reportKind in REPORT_LABELS ? payload.reportKind : titleMatchedKind ?? inferredKind;
         if (importedKind) setReportKind(importedKind);
       } else {
-        const legacy = parseLegacyExport(documentNode, templates);
-        if (!legacy) throw new Error("editable draft not found");
-        setDrafts((current) => ({ ...current, [legacy.kind]: legacy.draft }));
-        setReportKind(legacy.kind);
+        const imported = parseLegacyExport(documentNode, templates) ?? parseHouseStyleReport(documentNode, templates);
+        if (!imported) throw new Error("editable draft not found");
+        setDrafts((current) => ({ ...current, [imported.kind]: imported.draft }));
+        setReportKind(imported.kind);
+        const missingCharts = "missingCharts" in imported && typeof imported.missingCharts === "number" ? imported.missingCharts : 0;
+        if (missingCharts > 0) {
+          setStatus(`${file.name}을 ${REPORT_LABELS[imported.kind]} 양식으로 변환했습니다. 원본에서 자바스크립트로 그린 차트 ${missingCharts}개는 이미지가 없어 빈 차트 박스로 가져왔습니다.`);
+          setPreview(false);
+          setDeleted(null);
+          return;
+        }
       }
       setPreview(false);
       setDeleted(null);
