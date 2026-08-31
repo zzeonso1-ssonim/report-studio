@@ -791,7 +791,7 @@ export default function ReportAuthoringWorkspace({
   const [drafts, setDrafts] = useState<DraftMap>(templates);
   const [hydrated, setHydrated] = useState(false);
   const [preview, setPreview] = useState(false);
-  const [compactPrint, setCompactPrint] = useState(true);
+  const [compactPrint, setCompactPrint] = useState(false);
   const [status, setStatus] = useState("");
   const [deleted, setDeleted] = useState<DeletedBlock | null>(null);
   const reportRef = useRef<HTMLElement>(null);
@@ -978,10 +978,10 @@ export default function ReportAuthoringWorkspace({
             aria-pressed={compactPrint}
             onClick={() => {
               setCompactPrint((value) => !value);
-              setStatus(compactPrint ? "PDF 빈 공간 최소화를 껐습니다." : "PDF 빈 공간 최소화를 적용했습니다.");
+              setStatus(compactPrint ? "PDF 균형 여백을 적용했습니다." : "PDF 압축 인쇄를 적용했습니다.");
             }}
           >
-            빈 공간 최소화 {compactPrint ? "ON" : "OFF"}
+            압축 인쇄 {compactPrint ? "ON" : "OFF"}
           </button>
           <button type="button" onClick={resetTemplate}>양식 초기화</button>
           <label className="report-authoring-import-label">

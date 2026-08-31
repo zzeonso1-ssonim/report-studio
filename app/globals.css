@@ -1269,21 +1269,21 @@ body {
 .report-authoring-print-page-footer img { display: block; width: 30mm; height: auto; object-fit: contain; }
 body.report-authoring-printing { display: block !important; background: #fff !important; }
 .report-authoring-paginated-print .report-authoring-paper { position: relative; width: 100%; min-height: 0; margin: 0; overflow: visible; box-shadow: none; }
-.report-authoring-paginated-print .report-authoring-cover { grid-template-columns: minmax(0, 1fr) 46mm; min-height: 68mm; padding: 6mm 8mm 5mm; border-top-width: 2.5mm; }
+.report-authoring-paginated-print .report-authoring-cover { grid-template-columns: minmax(0, 1fr) 46mm; min-height: 78mm; padding: 9mm 10mm 8mm; border-top-width: 2.5mm; }
 .report-authoring-paginated-print .report-authoring-cover h1 { font-size: 28pt; }
 .report-authoring-paginated-print .report-authoring-subtitle { font-size: 10pt; }
-.report-authoring-paginated-print .report-authoring-ranges { grid-template-columns: 30mm minmax(0, 1fr); gap: 4mm; padding: 4mm 8mm; }
+.report-authoring-paginated-print .report-authoring-ranges { grid-template-columns: 30mm minmax(0, 1fr); gap: 5mm; padding: 5mm 10mm; }
 .report-authoring-paginated-print .report-authoring-ranges > div { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.report-authoring-paginated-print .report-authoring-blocks { padding: 2mm 8mm 0; }
+.report-authoring-paginated-print .report-authoring-blocks { padding: 4mm 10mm 0; }
 .report-authoring-paginated-print .report-authoring-footer-logo { display: none; }
-.report-authoring-paginated-print .report-authoring-block { padding: 5mm 0 3mm; }
-.report-authoring-paginated-print .report-authoring-block-body > h2 { margin-bottom: 2mm; font-size: 18pt; }
-.report-authoring-paginated-print .report-authoring-body-copy { font-size: 10pt; line-height: 1.42; }
+.report-authoring-paginated-print .report-authoring-block { padding: 7mm 0 5mm; }
+.report-authoring-paginated-print .report-authoring-block-body > h2 { margin-bottom: 3mm; font-size: 18pt; }
+.report-authoring-paginated-print .report-authoring-body-copy { font-size: 10pt; line-height: 1.58; }
 .report-authoring-paginated-print .report-authoring-table-wrap { overflow: visible; }
 .report-authoring-paginated-print .report-authoring-table-wrap table { font-size: 9pt; }
 .report-authoring-paginated-print .report-authoring-image { max-height: 86mm; }
-.report-authoring-paginated-print .report-authoring-chart-grid { gap: 2mm; }
-.report-authoring-paginated-print .report-authoring-chart-card { padding: 2mm; }
+.report-authoring-paginated-print .report-authoring-chart-grid { gap: 3mm; margin-top: 3mm; }
+.report-authoring-paginated-print .report-authoring-chart-card { padding: 3mm; }
 .report-authoring-paginated-print .report-authoring-chart-card > img,
 .report-authoring-paginated-print .report-authoring-chart-grid.columns-3 .report-authoring-chart-card > img { height: 36mm; }
 
@@ -1532,39 +1532,48 @@ body.report-authoring-printing { display: block !important; background: #fff !im
   .report-authoring-print-page .report-authoring-paper { width: 100%; }
   .report-authoring-paper,
   .report-authoring-workspace.is-preview .report-authoring-paper { position: relative; width: 100%; min-height: 0; margin: 0; overflow: visible; box-shadow: none; }
-  .report-authoring-cover { grid-template-columns: minmax(0, 1fr) 46mm; min-height: 68mm; padding: 6mm 8mm 5mm; border-top-width: 2.5mm; }
+  .report-authoring-cover { grid-template-columns: minmax(0, 1fr) 46mm; min-height: 78mm; padding: 9mm 10mm 8mm; border-top-width: 2.5mm; }
   .report-authoring-cover h1 { font-size: 28pt; }
   .report-authoring-subtitle { font-size: 10pt; }
-  .report-authoring-ranges { grid-template-columns: 30mm minmax(0, 1fr); gap: 4mm; padding: 4mm 8mm; break-inside: avoid; }
+  .report-authoring-ranges { grid-template-columns: 30mm minmax(0, 1fr); gap: 5mm; padding: 5mm 10mm; break-inside: avoid; }
   .report-authoring-ranges > div { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .report-authoring-blocks { padding: 2mm 8mm 0; }
+  .report-authoring-blocks { padding: 4mm 10mm 0; }
   .report-authoring-footer-logo { display: none; }
-  .report-authoring-block { padding: 5mm 0 3mm; break-inside: auto; }
-  .report-authoring-block-body > h2 { margin-bottom: 2mm; font-size: 18pt; }
-  .report-authoring-body-copy { font-size: 10pt; line-height: 1.42; }
+  .report-authoring-block { padding: 7mm 0 5mm; break-inside: auto; }
+  .report-authoring-block-body > h2 { margin-bottom: 3mm; font-size: 18pt; break-after: avoid; page-break-after: avoid; }
+  .report-authoring-body-copy { font-size: 10pt; line-height: 1.58; }
   .report-authoring-block-image,
   .report-authoring-block-table,
   .report-authoring-block-chart,
   .report-authoring-chart-card { break-inside: avoid; }
-  .report-authoring-image { max-height: 105mm; }
+  .report-authoring-image { max-height: 98mm; margin-top: 3mm; }
   .report-authoring-table-wrap { overflow: visible; }
   .report-authoring-table-wrap table { font-size: 9pt; }
+  .report-authoring-table-wrap th,
+  .report-authoring-table-wrap td { padding: 2.5mm 2.2mm; line-height: 1.45; }
   .report-authoring-table-wrap thead { display: table-header-group; }
   .report-authoring-table-wrap tr { break-inside: avoid; }
-  .report-authoring-block-image figcaption { font-size: 7.2pt; }
-  .report-authoring-chart-grid { gap: 2mm; }
-  .report-authoring-chart-card { padding: 2mm; }
+  .report-authoring-block-image figcaption { margin-top: 2mm; font-size: 7.5pt; }
+  .report-authoring-chart-grid { gap: 3mm; margin-top: 3mm; }
+  .report-authoring-chart-card { padding: 3mm; }
+  .report-authoring-chart-card h3 { margin-bottom: 2.5mm; font-size: 10.5pt; line-height: 1.35; }
   .report-authoring-chart-card > img,
   .report-authoring-chart-grid.columns-3 .report-authoring-chart-card > img { height: 45mm; }
   .report-authoring-chart-empty,
   .report-authoring-chart-grid.columns-3 .report-authoring-chart-empty { height: 42mm; }
-  .report-authoring-insight { margin-top: 1.5mm; border-top-width: .8mm; padding: 2mm; }
+  .report-authoring-insight { margin-top: 2.5mm; border-top-width: .8mm; padding: 3mm; }
   .report-authoring-insight strong { font-size: 8pt; }
-  .report-authoring-insight p { margin-top: 1mm; font-size: 9pt; line-height: 1.35; }
-  .report-authoring-left-bar { border-left-width: 1.5mm; padding: 2.5mm 3mm; }
+  .report-authoring-insight p { margin-top: 1.5mm; font-size: 10pt; line-height: 1.5; }
+  .report-authoring-left-bar { border-left-width: 1.5mm; padding: 3.5mm 4mm; }
 
-  /* 기본값인 빈 공간 최소화 모드에서는 큰 박스가 통째로 다음 장으로
-     밀리지 않게 하고, 표·차트의 의미 단위만 페이지 안에서 보호한다. */
+  /* 압축 인쇄는 사용자가 선택한 경우에만 적용한다. 본문 가독성과
+     인사이트의 10pt 하한은 유지하면서 세로 간격만 절약한다. */
+  .report-authoring-print-compact .report-authoring-cover { min-height: 68mm; padding: 6mm 8mm 5mm; }
+  .report-authoring-print-compact .report-authoring-ranges { gap: 4mm; padding: 4mm 8mm; }
+  .report-authoring-print-compact .report-authoring-blocks { padding: 2mm 8mm 0; }
+  .report-authoring-print-compact .report-authoring-block { padding: 5mm 0 3mm; }
+  .report-authoring-print-compact .report-authoring-block-body > h2 { margin-bottom: 2mm; }
+  .report-authoring-print-compact .report-authoring-body-copy { line-height: 1.48; }
   .report-authoring-print-compact .report-authoring-block-image,
   .report-authoring-print-compact .report-authoring-block-table,
   .report-authoring-print-compact .report-authoring-block-chart,
@@ -1572,9 +1581,13 @@ body.report-authoring-printing { display: block !important; background: #fff !im
   .report-authoring-print-compact .report-authoring-chart-grid { break-inside: auto; page-break-inside: auto; }
   .report-authoring-print-compact .report-authoring-block { orphans: 2; widows: 2; }
   .report-authoring-print-compact .report-authoring-body-copy { orphans: 3; widows: 3; }
-  .report-authoring-print-compact .report-authoring-image { max-height: 86mm; }
+  .report-authoring-print-compact .report-authoring-image { max-height: 90mm; margin-top: 2mm; }
+  .report-authoring-print-compact .report-authoring-chart-grid { gap: 2mm; margin-top: 2mm; }
+  .report-authoring-print-compact .report-authoring-chart-card { padding: 2mm; }
   .report-authoring-print-compact .report-authoring-chart-card > img,
-  .report-authoring-print-compact .report-authoring-chart-grid.columns-3 .report-authoring-chart-card > img { height: 36mm; }
+  .report-authoring-print-compact .report-authoring-chart-grid.columns-3 .report-authoring-chart-card > img { height: 40mm; }
+  .report-authoring-print-compact .report-authoring-insight { margin-top: 1.5mm; padding: 2mm; }
+  .report-authoring-print-compact .report-authoring-insight p { margin-top: 1mm; font-size: 10pt; line-height: 1.42; }
   .report-authoring-print-compact .report-authoring-block-body > h2,
   .report-authoring-print-compact .report-authoring-chart-card h3 { break-after: avoid; page-break-after: avoid; }
 }
