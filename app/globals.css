@@ -1254,6 +1254,14 @@ body {
 
 .report-authoring-workspace.is-preview { grid-template-columns: minmax(0, 1fr); }
 .report-authoring-workspace.is-preview .report-authoring-paper { width: min(210mm, 100%); margin: 0 auto; }
+.report-authoring-print-document {
+  --author-blue: #0f62fe;
+  --author-ink: #161616;
+  --author-muted: #525252;
+  --author-line: #c6c6c6;
+  --author-soft: #f4f4f4;
+  display: none;
+}
 .report-authoring-paginated-print { position: fixed; left: -300vw; top: 0; visibility: hidden; width: 190mm; }
 .report-authoring-print-page { position: relative; width: 190mm; height: 269mm; overflow: hidden; background: #fff; }
 .report-authoring-print-page-content { height: 257mm; overflow: hidden; }
@@ -1346,6 +1354,9 @@ body.report-authoring-printing { display: block !important; background: #fff !im
 .report-authoring-cover aside small { display: block; margin-top: 10px; color: var(--author-muted); font-size: 10px; overflow-wrap: anywhere; }
 .report-authoring-cover aside .report-authoring-template-kind { margin-top: 20px; font-size: 18px; font-weight: 600; }
 .report-authoring-cover aside input + input { margin-top: 8px; }
+.report-authoring-paper-issue .report-authoring-cover { border-top-color: var(--author-blue); }
+.report-authoring-paper-issue .report-authoring-cover aside strong { color: var(--author-blue); }
+.report-authoring-paper-outlook .report-authoring-cover { border-top-color: var(--author-blue); }
 
 .report-authoring-ranges { position: relative; display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 20px; border-bottom: 1px solid var(--author-line); padding: 38px 48px 24px; }
 .report-authoring-range-tools { position: absolute; top: 8px; right: 48px; display: flex; align-items: center; gap: 8px; }
@@ -1491,6 +1502,12 @@ body.report-authoring-printing { display: block !important; background: #fff !im
 }
 
 @media print {
+  body.report-authoring-printing > * { display: none !important; }
+  body.report-authoring-printing > .report-authoring-print-document {
+    display: block !important;
+    width: 100%;
+    margin: 0;
+  }
   .report-authoring-shell { min-height: 0; padding: 0; background: #fff; }
   .report-authoring-app-header,
   .report-authoring-tabs,

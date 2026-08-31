@@ -204,7 +204,7 @@ function standaloneDocument(report: HTMLElement, title: string, drafts: DraftMap
   const clone = cleanExportClone(report);
   const safeTitle = title.replace(/[<>&"]/g, "");
   const editableDraft = JSON.stringify({ version: 1, reportKind, drafts }).replace(/</g, "\\u003c");
-  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title><style>${collectDocumentStyles()}</style></head><body class="report-authoring-export">${clone.outerHTML}<script type="application/json" id="${IMPORT_SCRIPT_ID}">${editableDraft}</script></body></html>`;
+  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title><style>${collectDocumentStyles()}</style></head><body class="report-authoring-shell report-authoring-export">${clone.outerHTML}<script type="application/json" id="${IMPORT_SCRIPT_ID}">${editableDraft}</script></body></html>`;
 }
 
 function nodeText(root: ParentNode, selector: string) {
@@ -875,13 +875,20 @@ export default function ReportAuthoringWorkspace({
     setStatus("기본 보고서 양식을 다시 적용했습니다.");
   }
 
-  function saveHtml() {
+  async function ensurePreviewRendered() {
+    if (!preview) setPreview(true);
+    await new Promise<void>((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve())));
+  }
+
+  async function saveHtml() {
+    await ensurePreviewRendered();
     if (!reportRef.current) return;
     downloadBlob(standaloneDocument(reportRef.current, draft.title, drafts, reportKind), "text/html;charset=utf-8", `report-${localDateStamp()}.html`);
     setStatus("편집 데이터가 포함된 HTML 작업본을 저장했습니다.");
   }
 
-  function saveWord() {
+  async function saveWord() {
+    await ensurePreviewRendered();
     if (!reportRef.current) return;
     const html = standaloneDocument(reportRef.current, draft.title, drafts, reportKind);
     downloadBlob(html, "application/msword;charset=utf-8", `report-${localDateStamp()}.doc`);
@@ -929,17 +936,24 @@ export default function ReportAuthoringWorkspace({
     }
   }
 
-  function printPdf() {
-    setPreview(true);
+  async function printPdf() {
+    await ensurePreviewRendered();
+    if (!reportRef.current) return;
     setStatus("인쇄 창에서 대상을 ‘PDF로 저장’으로 선택하세요. 브라우저 제목·주소는 제외되고 회사 로고만 표시됩니다.");
-    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
-      const cleanup = () => {
-        document.body.classList.remove("report-authoring-printing");
-      };
-      window.addEventListener("afterprint", cleanup, { once: true });
-      document.body.classList.add("report-authoring-printing");
-      window.print();
-    }));
+    const printDocument = document.createElement("div");
+    printDocument.className = `report-authoring-print-document report-authoring-print-${reportKind}`;
+    printDocument.append(reportRef.current.cloneNode(true));
+    document.body.append(printDocument);
+    const cleanup = () => {
+      printDocument.remove();
+      document.body.classList.remove("report-authoring-printing");
+    };
+    window.addEventListener("afterprint", cleanup, { once: true });
+    document.body.classList.add("report-authoring-printing");
+    window.print();
+    window.setTimeout(() => {
+      if (document.body.contains(printDocument) && !window.matchMedia("print").matches) cleanup();
+    }, 1_000);
   }
 
   return (
@@ -993,7 +1007,7 @@ export default function ReportAuthoringWorkspace({
           </aside>
         ) : null}
 
-        <article ref={reportRef} className={`report-authoring-paper${compactPrint ? " report-authoring-print-compact" : ""}`} aria-label="보고서 편집 문서">
+        <article ref={reportRef} className={`report-authoring-paper report-authoring-paper-${reportKind}${compactPrint ? " report-authoring-print-compact" : ""}`} aria-label="보고서 편집 문서">
           <header className="report-authoring-cover">
             <div>
               {preview ? <p className="report-authoring-kicker">{draft.kicker}</p> : <input className="report-authoring-kicker-input" value={draft.kicker} onChange={(event) => updateDraft({ kicker: event.target.value })} aria-label="보고서 영문 머리말" />}
