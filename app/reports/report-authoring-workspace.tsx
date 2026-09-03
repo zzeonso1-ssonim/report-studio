@@ -968,11 +968,6 @@ export default function ReportAuthoringWorkspace({
 
   return (
     <>
-      <div className="report-authoring-tabs" data-report-control>
-        {(Object.keys(REPORT_LABELS) as ReportKind[]).map((kind) => (
-          <button key={kind} type="button" aria-pressed={reportKind === kind} onClick={() => setReportKind(kind)}>{REPORT_LABELS[kind]}</button>
-        ))}
-      </div>
       <div className="report-authoring-toolbar" data-report-control>
         <div className="report-authoring-usage-guide">
           <strong>사용 방법</strong>
