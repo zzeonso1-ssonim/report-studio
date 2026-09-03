@@ -32,6 +32,12 @@ type DeletedBlock = { report: ReportKind; block: ReportBlock; index: number };
 const STORAGE_KEY = "econ-cockpit:report-authoring-drafts:v2";
 const LEGACY_STORAGE_KEY = "econ-cockpit:report-authoring-drafts:v1";
 const IMPORT_SCRIPT_ID = "econ-cockpit-report-draft";
+const IMAGE_FILE_ACCEPT = "image/*,.avif,.bmp,.gif,.heic,.heif,.ico,.jfif,.jpeg,.jpg,.png,.svg,.tif,.tiff,.webp";
+const IMAGE_TYPES_BY_EXTENSION: Record<string, string> = {
+  avif: "image/avif", bmp: "image/bmp", gif: "image/gif", heic: "image/heic", heif: "image/heif",
+  ico: "image/x-icon", jfif: "image/jpeg", jpeg: "image/jpeg", jpg: "image/jpeg", png: "image/png",
+  svg: "image/svg+xml", tif: "image/tiff", tiff: "image/tiff", webp: "image/webp",
+};
 const REPORT_LABELS: Record<ReportKind, string> = {
   outlook: "경제전망",
   weekly: "주간채권전략",
@@ -281,8 +287,95 @@ function structuredLinesFrom(root: ParentNode, selector: string) {
 
 function svgDataUrl(svg: SVGElement | null) {
   if (!svg) return "";
+  if (!svg.getAttribute("xmlns")) svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
   const markup = new XMLSerializer().serializeToString(svg);
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`;
+}
+
+function imageTypeFromName(name: string) {
+  return IMAGE_TYPES_BY_EXTENSION[name.split(/[?#]/, 1)[0].split(".").pop()?.toLowerCase() ?? ""] ?? "";
+}
+
+function isImageFile(file: File) {
+  return file.type.startsWith("image/") || Boolean(imageTypeFromName(file.name));
+}
+
+function blobAsDataUrl(blob: Blob, name = "") {
+  const type = blob.type.startsWith("image/") ? blob.type : imageTypeFromName(name);
+  const imageBlob = type && type !== blob.type ? blob.slice(0, blob.size, type) : blob;
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error ?? new Error("이미지 파일을 읽지 못했습니다."));
+    reader.readAsDataURL(imageBlob);
+  });
+}
+
+function loadImage(source: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("브라우저가 이미지 형식을 읽지 못했습니다."));
+    image.src = source;
+  });
+}
+
+async function imageSourceAsPng(source: string) {
+  const value = source.trim();
+  if (!value) return "";
+  let embeddedSource = value;
+  if (!/^data:image\//i.test(value)) {
+    const response = await fetch(value);
+    if (!response.ok) throw new Error(`이미지를 가져오지 못했습니다 (${response.status}).`);
+    const blob = await response.blob();
+    if (!blob.type.startsWith("image/") && !imageTypeFromName(value)) throw new Error("이미지 형식이 아닙니다.");
+    embeddedSource = await blobAsDataUrl(blob, value);
+  }
+  if (/^data:image\/png(?:;|,)/i.test(embeddedSource)) return embeddedSource;
+
+  const image = await loadImage(embeddedSource);
+  const width = image.naturalWidth || image.width;
+  const height = image.naturalHeight || image.height;
+  if (!width || !height) throw new Error("이미지 크기를 확인하지 못했습니다.");
+  const maximumScale = /^data:image\/svg\+xml(?:;|,)/i.test(embeddedSource) ? 3 : 1;
+  const scale = Math.min(maximumScale, 4096 / width, 4096 / height, Math.sqrt(16_000_000 / (width * height)));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(width * scale));
+  canvas.height = Math.max(1, Math.round(height * scale));
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("이미지 변환 기능을 사용할 수 없습니다.");
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  const png = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+  if (!png) throw new Error("PNG 이미지를 만들지 못했습니다.");
+  return blobAsDataUrl(png);
+}
+
+async function fileAsEmbeddedPng(file: File) {
+  if (!isImageFile(file)) throw new Error("지원하는 이미지 파일이 아닙니다.");
+  return imageSourceAsPng(await blobAsDataUrl(file, file.name));
+}
+
+type EmbeddedImageResult<T> = { value: T; converted: number; failed: number };
+
+async function embedDraftImages<T extends Partial<DraftMap>>(drafts: T): Promise<EmbeddedImageResult<T>> {
+  const value = structuredClone(drafts);
+  let converted = 0;
+  let failed = 0;
+  const tasks: Promise<void>[] = [];
+  Object.values(value).forEach((draft) => draft?.blocks?.forEach((block) => {
+    const images = block.type === "image" ? [block] : block.type === "chart" ? block.charts : [];
+    images.forEach((item) => {
+      if (!item.src || /^data:image\/png(?:;|,)/i.test(item.src)) return;
+      tasks.push(imageSourceAsPng(item.src).then((src) => {
+        item.src = src;
+        converted += 1;
+      }).catch(() => {
+        failed += 1;
+      }));
+    });
+  }));
+  await Promise.all(tasks);
+  return { value, converted, failed };
 }
 
 function splitRange(value: string) {
@@ -570,18 +663,18 @@ function ImageBlockEditor({ block, preview, onChange, onStatus }: {
   onChange: (patch: Partial<ImageBlock>) => void;
   onStatus: (message: string) => void;
 }) {
-  function loadFile(file: File | undefined) {
+  async function loadFile(file: File | undefined) {
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
+    if (!isImageFile(file)) {
       onStatus("이미지 파일만 추가할 수 있습니다.");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      onChange({ src: String(reader.result), source: file.name });
-      onStatus("로컬 이미지를 보고서에 넣었습니다.");
-    };
-    reader.readAsDataURL(file);
+    try {
+      onChange({ src: await fileAsEmbeddedPng(file), source: file.name });
+      onStatus(`${file.name}을 자체 포함 PNG 이미지로 넣었습니다.`);
+    } catch {
+      onStatus("이 브라우저에서 읽을 수 없는 이미지 형식입니다. PNG·JPEG·WebP·GIF·AVIF·BMP·SVG 파일을 사용하세요.");
+    }
   }
 
   return (
@@ -598,7 +691,7 @@ function ImageBlockEditor({ block, preview, onChange, onStatus }: {
         <div className="report-authoring-image-controls" data-report-control>
           <label>
             <span>로컬 이미지</span>
-            <input type="file" accept="image/*" onChange={(event) => loadFile(event.target.files?.[0])} />
+            <input type="file" accept={IMAGE_FILE_ACCEPT} onChange={(event) => loadFile(event.target.files?.[0])} />
           </label>
           <label>
             <span>외부 이미지 URL</span>
@@ -726,18 +819,18 @@ function ChartBlockEditor({ block, preview, onChange, onStatus }: {
     onChange({ charts: block.charts.map((chart, itemIndex) => itemIndex === index ? { ...chart, ...patch } : chart) });
   }
 
-  function loadFile(index: number, file: File | undefined) {
+  async function loadFile(index: number, file: File | undefined) {
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
+    if (!isImageFile(file)) {
       onStatus("이미지 파일만 차트로 추가할 수 있습니다.");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      updateChart(index, { src: String(reader.result), source: file.name });
-      onStatus(`차트 ${index + 1} 이미지를 넣었습니다.`);
-    };
-    reader.readAsDataURL(file);
+    try {
+      updateChart(index, { src: await fileAsEmbeddedPng(file), source: file.name });
+      onStatus(`차트 ${index + 1}에 ${file.name}을 자체 포함 PNG로 넣었습니다.`);
+    } catch {
+      onStatus("이 브라우저에서 읽을 수 없는 차트 형식입니다. PNG·JPEG·WebP·GIF·AVIF·BMP·SVG 파일을 사용하세요.");
+    }
   }
 
   return (
@@ -762,7 +855,7 @@ function ChartBlockEditor({ block, preview, onChange, onStatus }: {
             {!preview ? (
               <>
                 <div className="report-authoring-chart-inputs" data-report-control>
-                  <label><span>로컬 차트</span><input type="file" accept="image/*" onChange={(event) => loadFile(index, event.target.files?.[0])} /></label>
+                  <label><span>로컬 차트</span><input type="file" accept={IMAGE_FILE_ACCEPT} onChange={(event) => loadFile(index, event.target.files?.[0])} /></label>
                   <label><span>외부 URL</span><input type="url" value={chart.src.startsWith("data:") ? "" : chart.src} placeholder="https://…" onChange={(event) => updateChart(index, { src: event.target.value })} /></label>
                 </div>
                 <div className="report-authoring-chart-meta">
@@ -891,18 +984,26 @@ export default function ReportAuthoringWorkspace({
   }
 
   async function saveHtml() {
+    const embedded = await embedDraftImages(drafts);
+    if (embedded.converted) setDrafts(embedded.value);
     await ensurePreviewRendered();
     if (!reportRef.current) return;
-    downloadBlob(standaloneDocument(reportRef.current, draft.title, drafts, reportKind), "text/html;charset=utf-8", `report-${localDateStamp()}.html`);
-    setStatus("편집 데이터가 포함된 HTML 작업본을 저장했습니다.");
+    downloadBlob(standaloneDocument(reportRef.current, draft.title, embedded.value, reportKind), "text/html;charset=utf-8", `report-${localDateStamp()}.html`);
+    setStatus(embedded.failed
+      ? `HTML 작업본을 저장했습니다. 외부에서 가져올 수 없는 이미지 ${embedded.failed}개는 원래 경로를 유지했습니다.`
+      : "모든 이미지를 자체 포함한 HTML 작업본을 저장했습니다.");
   }
 
   async function saveWord() {
+    const embedded = await embedDraftImages(drafts);
+    if (embedded.converted) setDrafts(embedded.value);
     await ensurePreviewRendered();
     if (!reportRef.current) return;
-    const html = standaloneDocument(reportRef.current, draft.title, drafts, reportKind);
+    const html = standaloneDocument(reportRef.current, draft.title, embedded.value, reportKind);
     downloadBlob(html, "application/msword;charset=utf-8", `report-${localDateStamp()}.doc`);
-    setStatus("현재 작업본을 Word 호환 문서로 저장했습니다.");
+    setStatus(embedded.failed
+      ? `Word 호환 문서를 저장했습니다. 외부에서 가져올 수 없는 이미지 ${embedded.failed}개는 원래 경로를 유지했습니다.`
+      : "모든 이미지를 자체 포함한 Word 호환 문서를 저장했습니다.");
   }
 
   async function importHtml(event: ChangeEvent<HTMLInputElement>) {
@@ -916,10 +1017,15 @@ export default function ReportAuthoringWorkspace({
     try {
       const documentNode = new DOMParser().parseFromString(await file.text(), "text/html");
       const payloadNode = documentNode.getElementById(IMPORT_SCRIPT_ID);
+      let convertedImages = 0;
+      let failedImages = 0;
       if (payloadNode?.textContent) {
         const payload = JSON.parse(payloadNode.textContent) as { version?: number; reportKind?: ReportKind; drafts?: Partial<DraftMap> };
         if (payload.version !== 1 || !payload.drafts) throw new Error("unsupported draft");
-        setDrafts(normalizeDrafts(payload.drafts, templates));
+        const embedded = await embedDraftImages(normalizeDrafts(payload.drafts, templates));
+        convertedImages = embedded.converted;
+        failedImages = embedded.failed;
+        setDrafts(embedded.value);
         const renderedTitle = nodeText(documentNode, ".report-authoring-cover-title, .report-authoring-cover h1") || documentNode.title.trim();
         const titleMatchedKind = (Object.keys(REPORT_LABELS) as ReportKind[]).find((kind) => payload.drafts?.[kind]?.title?.trim() === renderedTitle);
         const inferredKind = parseLegacyExport(documentNode, templates)?.kind;
@@ -928,7 +1034,10 @@ export default function ReportAuthoringWorkspace({
       } else {
         const imported = parseLegacyExport(documentNode, templates) ?? parseHouseStyleReport(documentNode, templates);
         if (!imported) throw new Error("editable draft not found");
-        setDrafts((current) => ({ ...current, [imported.kind]: imported.draft }));
+        const embedded = await embedDraftImages({ [imported.kind]: imported.draft });
+        convertedImages = embedded.converted;
+        failedImages = embedded.failed;
+        setDrafts((current) => ({ ...current, [imported.kind]: embedded.value[imported.kind] }));
         setReportKind(imported.kind);
         const missingCharts = "missingCharts" in imported && typeof imported.missingCharts === "number" ? imported.missingCharts : 0;
         if (missingCharts > 0) {
@@ -940,7 +1049,11 @@ export default function ReportAuthoringWorkspace({
       }
       setPreview(false);
       setDeleted(null);
-      setStatus(`${file.name} 작업본을 불러왔습니다. 바로 이어서 편집할 수 있습니다.`);
+      setStatus(failedImages
+        ? `${file.name} 작업본을 불러왔습니다. 이미지 ${failedImages}개는 외부 경로 접근이 막혀 원래 경로를 유지했습니다.`
+        : convertedImages
+          ? `${file.name} 작업본과 이미지 ${convertedImages}개를 자체 포함 PNG로 불러왔습니다.`
+          : `${file.name} 작업본을 불러왔습니다. 포함된 이미지를 그대로 이어서 편집할 수 있습니다.`);
     } catch {
       setStatus("지원하는 보고서 HTML 작업본이 아니거나 파일이 손상되었습니다.");
     }
