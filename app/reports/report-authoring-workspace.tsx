@@ -787,6 +787,7 @@ export default function ReportAuthoringWorkspace({
   legacyStorageKey?: string | null;
 } = {}) {
   const templates = useMemo(() => cloneTemplates(), []);
+  const reportKindStorageKey = `${storageKey}:active-report-kind`;
   const [reportKind, setReportKind] = useState<ReportKind>("weekly");
   const [drafts, setDrafts] = useState<DraftMap>(templates);
   const [hydrated, setHydrated] = useState(false);
@@ -807,10 +808,14 @@ export default function ReportAuthoringWorkspace({
           setStatus("저장본을 읽지 못해 기본 양식을 적용했습니다.");
         }
       }
+      const savedReportKind = window.localStorage.getItem(reportKindStorageKey);
+      if (savedReportKind && savedReportKind in REPORT_LABELS) {
+        setReportKind(savedReportKind as ReportKind);
+      }
       setHydrated(true);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [legacyStorageKey, storageKey, templates]);
+  }, [legacyStorageKey, reportKindStorageKey, storageKey, templates]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -820,6 +825,11 @@ export default function ReportAuthoringWorkspace({
       window.setTimeout(() => setStatus("이미지 용량이 커 자동저장 한도를 넘었습니다. HTML 또는 Word로 먼저 저장하세요."), 0);
     }
   }, [drafts, hydrated, storageKey]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    window.localStorage.setItem(reportKindStorageKey, reportKind);
+  }, [hydrated, reportKind, reportKindStorageKey]);
 
   function updateDraft(patch: Partial<ReportDraft>) {
     setDrafts((current) => ({ ...current, [reportKind]: { ...current[reportKind], ...patch } }));
