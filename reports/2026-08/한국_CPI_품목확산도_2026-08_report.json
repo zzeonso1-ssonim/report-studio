@@ -1,0 +1,3873 @@
+{
+  "schemaVersion": 1,
+  "report": {
+    "type": "custom",
+    "title": "한국 CPI 품목 확산도",
+    "date": "2026-08-31",
+    "author": "ECON COCKPIT REPORTS",
+    "theme": "ibm-coinbase-print",
+    "language": "ko-KR"
+  },
+  "thesis": {
+    "headline": "농산물 상단 꼬리 확대, 근원·서비스 확산은 둔화",
+    "summary": "8월 헤드라인이 강해 보인 주된 이유는 여름 채소 급등. 헤드라인 3개월 상승 품목 비중은 63.5%에서 62.9%, 근원은 65.7%에서 62.5%로 하락. 식료품 상승 품목만 83개에서 91개로 증가했으며 개인서비스 3개월 확산은 84.5%에서 79.3%로 축소.",
+    "ranges": []
+  },
+  "modules": [
+    {
+      "id": "module-01",
+      "type": "summary",
+      "kicker": "01 · HEADLINE vs CORE",
+      "title": "기간별 상승 품목 비중",
+      "body": [
+        "헤드라인 단기 | 3개월 상승 품목 비중 63.5→62.9%, 전월비 53.3→50.2%",
+        "근원 단기 | 3개월 상승 품목 비중 65.7→62.5%, 전월비 54.0→47.6%",
+        "식료품 | 3개월 상승 품목 83→91개, 전체 헤드라인은 291→288개",
+        "개인서비스 | 3개월 상승 품목 비중 84.5→79.3%, 전월비 69.0→62.9%",
+        "분포 | 3개월 최대값 73.2→164.7%이나 중앙값은 0.3%로 동일"
+      ],
+      "chartIds": [],
+      "removable": true
+    },
+    {
+      "id": "module-02",
+      "type": "chart",
+      "kicker": "02 · OBSERVATION WINDOWS",
+      "title": "관찰기간별 상승 품목 비중",
+      "body": [],
+      "chartIds": [
+        "chart-02-observation-windows"
+      ],
+      "removable": true
+    },
+    {
+      "id": "module-03",
+      "type": "chart",
+      "kicker": "03 · DIRECTION",
+      "title": "상승·보합·하락 방향 구성",
+      "body": [],
+      "chartIds": [
+        "chart-03-direction-headline",
+        "chart-03-direction-core"
+      ],
+      "removable": true
+    },
+    {
+      "id": "module-04",
+      "type": "chart",
+      "kicker": "04 · TYPICAL RANGE",
+      "title": "대부분 품목의 가격은 얼마나 변했나",
+      "body": [],
+      "chartIds": [
+        "chart-04-distribution-july",
+        "chart-04-distribution-august"
+      ],
+      "removable": true
+    },
+    {
+      "id": "module-05",
+      "type": "table",
+      "kicker": "05 · TAILS",
+      "title": "3개월 누적 상승·하락 상하위",
+      "body": [],
+      "chartIds": [],
+      "removable": true
+    },
+    {
+      "id": "module-06",
+      "type": "analysis",
+      "kicker": "06 · PERSONAL SERVICES",
+      "title": "개인서비스 가격 상승의 폭",
+      "body": [],
+      "chartIds": [
+        "chart-06-personal-services"
+      ],
+      "removable": true
+    },
+    {
+      "id": "module-07",
+      "type": "analysis",
+      "kicker": "07 · METHOD & GATES",
+      "title": "계산 경로와 모집단 검산",
+      "body": [],
+      "chartIds": [],
+      "removable": true
+    },
+    {
+      "id": "module-08",
+      "type": "chart",
+      "kicker": "08 · POLICY REGIMES",
+      "title": "금리 인상·동결·인하기의 물가 확산",
+      "body": [
+        "2001년 이후 동일품목 고정패널(357·233·84개)에서 2026년 8월 3개월 상승 품목 비중은 헤드라인 61.1%, 근원 60.9%, 개인서비스 79.8%. 과거 인상기 평균보다 각각 +3.7p, +5.1p, +4.8p이며, 과거 인상기 월별 분포에서 각각 65·73·72퍼센타일이다. 현재 전체 바스켓(458·309·116개)의 같은 비중은 62.9·62.5·79.3%다."
+      ],
+      "chartIds": [
+        "chart-08-regime-breadth-3m"
+      ],
+      "removable": true
+    },
+    {
+      "id": "module-09",
+      "type": "analysis",
+      "kicker": "09 · ITEM ROTATION",
+      "title": "국면을 지나며 상승·하락 품목은 어떻게 바뀌었나",
+      "body": [],
+      "chartIds": [
+        "chart-09-regime-direction-3m"
+      ],
+      "removable": true
+    },
+    {
+      "id": "module-10",
+      "type": "analysis",
+      "kicker": "10 · CURRENT & BOK LENS",
+      "title": "2026년 8월 현재 위치",
+      "body": [
+        "2001년 이후 동일품목 고정패널(357·233·84개)에서 2026년 8월 3개월 상승 품목 비중은 헤드라인 61.1%, 근원 60.9%, 개인서비스 79.8%. 과거 인상기 평균보다 각각 +3.7p, +5.1p, +4.8p이며, 과거 인상기 월별 분포에서 각각 65·73·72퍼센타일이다. 현재 전체 바스켓(458·309·116개)의 같은 비중은 62.9·62.5·79.3%다.",
+        "한은 렌즈 | 현재 재인상국면의 근원·개인서비스 확산도는 2001년 이후 과거 인상기 중상단에 있다. 다만 현재 단월과 과거 월별 분포의 조건부 비교이며 금리의 인과효과나 추세 전환을 뜻하지 않는다."
+      ],
+      "chartIds": [],
+      "removable": true
+    }
+  ],
+  "charts": [
+    {
+      "id": "chart-02-observation-windows",
+      "type": "line",
+      "title": "관찰기간별 상승 품목 비중",
+      "unit": "품목 수 기준, %",
+      "asOf": "2026-08-31",
+      "source": "한국은행 ECOS 901Y009",
+      "reconstruction": "exact",
+      "xLabels": [
+        "12개월(전년동월비)",
+        "6개월 누적",
+        "3개월 누적",
+        "전월비"
+      ],
+      "series": [
+        {
+          "name": "Headline 458",
+          "role": "primary",
+          "values": [
+            74.5,
+            68.8,
+            62.9,
+            50.2
+          ]
+        },
+        {
+          "name": "Core 309",
+          "role": "secondary",
+          "values": [
+            82.2,
+            72.2,
+            62.5,
+            47.6
+          ]
+        }
+      ]
+    },
+    {
+      "id": "chart-03-direction-headline",
+      "type": "bar",
+      "title": "Headline 방향 구성",
+      "unit": "품목 수 기준, %",
+      "asOf": "2026-08-31",
+      "source": "한국은행 ECOS 901Y009",
+      "reconstruction": "exact",
+      "xLabels": [
+        "12개월(전년동월비)",
+        "6개월 누적",
+        "3개월 누적",
+        "전월비"
+      ],
+      "series": [
+        {
+          "name": "상승",
+          "role": "primary",
+          "values": [
+            74.5,
+            68.8,
+            62.9,
+            50.2
+          ]
+        },
+        {
+          "name": "보합",
+          "role": "secondary",
+          "values": [
+            4.1,
+            9.6,
+            16.2,
+            26.0
+          ]
+        },
+        {
+          "name": "하락",
+          "role": "secondary",
+          "values": [
+            21.4,
+            21.6,
+            21.0,
+            23.8
+          ]
+        }
+      ]
+    },
+    {
+      "id": "chart-03-direction-core",
+      "type": "bar",
+      "title": "Core 방향 구성",
+      "unit": "품목 수 기준, %",
+      "asOf": "2026-08-31",
+      "source": "한국은행 ECOS 901Y009",
+      "reconstruction": "exact",
+      "xLabels": [
+        "12개월(전년동월비)",
+        "6개월 누적",
+        "3개월 누적",
+        "전월비"
+      ],
+      "series": [
+        {
+          "name": "상승",
+          "role": "primary",
+          "values": [
+            82.2,
+            72.2,
+            62.5,
+            47.6
+          ]
+        },
+        {
+          "name": "보합",
+          "role": "secondary",
+          "values": [
+            5.5,
+            13.9,
+            23.6,
+            36.6
+          ]
+        },
+        {
+          "name": "하락",
+          "role": "secondary",
+          "values": [
+            12.3,
+            13.9,
+            13.9,
+            15.9
+          ]
+        }
+      ]
+    },
+    {
+      "id": "chart-04-distribution-july",
+      "type": "scatter",
+      "title": "2026.07 변화율 분포",
+      "unit": "비연율, %",
+      "asOf": "2026-07-31",
+      "source": "2026.07 보관 HTML · ECOS 901Y009",
+      "reconstruction": "exact",
+      "xDomain": [
+        -60,
+        180
+      ],
+      "series": [
+        {
+          "window": "12개월(전년동월비)",
+          "universe": "Headline",
+          "minimum": -41.3,
+          "p25": 0.0,
+          "median": 1.8,
+          "p75": 3.9,
+          "maximum": 47.5
+        },
+        {
+          "window": "12개월(전년동월비)",
+          "universe": "Core",
+          "minimum": -41.3,
+          "p25": 0.4,
+          "median": 2.0,
+          "p75": 4.0,
+          "maximum": 47.5
+        },
+        {
+          "window": "6개월 누적",
+          "universe": "Headline",
+          "minimum": -53.4,
+          "p25": 0.0,
+          "median": 0.9,
+          "p75": 2.3,
+          "maximum": 32.5
+        },
+        {
+          "window": "6개월 누적",
+          "universe": "Core",
+          "minimum": -17.6,
+          "p25": 0.0,
+          "median": 1.1,
+          "p75": 2.4,
+          "maximum": 32.5
+        },
+        {
+          "window": "3개월 누적",
+          "universe": "Headline",
+          "minimum": -42.6,
+          "p25": 0.0,
+          "median": 0.3,
+          "p75": 1.4,
+          "maximum": 73.2
+        },
+        {
+          "window": "3개월 누적",
+          "universe": "Core",
+          "minimum": -5.2,
+          "p25": 0.0,
+          "median": 0.4,
+          "p75": 1.3,
+          "maximum": 35.3
+        },
+        {
+          "window": "전월비",
+          "universe": "Headline",
+          "minimum": -19.5,
+          "p25": 0.0,
+          "median": 0.0,
+          "p75": 0.5,
+          "maximum": 42.8
+        },
+        {
+          "window": "전월비",
+          "universe": "Core",
+          "minimum": -4.7,
+          "p25": 0.0,
+          "median": 0.0,
+          "p75": 0.4,
+          "maximum": 31.1
+        }
+      ]
+    },
+    {
+      "id": "chart-04-distribution-august",
+      "type": "scatter",
+      "title": "2026.08 변화율 분포",
+      "unit": "비연율, %",
+      "asOf": "2026-08-31",
+      "source": "2026.08 현재 HTML · ECOS 901Y009",
+      "reconstruction": "exact",
+      "xDomain": [
+        -60,
+        180
+      ],
+      "series": [
+        {
+          "window": "12개월(전년동월비)",
+          "universe": "Headline",
+          "minimum": -40.6,
+          "p25": 0.0,
+          "median": 1.8,
+          "p75": 4.1,
+          "maximum": 46.8
+        },
+        {
+          "window": "12개월(전년동월비)",
+          "universe": "Core",
+          "minimum": -40.6,
+          "p25": 0.4,
+          "median": 2.0,
+          "p75": 4.0,
+          "maximum": 46.8
+        },
+        {
+          "window": "6개월 누적",
+          "universe": "Headline",
+          "minimum": -46.9,
+          "p25": 0.0,
+          "median": 1.0,
+          "p75": 2.8,
+          "maximum": 65.1
+        },
+        {
+          "window": "6개월 누적",
+          "universe": "Core",
+          "minimum": -18.2,
+          "p25": 0.0,
+          "median": 1.1,
+          "p75": 2.5,
+          "maximum": 27.8
+        },
+        {
+          "window": "3개월 누적",
+          "universe": "Headline",
+          "minimum": -39.1,
+          "p25": 0.0,
+          "median": 0.3,
+          "p75": 1.3,
+          "maximum": 164.7
+        },
+        {
+          "window": "3개월 누적",
+          "universe": "Core",
+          "minimum": -13.6,
+          "p25": 0.0,
+          "median": 0.3,
+          "p75": 1.0,
+          "maximum": 28.4
+        },
+        {
+          "window": "전월비",
+          "universe": "Headline",
+          "minimum": -11.8,
+          "p25": 0.0,
+          "median": 0.0,
+          "p75": 0.4,
+          "maximum": 68.2
+        },
+        {
+          "window": "전월비",
+          "universe": "Core",
+          "minimum": -10.5,
+          "p25": 0.0,
+          "median": 0.0,
+          "p75": 0.2,
+          "maximum": 19.9
+        }
+      ]
+    },
+    {
+      "id": "chart-06-personal-services",
+      "type": "line",
+      "title": "개인서비스 관찰기간별 상승 품목 비중",
+      "unit": "품목 수 기준, %",
+      "asOf": "2026-08-31",
+      "source": "KOSIS DT_1J22112 분류 · ECOS 901Y009 지수",
+      "reconstruction": "exact",
+      "xLabels": [
+        "12개월(전년동월비)",
+        "6개월 누적",
+        "3개월 누적",
+        "전월비"
+      ],
+      "series": [
+        {
+          "name": "개인서비스 116",
+          "role": "primary",
+          "values": [
+            89.7,
+            89.7,
+            79.3,
+            62.9
+          ]
+        },
+        {
+          "name": "외식 39",
+          "role": "secondary",
+          "values": [
+            97.4,
+            97.4,
+            92.3,
+            74.4
+          ]
+        },
+        {
+          "name": "외식제외 77",
+          "role": "secondary",
+          "values": [
+            85.7,
+            85.7,
+            72.7,
+            57.1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "chart-08-regime-breadth-3m",
+      "type": "line",
+      "title": "정책국면별 3개월 상승 품목 비중",
+      "unit": "%",
+      "asOf": "2026-08-31",
+      "source": "한국은행 ECOS 901Y009 · 한국은행 기준금리 추이",
+      "reconstruction": "exact",
+      "xLabels": [
+        "과거 인상기",
+        "동결기",
+        "인하기",
+        "2026.08"
+      ],
+      "series": [
+        {
+          "name": "Headline 357",
+          "role": "primary",
+          "values": [
+            57.3,
+            56.0,
+            55.1,
+            61.1
+          ]
+        },
+        {
+          "name": "Core 233",
+          "role": "secondary",
+          "values": [
+            55.8,
+            55.5,
+            54.4,
+            60.9
+          ]
+        },
+        {
+          "name": "개인서비스 84",
+          "role": "secondary",
+          "values": [
+            75.0,
+            73.6,
+            72.2,
+            79.8
+          ]
+        }
+      ]
+    },
+    {
+      "id": "chart-09-regime-direction-3m",
+      "type": "bar",
+      "title": "정책국면별 헤드라인 3개월 방향 구성",
+      "unit": "%",
+      "asOf": "2026-08-31",
+      "source": "한국은행 ECOS 901Y009",
+      "reconstruction": "exact",
+      "xLabels": [
+        "과거 인상기",
+        "동결기",
+        "인하기",
+        "2026.08"
+      ],
+      "series": [
+        {
+          "name": "상승",
+          "role": "primary",
+          "values": [
+            57.3,
+            56.0,
+            55.1,
+            61.1
+          ]
+        },
+        {
+          "name": "보합",
+          "role": "secondary",
+          "values": [
+            18.0,
+            16.0,
+            16.4,
+            16.2
+          ]
+        },
+        {
+          "name": "하락",
+          "role": "secondary",
+          "values": [
+            24.7,
+            28.1,
+            28.5,
+            22.7
+          ]
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "headlineCoreMetrics": {
+      "headline": [
+        {
+          "window": "12개월(전년동월비)",
+          "n": 458,
+          "rising_count": 341,
+          "falling_count": 98,
+          "flat_count": 19,
+          "rising_share": 74.5,
+          "falling_share": 21.4,
+          "flat_share": 4.1,
+          "weighted_rising_share": 83.9,
+          "weighted_falling_share": 10.6,
+          "weighted_flat_share": 5.5,
+          "net_diffusion": 53.1,
+          "median": 1.8
+        },
+        {
+          "window": "6개월 누적",
+          "n": 458,
+          "rising_count": 315,
+          "falling_count": 99,
+          "flat_count": 44,
+          "rising_share": 68.8,
+          "falling_share": 21.6,
+          "flat_share": 9.6,
+          "weighted_rising_share": 70.4,
+          "weighted_falling_share": 16.9,
+          "weighted_flat_share": 12.7,
+          "net_diffusion": 47.2,
+          "median": 1.0
+        },
+        {
+          "window": "3개월 누적",
+          "n": 458,
+          "rising_count": 288,
+          "falling_count": 96,
+          "flat_count": 74,
+          "rising_share": 62.9,
+          "falling_share": 21.0,
+          "flat_share": 16.2,
+          "weighted_rising_share": 64.4,
+          "weighted_falling_share": 16.3,
+          "weighted_flat_share": 19.4,
+          "net_diffusion": 41.9,
+          "median": 0.3
+        },
+        {
+          "window": "전월비",
+          "n": 458,
+          "rising_count": 230,
+          "falling_count": 109,
+          "flat_count": 119,
+          "rising_share": 50.2,
+          "falling_share": 23.8,
+          "flat_share": 26.0,
+          "weighted_rising_share": 52.0,
+          "weighted_falling_share": 18.9,
+          "weighted_flat_share": 29.1,
+          "net_diffusion": 26.4,
+          "median": 0.0
+        }
+      ],
+      "core_food_energy_ex": [
+        {
+          "window": "12개월(전년동월비)",
+          "n": 309,
+          "rising_count": 254,
+          "falling_count": 38,
+          "flat_count": 17,
+          "rising_share": 82.2,
+          "falling_share": 12.3,
+          "flat_share": 5.5,
+          "weighted_rising_share": 88.1,
+          "weighted_falling_share": 6.9,
+          "weighted_flat_share": 5.0,
+          "net_diffusion": 69.9,
+          "median": 2.0
+        },
+        {
+          "window": "6개월 누적",
+          "n": 309,
+          "rising_count": 223,
+          "falling_count": 43,
+          "flat_count": 43,
+          "rising_share": 72.2,
+          "falling_share": 13.9,
+          "flat_share": 13.9,
+          "weighted_rising_share": 71.3,
+          "weighted_falling_share": 12.5,
+          "weighted_flat_share": 16.2,
+          "net_diffusion": 58.3,
+          "median": 1.1
+        },
+        {
+          "window": "3개월 누적",
+          "n": 309,
+          "rising_count": 193,
+          "falling_count": 43,
+          "flat_count": 73,
+          "rising_share": 62.5,
+          "falling_share": 13.9,
+          "flat_share": 23.6,
+          "weighted_rising_share": 68.0,
+          "weighted_falling_share": 7.3,
+          "weighted_flat_share": 24.7,
+          "net_diffusion": 48.5,
+          "median": 0.3
+        },
+        {
+          "window": "전월비",
+          "n": 309,
+          "rising_count": 147,
+          "falling_count": 49,
+          "flat_count": 113,
+          "rising_share": 47.6,
+          "falling_share": 15.9,
+          "flat_share": 36.6,
+          "weighted_rising_share": 55.6,
+          "weighted_falling_share": 10.3,
+          "weighted_flat_share": 34.1,
+          "net_diffusion": 31.7,
+          "median": 0.0
+        }
+      ]
+    },
+    "personalServiceMetrics": {
+      "personal_services": [
+        {
+          "window": "12개월(전년동월비)",
+          "n": 116,
+          "rising_count": 104,
+          "falling_count": 8,
+          "flat_count": 4,
+          "rising_share": 89.7,
+          "falling_share": 6.9,
+          "flat_share": 3.4,
+          "weighted_rising_share": 93.9,
+          "weighted_falling_share": 3.3,
+          "weighted_flat_share": 2.9,
+          "net_diffusion": 82.8,
+          "median": 2.5
+        },
+        {
+          "window": "6개월 누적",
+          "n": 116,
+          "rising_count": 104,
+          "falling_count": 4,
+          "flat_count": 8,
+          "rising_share": 89.7,
+          "falling_share": 3.4,
+          "flat_share": 6.9,
+          "weighted_rising_share": 92.6,
+          "weighted_falling_share": 2.0,
+          "weighted_flat_share": 5.4,
+          "net_diffusion": 86.2,
+          "median": 1.2
+        },
+        {
+          "window": "3개월 누적",
+          "n": 116,
+          "rising_count": 92,
+          "falling_count": 8,
+          "flat_count": 16,
+          "rising_share": 79.3,
+          "falling_share": 6.9,
+          "flat_share": 13.8,
+          "weighted_rising_share": 82.0,
+          "weighted_falling_share": 5.1,
+          "weighted_flat_share": 12.9,
+          "net_diffusion": 72.4,
+          "median": 0.4
+        },
+        {
+          "window": "전월비",
+          "n": 116,
+          "rising_count": 73,
+          "falling_count": 10,
+          "flat_count": 33,
+          "rising_share": 62.9,
+          "falling_share": 8.6,
+          "flat_share": 28.4,
+          "weighted_rising_share": 67.4,
+          "weighted_falling_share": 12.3,
+          "weighted_flat_share": 20.3,
+          "net_diffusion": 54.3,
+          "median": 0.1
+        }
+      ],
+      "dining": [
+        {
+          "window": "12개월(전년동월비)",
+          "n": 39,
+          "rising_count": 38,
+          "falling_count": 1,
+          "flat_count": 0,
+          "rising_share": 97.4,
+          "falling_share": 2.6,
+          "flat_share": 0.0,
+          "weighted_rising_share": 99.8,
+          "weighted_falling_share": 0.2,
+          "weighted_flat_share": 0.0,
+          "net_diffusion": 94.9,
+          "median": 2.9
+        },
+        {
+          "window": "6개월 누적",
+          "n": 39,
+          "rising_count": 38,
+          "falling_count": 0,
+          "flat_count": 1,
+          "rising_share": 97.4,
+          "falling_share": 0.0,
+          "flat_share": 2.6,
+          "weighted_rising_share": 97.0,
+          "weighted_falling_share": 0.0,
+          "weighted_flat_share": 3.0,
+          "net_diffusion": 97.4,
+          "median": 1.3
+        },
+        {
+          "window": "3개월 누적",
+          "n": 39,
+          "rising_count": 36,
+          "falling_count": 0,
+          "flat_count": 3,
+          "rising_share": 92.3,
+          "falling_share": 0.0,
+          "flat_share": 7.7,
+          "weighted_rising_share": 90.8,
+          "weighted_falling_share": 0.0,
+          "weighted_flat_share": 9.2,
+          "net_diffusion": 92.3,
+          "median": 0.5
+        },
+        {
+          "window": "전월비",
+          "n": 39,
+          "rising_count": 29,
+          "falling_count": 3,
+          "flat_count": 7,
+          "rising_share": 74.4,
+          "falling_share": 7.7,
+          "flat_share": 17.9,
+          "weighted_rising_share": 73.5,
+          "weighted_falling_share": 9.6,
+          "weighted_flat_share": 17.0,
+          "net_diffusion": 66.7,
+          "median": 0.2
+        }
+      ],
+      "ex_dining": [
+        {
+          "window": "12개월(전년동월비)",
+          "n": 77,
+          "rising_count": 66,
+          "falling_count": 7,
+          "flat_count": 4,
+          "rising_share": 85.7,
+          "falling_share": 9.1,
+          "flat_share": 5.2,
+          "weighted_rising_share": 89.7,
+          "weighted_falling_share": 5.4,
+          "weighted_flat_share": 4.9,
+          "net_diffusion": 76.6,
+          "median": 2.1
+        },
+        {
+          "window": "6개월 누적",
+          "n": 77,
+          "rising_count": 66,
+          "falling_count": 4,
+          "flat_count": 7,
+          "rising_share": 85.7,
+          "falling_share": 5.2,
+          "flat_share": 9.1,
+          "weighted_rising_share": 89.5,
+          "weighted_falling_share": 3.3,
+          "weighted_flat_share": 7.2,
+          "net_diffusion": 80.5,
+          "median": 1.1
+        },
+        {
+          "window": "3개월 누적",
+          "n": 77,
+          "rising_count": 56,
+          "falling_count": 8,
+          "flat_count": 13,
+          "rising_share": 72.7,
+          "falling_share": 10.4,
+          "flat_share": 16.9,
+          "weighted_rising_share": 75.7,
+          "weighted_falling_share": 8.7,
+          "weighted_flat_share": 15.6,
+          "net_diffusion": 62.3,
+          "median": 0.3
+        },
+        {
+          "window": "전월비",
+          "n": 77,
+          "rising_count": 44,
+          "falling_count": 7,
+          "flat_count": 26,
+          "rising_share": 57.1,
+          "falling_share": 9.1,
+          "flat_share": 33.8,
+          "weighted_rising_share": 63.1,
+          "weighted_falling_share": 14.2,
+          "weighted_flat_share": 22.6,
+          "net_diffusion": 48.1,
+          "median": 0.0
+        }
+      ]
+    },
+    "tails3m": {
+      "headline": {
+        "top": [
+          {
+            "code": "A01703",
+            "name": "시금치",
+            "weight": 0.3,
+            "value": 164.7
+          },
+          {
+            "code": "A01709",
+            "name": "열무",
+            "weight": 0.2,
+            "value": 92.4
+          },
+          {
+            "code": "A01702",
+            "name": "상추",
+            "weight": 0.6,
+            "value": 65.6
+          },
+          {
+            "code": "A01716",
+            "name": "오이",
+            "weight": 0.6,
+            "value": 46.8
+          },
+          {
+            "code": "A01707",
+            "name": "부추",
+            "weight": 0.2,
+            "value": 39.9
+          },
+          {
+            "code": "A01718",
+            "name": "호박",
+            "weight": 0.5,
+            "value": 37.8
+          },
+          {
+            "code": "A01705",
+            "name": "미나리",
+            "weight": 0.2,
+            "value": 36.7
+          },
+          {
+            "code": "A01616",
+            "name": "체리",
+            "weight": 0.3,
+            "value": 36.2
+          },
+          {
+            "code": "A01701",
+            "name": "배추",
+            "weight": 1.3,
+            "value": 35.8
+          },
+          {
+            "code": "A01721",
+            "name": "파",
+            "weight": 0.9,
+            "value": 30.9
+          }
+        ],
+        "bottom": [
+          {
+            "code": "A01711",
+            "name": "감자",
+            "weight": 0.6,
+            "value": -39.1
+          },
+          {
+            "code": "A01617",
+            "name": "아보카도",
+            "weight": 0.1,
+            "value": -23.8
+          },
+          {
+            "code": "A01726",
+            "name": "파프리카",
+            "weight": 0.6,
+            "value": -22.9
+          },
+          {
+            "code": "A01609",
+            "name": "참외",
+            "weight": 1.0,
+            "value": -19.0
+          },
+          {
+            "code": "A01610",
+            "name": "수박",
+            "weight": 1.0,
+            "value": -15.1
+          },
+          {
+            "code": "I03104",
+            "name": "화초",
+            "weight": 0.7,
+            "value": -13.6
+          },
+          {
+            "code": "D05101",
+            "name": "전기료",
+            "weight": 16.1,
+            "value": -11.0
+          },
+          {
+            "code": "F01115",
+            "name": "유산균",
+            "weight": 1.2,
+            "value": -10.5
+          },
+          {
+            "code": "A01104",
+            "name": "보리쌀",
+            "weight": 0.2,
+            "value": -10.0
+          },
+          {
+            "code": "I06102",
+            "name": "해외단체여행비",
+            "weight": 5.5,
+            "value": -9.4
+          }
+        ]
+      },
+      "core_food_energy_ex": {
+        "top": [
+          {
+            "code": "K02103",
+            "name": "콘도이용료",
+            "weight": 0.8,
+            "value": 28.4
+          },
+          {
+            "code": "K02105",
+            "name": "휴양시설이용료",
+            "weight": 1.4,
+            "value": 20.7
+          },
+          {
+            "code": "I01203",
+            "name": "휴대용멀티미디어기기",
+            "weight": 1.2,
+            "value": 15.9
+          },
+          {
+            "code": "I01202",
+            "name": "컴퓨터수리비",
+            "weight": 0.1,
+            "value": 13.5
+          },
+          {
+            "code": "E06107",
+            "name": "가정용비닐용품",
+            "weight": 0.6,
+            "value": 13.2
+          },
+          {
+            "code": "K02101",
+            "name": "호텔숙박료",
+            "weight": 2.1,
+            "value": 12.7
+          },
+          {
+            "code": "F01209",
+            "name": "건강기기렌탈비",
+            "weight": 1.5,
+            "value": 12.6
+          },
+          {
+            "code": "H01101",
+            "name": "우편료",
+            "weight": 0.1,
+            "value": 12.3
+          },
+          {
+            "code": "F01111",
+            "name": "인삼",
+            "weight": 0.3,
+            "value": 11.2
+          },
+          {
+            "code": "F01112",
+            "name": "홍삼",
+            "weight": 1.1,
+            "value": 11.1
+          }
+        ],
+        "bottom": [
+          {
+            "code": "I03104",
+            "name": "화초",
+            "weight": 0.7,
+            "value": -13.6
+          },
+          {
+            "code": "F01115",
+            "name": "유산균",
+            "weight": 1.2,
+            "value": -10.5
+          },
+          {
+            "code": "I06102",
+            "name": "해외단체여행비",
+            "weight": 5.5,
+            "value": -9.4
+          },
+          {
+            "code": "G03302",
+            "name": "국제항공료",
+            "weight": 2.9,
+            "value": -8.5
+          },
+          {
+            "code": "G03301",
+            "name": "국내항공료",
+            "weight": 1.0,
+            "value": -5.3
+          },
+          {
+            "code": "E06110",
+            "name": "습기제거제",
+            "weight": 0.1,
+            "value": -4.1
+          },
+          {
+            "code": "L01203",
+            "name": "칫솔",
+            "weight": 0.4,
+            "value": -4.1
+          },
+          {
+            "code": "E03108",
+            "name": "선풍기",
+            "weight": 0.4,
+            "value": -3.7
+          },
+          {
+            "code": "E06101",
+            "name": "세탁세제",
+            "weight": 1.7,
+            "value": -3.5
+          },
+          {
+            "code": "L01204",
+            "name": "치약",
+            "weight": 0.5,
+            "value": -3.0
+          }
+        ]
+      },
+      "personal_services": {
+        "top": [
+          {
+            "code": "K02103",
+            "name": "콘도이용료",
+            "weight": 0.8,
+            "value": 28.4
+          },
+          {
+            "code": "K02105",
+            "name": "휴양시설이용료",
+            "weight": 1.4,
+            "value": 20.7
+          },
+          {
+            "code": "I01202",
+            "name": "컴퓨터수리비",
+            "weight": 0.1,
+            "value": 13.5
+          },
+          {
+            "code": "K02101",
+            "name": "호텔숙박료",
+            "weight": 2.1,
+            "value": 12.7
+          },
+          {
+            "code": "F01209",
+            "name": "건강기기렌탈비",
+            "weight": 1.5,
+            "value": 12.6
+          },
+          {
+            "code": "E03201",
+            "name": "가전제품수리비",
+            "weight": 2.4,
+            "value": 10.1
+          },
+          {
+            "code": "I06101",
+            "name": "국내단체여행비",
+            "weight": 2.0,
+            "value": 7.5
+          },
+          {
+            "code": "I04109",
+            "name": "놀이시설이용료",
+            "weight": 2.3,
+            "value": 7.0
+          },
+          {
+            "code": "K01139",
+            "name": "도시락",
+            "weight": 0.6,
+            "value": 3.7
+          },
+          {
+            "code": "G02304",
+            "name": "승용차임차료",
+            "weight": 3.2,
+            "value": 3.7
+          }
+        ],
+        "bottom": [
+          {
+            "code": "I06102",
+            "name": "해외단체여행비",
+            "weight": 5.5,
+            "value": -9.4
+          },
+          {
+            "code": "G03301",
+            "name": "국내항공료",
+            "weight": 1.0,
+            "value": -5.3
+          },
+          {
+            "code": "J04110",
+            "name": "학교보충교육비",
+            "weight": 1.4,
+            "value": -2.4
+          },
+          {
+            "code": "I04105",
+            "name": "골프장이용료",
+            "weight": 3.0,
+            "value": -1.7
+          },
+          {
+            "code": "I04204",
+            "name": "독서실비",
+            "weight": 0.8,
+            "value": -1.1
+          },
+          {
+            "code": "I04104",
+            "name": "골프연습장이용료",
+            "weight": 2.3,
+            "value": -0.4
+          },
+          {
+            "code": "F03102",
+            "name": "병원검사료",
+            "weight": 1.1,
+            "value": -0.1
+          },
+          {
+            "code": "G03402",
+            "name": "택배이용료",
+            "weight": 1.9,
+            "value": -0.0
+          },
+          {
+            "code": "E03202",
+            "name": "가전제품렌탈비",
+            "weight": 2.5,
+            "value": 0.0
+          },
+          {
+            "code": "G02306",
+            "name": "자동차검사료",
+            "weight": 0.3,
+            "value": 0.0
+          }
+        ]
+      }
+    },
+    "gates": {
+      "leaf_count": 458,
+      "expected_leaf_count": 458,
+      "leaf_count_ok": true,
+      "missing_weight_count": 0,
+      "duplicate_leaf_codes": [],
+      "duplicate_leaf_names": [],
+      "weight_sum": 1000.0000000000008,
+      "expected_weight_sum": 1000.0,
+      "weight_sum_ok": true,
+      "passed": true,
+      "rebase": {
+        "as_of": "2026-09-03",
+        "basket_basis_year": 2020,
+        "rebase_review_after": "2026-12-18",
+        "rebase_confirmed": false,
+        "review_ok": true,
+        "basket_diff_required": false,
+        "warning": "2025-base official basket may change the 458-item/weight-1000 expectation; confirm and update config before reuse."
+      },
+      "core_membership": {
+        "definition": "food_and_energy_excluded",
+        "food_root_code": "A",
+        "food_leaf_count": 140,
+        "expected_food_leaf_count": 140,
+        "food_weight_sum": 142.0,
+        "expected_food_weight_sum": 142.0,
+        "energy_leaf_count": 9,
+        "expected_energy_leaf_count": 9,
+        "energy_weight_sum": 75.8,
+        "expected_energy_weight_sum": 75.8,
+        "excluded_leaf_count": 149,
+        "expected_excluded_leaf_count": 149,
+        "core_leaf_count": 309,
+        "expected_core_leaf_count": 309,
+        "core_weight_sum": 782.2,
+        "expected_core_weight_sum": 782.2,
+        "missing_energy_codes": [],
+        "energy_name_mismatches": {},
+        "food_energy_overlap": [],
+        "energy_items": {
+          "D05101": "전기료",
+          "D05201": "도시가스",
+          "D05202": "취사용LPG",
+          "D05301": "등유",
+          "D05302": "지역난방비",
+          "D05303": "부탄가스",
+          "G02101": "휘발유",
+          "G02102": "경유",
+          "G02103": "자동차용LPG"
+        },
+        "official_definition_url": "https://www.kostat.go.kr/board.es?act=view&bid=213&list_no=442792&mid=a10301040200&nPage=1&ref_bid=&tag=",
+        "passed": true
+      },
+      "personal_services_membership": {
+        "definition": "KOSIS DT_1J22112 F01/F02 leaf partition",
+        "mapping_path": "data/reference/personal_services.csv",
+        "source_table": "DT_1J22112",
+        "source_url": "https://kosis.kr/statHtml/statHtml.do?orgId=101&tblId=DT_1J22112",
+        "personal_count": 116,
+        "expected_personal_count": 116,
+        "personal_weight_sum": 333.3,
+        "expected_personal_weight_sum": 333.3,
+        "dining_count": 39,
+        "expected_dining_count": 39,
+        "dining_weight_sum": 138.0,
+        "expected_dining_weight_sum": 138.0,
+        "ex_dining_count": 77,
+        "expected_ex_dining_count": 77,
+        "ex_dining_weight_sum": 195.3,
+        "expected_ex_dining_weight_sum": 195.3,
+        "duplicate_codes": [],
+        "missing_codes": [],
+        "name_mismatches": {},
+        "invalid_groups": [],
+        "invalid_sources": [],
+        "invalid_selectors": [],
+        "dining_ex_dining_overlap": [],
+        "passed": true
+      },
+      "coverage": {
+        "12m": {
+          "valid": 458,
+          "expected": 458,
+          "complete": true
+        },
+        "6m": {
+          "valid": 458,
+          "expected": 458,
+          "complete": true
+        },
+        "3m": {
+          "valid": 458,
+          "expected": 458,
+          "complete": true
+        },
+        "1m": {
+          "valid": 458,
+          "expected": 458,
+          "complete": true
+        }
+      },
+      "coverage_ok": true,
+      "end_period": "202608",
+      "metadata": {
+        "monthly_rows": 581,
+        "unique_codes": 581,
+        "unique_names": 556,
+        "duplicate_codes": [],
+        "duplicate_names": [
+          "가구, 가사비품 및 카페트",
+          "가정·정원용 공구 및 장비",
+          "가정용 섬유제품",
+          "고등교육",
+          "기타 개인용품",
+          "기타 오락 및 문화용 주요 내구재",
+          "기타 오락용품, 조경용품 및 애완동물",
+          "기타서비스",
+          "단체여행",
+          "담배",
+          "병원 서비스",
+          "서적",
+          "숙박 서비스",
+          "신발",
+          "우편서비스",
+          "운송장비",
+          "유치원 및 초등교육",
+          "음식 서비스",
+          "전화 및 팩스 서비스",
+          "전화 및 팩스장비",
+          "주거시설 유지·보수",
+          "주류",
+          "주방용품 및 가정용품",
+          "주택임차료"
+        ],
+        "passed": true
+      },
+      "arithmetic": {
+        "headline": {
+          "horizons": {
+            "12m": {
+              "U_plus_D_plus_F_count": 458,
+              "U_plus_D_plus_F_share": 100.0,
+              "weighted_share_sum": 100.00000000000003,
+              "weight_coverage": 1000.0000000000008,
+              "passed": true
+            },
+            "6m": {
+              "U_plus_D_plus_F_count": 458,
+              "U_plus_D_plus_F_share": 100.00000000000001,
+              "weighted_share_sum": 99.99999999999997,
+              "weight_coverage": 1000.0000000000008,
+              "passed": true
+            },
+            "3m": {
+              "U_plus_D_plus_F_count": 458,
+              "U_plus_D_plus_F_share": 100.0,
+              "weighted_share_sum": 99.99999999999994,
+              "weight_coverage": 1000.0000000000008,
+              "passed": true
+            },
+            "1m": {
+              "U_plus_D_plus_F_count": 458,
+              "U_plus_D_plus_F_share": 100.0,
+              "weighted_share_sum": 99.99999999999994,
+              "weight_coverage": 1000.0000000000008,
+              "passed": true
+            }
+          },
+          "passed": true
+        },
+        "core_food_energy_ex": {
+          "horizons": {
+            "12m": {
+              "U_plus_D_plus_F_count": 309,
+              "U_plus_D_plus_F_share": 100.0,
+              "weighted_share_sum": 100.0,
+              "weight_coverage": 782.2000000000005,
+              "passed": true
+            },
+            "6m": {
+              "U_plus_D_plus_F_count": 309,
+              "U_plus_D_plus_F_share": 99.99999999999999,
+              "weighted_share_sum": 99.99999999999996,
+              "weight_coverage": 782.2000000000005,
+              "passed": true
+            },
+            "3m": {
+              "U_plus_D_plus_F_count": 309,
+              "U_plus_D_plus_F_share": 100.0,
+              "weighted_share_sum": 99.99999999999997,
+              "weight_coverage": 782.2000000000005,
+              "passed": true
+            },
+            "1m": {
+              "U_plus_D_plus_F_count": 309,
+              "U_plus_D_plus_F_share": 100.0,
+              "weighted_share_sum": 99.99999999999994,
+              "weight_coverage": 782.2000000000005,
+              "passed": true
+            }
+          },
+          "passed": true
+        },
+        "personal_services": {
+          "horizons": {
+            "12m": {
+              "U_plus_D_plus_F_count": 116,
+              "U_plus_D_plus_F_share": 100.00000000000001,
+              "weighted_share_sum": 99.99999999999997,
+              "weight_coverage": 333.30000000000007,
+              "passed": true
+            },
+            "6m": {
+              "U_plus_D_plus_F_count": 116,
+              "U_plus_D_plus_F_share": 100.00000000000001,
+              "weighted_share_sum": 99.99999999999997,
+              "weight_coverage": 333.30000000000007,
+              "passed": true
+            },
+            "3m": {
+              "U_plus_D_plus_F_count": 116,
+              "U_plus_D_plus_F_share": 100.0,
+              "weighted_share_sum": 99.99999999999999,
+              "weight_coverage": 333.30000000000007,
+              "passed": true
+            },
+            "1m": {
+              "U_plus_D_plus_F_count": 116,
+              "U_plus_D_plus_F_share": 100.0,
+              "weighted_share_sum": 99.99999999999996,
+              "weight_coverage": 333.30000000000007,
+              "passed": true
+            }
+          },
+          "passed": true
+        },
+        "dining": {
+          "horizons": {
+            "12m": {
+              "U_plus_D_plus_F_count": 39,
+              "U_plus_D_plus_F_share": 100.0,
+              "weighted_share_sum": 99.99999999999999,
+              "weight_coverage": 138.0,
+              "passed": true
+            },
+            "6m": {
+              "U_plus_D_plus_F_count": 39,
+              "U_plus_D_plus_F_share": 100.0,
+              "weighted_share_sum": 100.0,
+              "weight_coverage": 138.0,
+              "passed": true
+            },
+            "3m": {
+              "U_plus_D_plus_F_count": 39,
+              "U_plus_D_plus_F_share": 100.0,
+              "weighted_share_sum": 100.00000000000001,
+              "weight_coverage": 138.0,
+              "passed": true
+            },
+            "1m": {
+              "U_plus_D_plus_F_count": 39,
+              "U_plus_D_plus_F_share": 100.0,
+              "weighted_share_sum": 100.00000000000001,
+              "weight_coverage": 138.0,
+              "passed": true
+            }
+          },
+          "passed": true
+        },
+        "ex_dining": {
+          "horizons": {
+            "12m": {
+              "U_plus_D_plus_F_count": 77,
+              "U_plus_D_plus_F_share": 100.0,
+              "weighted_share_sum": 100.0,
+              "weight_coverage": 195.29999999999993,
+              "passed": true
+            },
+            "6m": {
+              "U_plus_D_plus_F_count": 77,
+              "U_plus_D_plus_F_share": 100.0,
+              "weighted_share_sum": 100.00000000000003,
+              "weight_coverage": 195.29999999999993,
+              "passed": true
+            },
+            "3m": {
+              "U_plus_D_plus_F_count": 77,
+              "U_plus_D_plus_F_share": 100.0,
+              "weighted_share_sum": 100.00000000000003,
+              "weight_coverage": 195.29999999999993,
+              "passed": true
+            },
+            "1m": {
+              "U_plus_D_plus_F_count": 77,
+              "U_plus_D_plus_F_share": 100.0,
+              "weighted_share_sum": 100.00000000000003,
+              "weight_coverage": 195.29999999999993,
+              "passed": true
+            }
+          },
+          "passed": true
+        },
+        "passed": true
+      }
+    },
+    "policyRegimeEpisodes": {
+      "columns": [
+        "국면",
+        "기간",
+        "월말 기준금리",
+        "표본",
+        "용도"
+      ],
+      "rows": [
+        [
+          "동결기 1",
+          "2001.01~2001.01",
+          "5.25→5.25%",
+          "1개월",
+          "과거 비교표본"
+        ],
+        [
+          "인하기 1",
+          "2001.02~2001.09",
+          "5.00→4.00%",
+          "8개월",
+          "과거 비교표본"
+        ],
+        [
+          "동결기 2",
+          "2001.10~2002.04",
+          "4.00→4.00%",
+          "7개월",
+          "과거 비교표본"
+        ],
+        [
+          "인상기 1",
+          "2002.05~2002.05",
+          "4.25→4.25%",
+          "1개월",
+          "과거 비교표본"
+        ],
+        [
+          "동결기 3",
+          "2002.06~2003.04",
+          "4.25→4.25%",
+          "11개월",
+          "과거 비교표본"
+        ],
+        [
+          "인하기 2",
+          "2003.05~2004.11",
+          "4.00→3.25%",
+          "19개월",
+          "과거 비교표본"
+        ],
+        [
+          "동결기 4",
+          "2004.12~2005.09",
+          "3.25→3.25%",
+          "10개월",
+          "과거 비교표본"
+        ],
+        [
+          "인상기 2",
+          "2005.10~2008.08",
+          "3.50→5.25%",
+          "35개월",
+          "과거 비교표본"
+        ],
+        [
+          "동결기 5",
+          "2008.09~2008.09",
+          "5.25→5.25%",
+          "1개월",
+          "과거 비교표본"
+        ],
+        [
+          "인하기 3",
+          "2008.10~2009.02",
+          "4.25→2.00%",
+          "5개월",
+          "과거 비교표본"
+        ],
+        [
+          "동결기 6",
+          "2009.03~2010.06",
+          "2.00→2.00%",
+          "16개월",
+          "과거 비교표본"
+        ],
+        [
+          "인상기 3",
+          "2010.07~2011.06",
+          "2.25→3.25%",
+          "12개월",
+          "과거 비교표본"
+        ],
+        [
+          "동결기 7",
+          "2011.07~2012.06",
+          "3.25→3.25%",
+          "12개월",
+          "과거 비교표본"
+        ],
+        [
+          "인하기 4",
+          "2012.07~2016.06",
+          "3.00→1.25%",
+          "48개월",
+          "과거 비교표본"
+        ],
+        [
+          "동결기 8",
+          "2016.07~2017.10",
+          "1.25→1.25%",
+          "16개월",
+          "과거 비교표본"
+        ],
+        [
+          "인상기 4",
+          "2017.11~2018.11",
+          "1.50→1.75%",
+          "13개월",
+          "과거 비교표본"
+        ],
+        [
+          "동결기 9",
+          "2018.12~2019.06",
+          "1.75→1.75%",
+          "7개월",
+          "과거 비교표본"
+        ],
+        [
+          "인하기 5",
+          "2019.07~2020.05",
+          "1.50→0.50%",
+          "11개월",
+          "과거 비교표본"
+        ],
+        [
+          "동결기 10",
+          "2020.06~2021.07",
+          "0.50→0.50%",
+          "14개월",
+          "과거 비교표본"
+        ],
+        [
+          "인상기 5",
+          "2021.08~2023.01",
+          "0.75→3.50%",
+          "18개월",
+          "과거 비교표본"
+        ],
+        [
+          "동결기 11",
+          "2023.02~2024.09",
+          "3.50→3.50%",
+          "20개월",
+          "과거 비교표본"
+        ],
+        [
+          "인하기 6",
+          "2024.10~2025.05",
+          "3.25→2.50%",
+          "8개월",
+          "과거 비교표본"
+        ],
+        [
+          "동결기 12",
+          "2025.06~2026.06",
+          "2.50→2.50%",
+          "13개월",
+          "과거 비교표본"
+        ],
+        [
+          "인상기 6",
+          "2026.07~2026.08",
+          "2.75→3.00%",
+          "2개월",
+          "현재 비교점"
+        ]
+      ]
+    },
+    "policyRegimeBreadth": {
+      "columns": [
+        "국면",
+        "모집단",
+        "표본월",
+        "12개월 상승",
+        "6개월 상승",
+        "3개월 상승",
+        "전월 상승"
+      ],
+      "rows": [
+        [
+          "과거 인상기",
+          "Headline 357",
+          "79",
+          "71.4",
+          "64.4",
+          "57.3",
+          "47.0"
+        ],
+        [
+          "과거 인상기",
+          "Core 233",
+          "79",
+          "72.0",
+          "64.2",
+          "55.8",
+          "43.8"
+        ],
+        [
+          "과거 인상기",
+          "개인서비스 84",
+          "79",
+          "86.6",
+          "81.2",
+          "75.0",
+          "61.2"
+        ],
+        [
+          "동결기",
+          "Headline 357",
+          "128",
+          "71.1",
+          "63.0",
+          "56.0",
+          "46.6"
+        ],
+        [
+          "동결기",
+          "Core 233",
+          "128",
+          "72.6",
+          "64.2",
+          "55.5",
+          "43.8"
+        ],
+        [
+          "동결기",
+          "개인서비스 84",
+          "128",
+          "85.1",
+          "79.9",
+          "73.6",
+          "59.6"
+        ],
+        [
+          "인하기",
+          "Headline 357",
+          "99",
+          "67.9",
+          "61.7",
+          "55.1",
+          "45.6"
+        ],
+        [
+          "인하기",
+          "Core 233",
+          "99",
+          "69.8",
+          "62.4",
+          "54.4",
+          "42.7"
+        ],
+        [
+          "인하기",
+          "개인서비스 84",
+          "99",
+          "84.6",
+          "79.0",
+          "72.2",
+          "56.6"
+        ],
+        [
+          "2026.08",
+          "Headline 357",
+          "1",
+          "73.9",
+          "67.5",
+          "61.1",
+          "49.9"
+        ],
+        [
+          "2026.08",
+          "Core 233",
+          "1",
+          "82.4",
+          "71.2",
+          "60.9",
+          "47.6"
+        ],
+        [
+          "2026.08",
+          "개인서비스 84",
+          "1",
+          "89.3",
+          "88.1",
+          "79.8",
+          "65.5"
+        ]
+      ]
+    },
+    "policyRegimeDirection3m": {
+      "columns": [
+        "국면",
+        "상승",
+        "보합",
+        "하락",
+        "순확산"
+      ],
+      "rows": [
+        [
+          "과거 인상기",
+          "57.3",
+          "18.0",
+          "24.7",
+          "32.6"
+        ],
+        [
+          "동결기",
+          "56.0",
+          "16.0",
+          "28.1",
+          "27.9"
+        ],
+        [
+          "인하기",
+          "55.1",
+          "16.4",
+          "28.5",
+          "26.5"
+        ],
+        [
+          "2026.08",
+          "61.1",
+          "16.2",
+          "22.7",
+          "38.4"
+        ]
+      ]
+    },
+    "policyRegimeTransitions3m": {
+      "columns": [
+        "비교",
+        "기준 국면 우세",
+        "비교 국면 우세",
+        "품목 수"
+      ],
+      "rows": [
+        [
+          "인상기 대비 동결기",
+          "하락 우세",
+          "하락 우세",
+          "14"
+        ],
+        [
+          "인상기 대비 동결기",
+          "하락 우세",
+          "혼합·보합",
+          "7"
+        ],
+        [
+          "인상기 대비 동결기",
+          "하락 우세",
+          "상승 우세",
+          "15"
+        ],
+        [
+          "인상기 대비 동결기",
+          "혼합·보합",
+          "하락 우세",
+          "6"
+        ],
+        [
+          "인상기 대비 동결기",
+          "혼합·보합",
+          "혼합·보합",
+          "78"
+        ],
+        [
+          "인상기 대비 동결기",
+          "혼합·보합",
+          "상승 우세",
+          "12"
+        ],
+        [
+          "인상기 대비 동결기",
+          "상승 우세",
+          "하락 우세",
+          "9"
+        ],
+        [
+          "인상기 대비 동결기",
+          "상승 우세",
+          "혼합·보합",
+          "18"
+        ],
+        [
+          "인상기 대비 동결기",
+          "상승 우세",
+          "상승 우세",
+          "198"
+        ],
+        [
+          "동결기 대비 인하기",
+          "하락 우세",
+          "하락 우세",
+          "16"
+        ],
+        [
+          "동결기 대비 인하기",
+          "하락 우세",
+          "혼합·보합",
+          "4"
+        ],
+        [
+          "동결기 대비 인하기",
+          "하락 우세",
+          "상승 우세",
+          "9"
+        ],
+        [
+          "동결기 대비 인하기",
+          "혼합·보합",
+          "하락 우세",
+          "8"
+        ],
+        [
+          "동결기 대비 인하기",
+          "혼합·보합",
+          "혼합·보합",
+          "84"
+        ],
+        [
+          "동결기 대비 인하기",
+          "혼합·보합",
+          "상승 우세",
+          "11"
+        ],
+        [
+          "동결기 대비 인하기",
+          "상승 우세",
+          "하락 우세",
+          "18"
+        ],
+        [
+          "동결기 대비 인하기",
+          "상승 우세",
+          "혼합·보합",
+          "12"
+        ],
+        [
+          "동결기 대비 인하기",
+          "상승 우세",
+          "상승 우세",
+          "195"
+        ]
+      ]
+    },
+    "policyRegimeItemFlips3m": {
+      "columns": [
+        "현재 방향",
+        "품목",
+        "현행 가중치(참고)",
+        "인상기 상승월",
+        "동결기 상승월",
+        "인하기 상승월",
+        "2026.08 3개월"
+      ],
+      "rows": [
+        [
+          "새로 상승",
+          "휴대전화료",
+          "29.8",
+          "19.0",
+          "24.2",
+          "5.1",
+          "0.0"
+        ],
+        [
+          "새로 상승",
+          "휴대전화기",
+          "10.4",
+          "20.3",
+          "21.9",
+          "21.2",
+          "1.9"
+        ],
+        [
+          "새로 상승",
+          "돼지고기",
+          "9.8",
+          "46.8",
+          "52.3",
+          "54.5",
+          "0.4"
+        ],
+        [
+          "새로 상승",
+          "국산쇠고기",
+          "8.6",
+          "45.6",
+          "57.0",
+          "73.7",
+          "0.3"
+        ],
+        [
+          "새로 상승",
+          "다목적승용차",
+          "7.7",
+          "49.4",
+          "57.8",
+          "36.4",
+          "1.4"
+        ],
+        [
+          "새로 상승",
+          "기초화장품",
+          "4.5",
+          "45.6",
+          "49.2",
+          "46.5",
+          "1.3"
+        ],
+        [
+          "새로 상승",
+          "햄버거",
+          "4.3",
+          "39.2",
+          "37.5",
+          "37.4",
+          "0.7"
+        ],
+        [
+          "새로 상승",
+          "대형승용차",
+          "3.2",
+          "49.4",
+          "50.0",
+          "33.3",
+          "7.9"
+        ],
+        [
+          "새로 상승",
+          "승용차임차료",
+          "3.2",
+          "32.9",
+          "44.5",
+          "30.3",
+          "3.7"
+        ],
+        [
+          "새로 상승",
+          "택시료",
+          "3.2",
+          "30.4",
+          "45.3",
+          "33.3",
+          "0.5"
+        ],
+        [
+          "새로 하락",
+          "휘발유",
+          "24.1",
+          "67.1",
+          "65.6",
+          "43.4",
+          "-7.6"
+        ],
+        [
+          "새로 하락",
+          "경유",
+          "16.3",
+          "75.9",
+          "63.3",
+          "38.4",
+          "-8.2"
+        ],
+        [
+          "새로 하락",
+          "전기료",
+          "16.1",
+          "32.9",
+          "15.6",
+          "17.2",
+          "-11.0"
+        ],
+        [
+          "새로 하락",
+          "해외단체여행비",
+          "5.5",
+          "62.0",
+          "53.9",
+          "51.5",
+          "-9.4"
+        ],
+        [
+          "새로 하락",
+          "쌀",
+          "4.2",
+          "62.0",
+          "40.6",
+          "46.5",
+          "-0.1"
+        ],
+        [
+          "새로 하락",
+          "수입쇠고기",
+          "3.1",
+          "60.8",
+          "61.7",
+          "64.6",
+          "-1.7"
+        ],
+        [
+          "새로 하락",
+          "골프장이용료",
+          "3.0",
+          "84.8",
+          "67.2",
+          "64.6",
+          "-1.7"
+        ],
+        [
+          "새로 하락",
+          "국제항공료",
+          "2.9",
+          "62.0",
+          "60.2",
+          "43.4",
+          "-8.5"
+        ],
+        [
+          "새로 하락",
+          "등유",
+          "2.4",
+          "81.0",
+          "59.4",
+          "34.3",
+          "-2.5"
+        ],
+        [
+          "새로 하락",
+          "사과",
+          "2.3",
+          "53.2",
+          "61.7",
+          "51.5",
+          "-5.4"
+        ]
+      ]
+    }
+  },
+  "sources": [
+    {
+      "id": "source-ecos",
+      "name": "한국은행 ECOS 901Y009 소비자물가지수(2020=100)",
+      "path": "https://ecos.bok.or.kr/api",
+      "asOf": "2026-09-03"
+    },
+    {
+      "id": "source-kosis",
+      "name": "KOSIS DT_1J22112 품목별 소비자물가지수(품목성질별: 2020=100)",
+      "path": "https://kosis.kr/statHtml/statHtml.do?orgId=101&tblId=DT_1J22112",
+      "asOf": "2026-09-03"
+    },
+    {
+      "id": "source-july-archive",
+      "name": "한국 CPI 품목 확산도 2026.07 보관본",
+      "path": "../../kr-cpi-breadth/archive/2026-07.html",
+      "asOf": "2026-07-31"
+    },
+    {
+      "id": "source-aug-current",
+      "name": "한국 CPI 품목 확산도 2026.08 현재본",
+      "path": "../../kr-cpi-breadth/index.html",
+      "asOf": "2026-08-31"
+    },
+    {
+      "id": "source-bok-rate",
+      "name": "한국은행 기준금리 추이",
+      "path": "https://www.bok.or.kr/portal/singl/baseRate/list.do?dataSeCd=01&menuNo=200643",
+      "asOf": "2026-09-07"
+    },
+    {
+      "id": "source-regime-run",
+      "name": "ECOS 901Y009 장기 불변 캐시 20260907T133717413349",
+      "path": "../../kr-cpi-breadth/data/raw/20260907T133717413349/manifest.json",
+      "asOf": "2026-09-07"
+    }
+  ],
+  "econCockpitImportDraft": {
+    "version": 1,
+    "reportKind": "issue",
+    "drafts": {
+      "issue": {
+        "kicker": "KOREA INFLATION · CPI ITEM BREADTH",
+        "title": "한국 CPI 품목 확산도",
+        "subtitle": "헤드라인 458개·식료품 및 에너지 제외 근원 309개·개인서비스 116개의 가격 방향",
+        "date": "2026.09.03",
+        "desk": "채권전략·경제지표분석",
+        "workspaceLabel": "본부 공용 보고서작성",
+        "templateLabel": "Issue Review",
+        "reportTypeLabel": "소비자물가 품목 확산도",
+        "templateName": "IBM × Coinbase 인쇄형 이슈보고서",
+        "showRanges": false,
+        "source": "한국은행 ECOS 901Y009 · KOSIS DT_1J22112 · 기준월 2026.08",
+        "blocks": [
+          {
+            "id": "section-00-summary",
+            "type": "text",
+            "title": "핵심 판독 · 농산물 상단 꼬리 확대, 근원·서비스 확산은 둔화",
+            "body": "8월 헤드라인이 강해 보인 주된 이유는 여름 채소 급등. 3개월 상승 품목 수와 중앙값은 늘지 않아 전반적 재확산으로 보기는 어려운 결과.\n\n헤드라인 단기 | 3개월 상승 품목 비중 63.5→62.9%, 전월비 53.3→50.2%\n\n근원 단기 | 3개월 상승 품목 비중 65.7→62.5%, 전월비 54.0→47.6%\n\n식료품 | 3개월 상승 품목 83→91개, 전체 헤드라인은 291→288개\n\n개인서비스 | 3개월 상승 품목 비중 84.5→79.3%, 전월비 69.0→62.9%\n\n분포 판독 | 3개월 최대 상승률은 시금치 영향으로 73.2→164.7%까지 확대됐지만 중앙값은 0.3%로 동일. 물가 압력의 폭 확대보다 농산물 계절 급등과 일부 고가중 품목 집중에 가까운 모습.",
+            "style": "bar"
+          },
+          {
+            "id": "section-01-detail",
+            "type": "table",
+            "title": "01 · 기간별 상승 품목 비중",
+            "columns": [
+              "구간",
+              "모집단",
+              "상승",
+              "하락",
+              "보합",
+              "가중 상승",
+              "가중 하락",
+              "순확산",
+              "중앙값"
+            ],
+            "rows": [
+              [
+                "12개월(전년동월비)",
+                "Headline 458",
+                "341개 / 74.5%",
+                "98개 / 21.4%",
+                "19개 / 4.1%",
+                "83.9%",
+                "10.6%",
+                "53.1p",
+                "1.8%"
+              ],
+              [
+                "12개월(전년동월비)",
+                "Core 309",
+                "254개 / 82.2%",
+                "38개 / 12.3%",
+                "17개 / 5.5%",
+                "88.1%",
+                "6.9%",
+                "69.9p",
+                "2.0%"
+              ],
+              [
+                "6개월 누적",
+                "Headline 458",
+                "315개 / 68.8%",
+                "99개 / 21.6%",
+                "44개 / 9.6%",
+                "70.4%",
+                "16.9%",
+                "47.2p",
+                "1.0%"
+              ],
+              [
+                "6개월 누적",
+                "Core 309",
+                "223개 / 72.2%",
+                "43개 / 13.9%",
+                "43개 / 13.9%",
+                "71.3%",
+                "12.5%",
+                "58.3p",
+                "1.1%"
+              ],
+              [
+                "3개월 누적",
+                "Headline 458",
+                "288개 / 62.9%",
+                "96개 / 21.0%",
+                "74개 / 16.2%",
+                "64.4%",
+                "16.3%",
+                "41.9p",
+                "0.3%"
+              ],
+              [
+                "3개월 누적",
+                "Core 309",
+                "193개 / 62.5%",
+                "43개 / 13.9%",
+                "73개 / 23.6%",
+                "68.0%",
+                "7.3%",
+                "48.5p",
+                "0.3%"
+              ],
+              [
+                "전월비",
+                "Headline 458",
+                "230개 / 50.2%",
+                "109개 / 23.8%",
+                "119개 / 26.0%",
+                "52.0%",
+                "18.9%",
+                "26.4p",
+                "0.0%"
+              ],
+              [
+                "전월비",
+                "Core 309",
+                "147개 / 47.6%",
+                "49개 / 15.9%",
+                "113개 / 36.6%",
+                "55.6%",
+                "10.3%",
+                "31.7p",
+                "0.0%"
+              ]
+            ],
+            "insightLabel": "이 표의 주장",
+            "insightTitle": "헤드라인과 근원의 가격 상승 확산 비교",
+            "insightBody": "식료품·에너지를 빼기 전·후의 상승 품목 퍼짐을 동일 기간 변화율로 비교"
+          },
+          {
+            "id": "section-02-chart",
+            "type": "chart",
+            "title": "02 · 관찰기간별 상승 품목 비중",
+            "columns": 1,
+            "charts": [
+              {
+                "id": "section-02-observation",
+                "title": "Headline 458 vs Core 309",
+                "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA3NjAgMzEwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9Iuq0gOywsOq4sOqwhOuzhCDsg4Hsirkg7ZKI66qpIOu5hOykkSDtl6Trk5zrnbzsnbgg6re87JuQIOu5hOq1kCI+PGxpbmUgY2xhc3M9ImdyaWQiIHgxPSI2MiIgeTE9IjI0Ni4wIiB4Mj0iNzMyIiB5Mj0iMjQ2LjAiLz48dGV4dCBjbGFzcz0iYXhpcyIgeD0iNTMiIHk9IjI1MC4wIiB0ZXh0LWFuY2hvcj0iZW5kIj40MCU8L3RleHQ+PGxpbmUgY2xhc3M9ImdyaWQiIHgxPSI2MiIgeTE9IjIwMy42IiB4Mj0iNzMyIiB5Mj0iMjAzLjYiLz48dGV4dCBjbGFzcz0iYXhpcyIgeD0iNTMiIHk9IjIwNy42IiB0ZXh0LWFuY2hvcj0iZW5kIj41MCU8L3RleHQ+PGxpbmUgY2xhc3M9ImdyaWQiIHgxPSI2MiIgeTE9IjE2MS4yIiB4Mj0iNzMyIiB5Mj0iMTYxLjIiLz48dGV4dCBjbGFzcz0iYXhpcyIgeD0iNTMiIHk9IjE2NS4yIiB0ZXh0LWFuY2hvcj0iZW5kIj42MCU8L3RleHQ+PGxpbmUgY2xhc3M9ImdyaWQiIHgxPSI2MiIgeTE9IjExOC44IiB4Mj0iNzMyIiB5Mj0iMTE4LjgiLz48dGV4dCBjbGFzcz0iYXhpcyIgeD0iNTMiIHk9IjEyMi44IiB0ZXh0LWFuY2hvcj0iZW5kIj43MCU8L3RleHQ+PGxpbmUgY2xhc3M9ImdyaWQiIHgxPSI2MiIgeTE9Ijc2LjQiIHgyPSI3MzIiIHkyPSI3Ni40Ii8+PHRleHQgY2xhc3M9ImF4aXMiIHg9IjUzIiB5PSI4MC40IiB0ZXh0LWFuY2hvcj0iZW5kIj44MCU8L3RleHQ+PGxpbmUgY2xhc3M9ImdyaWQiIHgxPSI2MiIgeTE9IjM0LjAiIHgyPSI3MzIiIHkyPSIzNC4wIi8+PHRleHQgY2xhc3M9ImF4aXMiIHg9IjUzIiB5PSIzOC4wIiB0ZXh0LWFuY2hvcj0iZW5kIj45MCU8L3RleHQ+PHBvbHlsaW5lIHBvaW50cz0iNjIuMCw5OS45IDI4NS4zLDEyNC4wIDUwOC43LDE0OS4wIDczMi4wLDIwMi43IiBmaWxsPSJub25lIiBzdHJva2U9IiNkYTFlMjgiIHN0cm9rZS13aWR0aD0iMyIvPjxjaXJjbGUgY3g9IjYyLjAiIGN5PSI5OS45IiByPSI1IiBmaWxsPSIjZGExZTI4Ii8+PHRleHQgY2xhc3M9InZhbHVlIiB4PSI2Mi4wIiB5PSIxMjAuOSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+NzQuNSU8L3RleHQ+PGNpcmNsZSBjeD0iMjg1LjMiIGN5PSIxMjQuMCIgcj0iNSIgZmlsbD0iI2RhMWUyOCIvPjx0ZXh0IGNsYXNzPSJ2YWx1ZSIgeD0iMjg1LjMiIHk9IjE0NS4wIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj42OC44JTwvdGV4dD48Y2lyY2xlIGN4PSI1MDguNyIgY3k9IjE0OS4wIiByPSI1IiBmaWxsPSIjZGExZTI4Ii8+PHRleHQgY2xhc3M9InZhbHVlIiB4PSI1MDguNyIgeT0iMTcwLjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjYyLjklPC90ZXh0PjxjaXJjbGUgY3g9IjczMi4wIiBjeT0iMjAyLjciIHI9IjUiIGZpbGw9IiNkYTFlMjgiLz48dGV4dCBjbGFzcz0idmFsdWUiIHg9IjczMi4wIiB5PSIyMjMuNyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+NTAuMiU8L3RleHQ+PHBvbHlsaW5lIHBvaW50cz0iNjIuMCw2Ny4xIDI4NS4zLDEwOS42IDUwOC43LDE1MC44IDczMi4wLDIxMy45IiBmaWxsPSJub25lIiBzdHJva2U9IiM4YTFjMWMiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWRhc2hhcnJheT0iNiA0Ii8+PGNpcmNsZSBjeD0iNjIuMCIgY3k9IjY3LjEiIHI9IjUiIGZpbGw9IiM4YTFjMWMiLz48dGV4dCBjbGFzcz0idmFsdWUiIHg9IjYyLjAiIHk9IjU2LjEiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjgyLjIlPC90ZXh0PjxjaXJjbGUgY3g9IjI4NS4zIiBjeT0iMTA5LjYiIHI9IjUiIGZpbGw9IiM4YTFjMWMiLz48dGV4dCBjbGFzcz0idmFsdWUiIHg9IjI4NS4zIiB5PSI5OC42IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj43Mi4yJTwvdGV4dD48Y2lyY2xlIGN4PSI1MDguNyIgY3k9IjE1MC44IiByPSI1IiBmaWxsPSIjOGExYzFjIi8+PHRleHQgY2xhc3M9InZhbHVlIiB4PSI1MDguNyIgeT0iMTM5LjgiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjYyLjUlPC90ZXh0PjxjaXJjbGUgY3g9IjczMi4wIiBjeT0iMjEzLjkiIHI9IjUiIGZpbGw9IiM4YTFjMWMiLz48dGV4dCBjbGFzcz0idmFsdWUiIHg9IjczMi4wIiB5PSIyMDIuOSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+NDcuNiU8L3RleHQ+PHRleHQgY2xhc3M9InhsYWIiIHg9IjYyLjAiIHk9IjI3NiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+MTLqsJzsm5Qo7KCE64WE64+Z7JuU67mEKTwvdGV4dD48dGV4dCBjbGFzcz0ieGxhYiIgeD0iMjg1LjMiIHk9IjI3NiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+NuqwnOyblCDriITsoIE8L3RleHQ+PHRleHQgY2xhc3M9InhsYWIiIHg9IjUwOC43IiB5PSIyNzYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjPqsJzsm5Qg64iE7KCBPC90ZXh0Pjx0ZXh0IGNsYXNzPSJ4bGFiIiB4PSI3MzIuMCIgeT0iMjc2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7soITsm5TruYQ8L3RleHQ+PGxpbmUgeDE9IjI0MCIgeTE9IjMwMCIgeDI9IjI2OCIgeTI9IjMwMCIgc3Ryb2tlPSIjZGExZTI4IiBzdHJva2Utd2lkdGg9IjMiLz48dGV4dCBjbGFzcz0ibGVnZW5kIiB4PSIyNzUiIHk9IjMwNCI+SGVhZGxpbmUgNDU4PC90ZXh0PjxsaW5lIHgxPSI0MTUiIHkxPSIzMDAiIHgyPSI0NDMiIHkyPSIzMDAiIHN0cm9rZT0iIzhhMWMxYyIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtZGFzaGFycmF5PSI2IDQiLz48dGV4dCBjbGFzcz0ibGVnZW5kIiB4PSI0NTAiIHk9IjMwNCI+Q29yZSAzMDk8L3RleHQ+PC9zdmc+",
+                "caption": "모두 2026.08을 끝점으로 하는 서로 다른 관찰창이며 시계열 아님",
+                "source": "한국은행 ECOS 901Y009 · 기준월 2026.08 · 품목 수 기준 %",
+                "insightLabel": "판독",
+                "insightTitle": "짧은 관찰창일수록 상승 품목 비중 하락",
+                "insightBody": "헤드라인 74.5→50.2%, 근원 82.2→47.6%"
+              }
+            ]
+          },
+          {
+            "id": "section-03-chart",
+            "type": "chart",
+            "title": "03 · 상승·보합·하락 방향 구성",
+            "columns": 2,
+            "charts": [
+              {
+                "id": "section-03-headline",
+                "title": "Headline · 458개",
+                "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA3NjAgMzEwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9Iuq4sOqwhOuzhCDsg4Hsirkg7ZWY6529IO2SiOuqqSDruYTspJEiPjxsaW5lIGNsYXNzPSJncmlkIiB4MT0iNTUiIHkxPSIyNDguMCIgeDI9IjczNSIgeTI9IjI0OC4wIi8+PHRleHQgY2xhc3M9ImF4aXMiIHg9IjQ3IiB5PSIyNTIuMCIgdGV4dC1hbmNob3I9ImVuZCI+MCU8L3RleHQ+PGxpbmUgY2xhc3M9ImdyaWQiIHgxPSI1NSIgeTE9IjE5My4wIiB4Mj0iNzM1IiB5Mj0iMTkzLjAiLz48dGV4dCBjbGFzcz0iYXhpcyIgeD0iNDciIHk9IjE5Ny4wIiB0ZXh0LWFuY2hvcj0iZW5kIj4yNSU8L3RleHQ+PGxpbmUgY2xhc3M9ImdyaWQiIHgxPSI1NSIgeTE9IjEzOC4wIiB4Mj0iNzM1IiB5Mj0iMTM4LjAiLz48dGV4dCBjbGFzcz0iYXhpcyIgeD0iNDciIHk9IjE0Mi4wIiB0ZXh0LWFuY2hvcj0iZW5kIj41MCU8L3RleHQ+PGxpbmUgY2xhc3M9ImdyaWQiIHgxPSI1NSIgeTE9IjgzLjAiIHgyPSI3MzUiIHkyPSI4My4wIi8+PHRleHQgY2xhc3M9ImF4aXMiIHg9IjQ3IiB5PSI4Ny4wIiB0ZXh0LWFuY2hvcj0iZW5kIj43NSU8L3RleHQ+PGxpbmUgY2xhc3M9ImdyaWQiIHgxPSI1NSIgeTE9IjI4LjAiIHgyPSI3MzUiIHkyPSIyOC4wIi8+PHRleHQgY2xhc3M9ImF4aXMiIHg9IjQ3IiB5PSIzMi4wIiB0ZXh0LWFuY2hvcj0iZW5kIj4xMDAlPC90ZXh0PjxyZWN0IHg9IjEwMCIgeT0iODQuMiIgd2lkdGg9Ijc2IiBoZWlnaHQ9IjE2My44IiBmaWxsPSIjZGExZTI4Ii8+PHRleHQgY2xhc3M9ImJhcnZhbCIgeD0iMTM4LjAiIHk9IjE3MC4xIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj43NC41PC90ZXh0PjxyZWN0IHg9IjEwMCIgeT0iNzUuMSIgd2lkdGg9Ijc2IiBoZWlnaHQ9IjkuMSIgZmlsbD0iIzhkOGQ4ZCIvPjxyZWN0IHg9IjEwMCIgeT0iMjguMCIgd2lkdGg9Ijc2IiBoZWlnaHQ9IjQ3LjEiIGZpbGw9IiMwZjYyZmUiLz48dGV4dCBjbGFzcz0iYmFydmFsIiB4PSIxMzguMCIgeT0iNTUuNSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+MjEuNDwvdGV4dD48dGV4dCBjbGFzcz0ieGxhYiIgeD0iMTM4LjAiIHk9IjI3MCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+MTLqsJzsm5Qo7KCE64WE64+Z7JuU67mEKTwvdGV4dD48cmVjdCB4PSIyNzAiIHk9Ijk2LjciIHdpZHRoPSI3NiIgaGVpZ2h0PSIxNTEuMyIgZmlsbD0iI2RhMWUyOCIvPjx0ZXh0IGNsYXNzPSJiYXJ2YWwiIHg9IjMwOC4wIiB5PSIxNzYuMyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+NjguODwvdGV4dD48cmVjdCB4PSIyNzAiIHk9Ijc1LjYiIHdpZHRoPSI3NiIgaGVpZ2h0PSIyMS4xIiBmaWxsPSIjOGQ4ZDhkIi8+PHRleHQgY2xhc3M9ImJhcnZhbCIgeD0iMzA4LjAiIHk9IjkwLjEiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjkuNjwvdGV4dD48cmVjdCB4PSIyNzAiIHk9IjI4LjAiIHdpZHRoPSI3NiIgaGVpZ2h0PSI0Ny42IiBmaWxsPSIjMGY2MmZlIi8+PHRleHQgY2xhc3M9ImJhcnZhbCIgeD0iMzA4LjAiIHk9IjU1LjgiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjIxLjY8L3RleHQ+PHRleHQgY2xhc3M9InhsYWIiIHg9IjMwOC4wIiB5PSIyNzAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjbqsJzsm5Qg64iE7KCBPC90ZXh0PjxyZWN0IHg9IjQ0MCIgeT0iMTA5LjciIHdpZHRoPSI3NiIgaGVpZ2h0PSIxMzguMyIgZmlsbD0iI2RhMWUyOCIvPjx0ZXh0IGNsYXNzPSJiYXJ2YWwiIHg9IjQ3OC4wIiB5PSIxODIuOCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+NjIuOTwvdGV4dD48cmVjdCB4PSI0NDAiIHk9Ijc0LjEiIHdpZHRoPSI3NiIgaGVpZ2h0PSIzNS41IiBmaWxsPSIjOGQ4ZDhkIi8+PHRleHQgY2xhc3M9ImJhcnZhbCIgeD0iNDc4LjAiIHk9Ijk1LjkiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjE2LjI8L3RleHQ+PHJlY3QgeD0iNDQwIiB5PSIyOC4wIiB3aWR0aD0iNzYiIGhlaWdodD0iNDYuMSIgZmlsbD0iIzBmNjJmZSIvPjx0ZXh0IGNsYXNzPSJiYXJ2YWwiIHg9IjQ3OC4wIiB5PSI1NS4xIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj4yMS4wPC90ZXh0Pjx0ZXh0IGNsYXNzPSJ4bGFiIiB4PSI0NzguMCIgeT0iMjcwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj4z6rCc7JuUIOuIhOyggTwvdGV4dD48cmVjdCB4PSI2MTAiIHk9IjEzNy41IiB3aWR0aD0iNzYiIGhlaWdodD0iMTEwLjUiIGZpbGw9IiNkYTFlMjgiLz48dGV4dCBjbGFzcz0iYmFydmFsIiB4PSI2NDguMCIgeT0iMTk2LjgiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjUwLjI8L3RleHQ+PHJlY3QgeD0iNjEwIiB5PSI4MC40IiB3aWR0aD0iNzYiIGhlaWdodD0iNTcuMiIgZmlsbD0iIzhkOGQ4ZCIvPjx0ZXh0IGNsYXNzPSJiYXJ2YWwiIHg9IjY0OC4wIiB5PSIxMTIuOSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+MjYuMDwvdGV4dD48cmVjdCB4PSI2MTAiIHk9IjI4LjAiIHdpZHRoPSI3NiIgaGVpZ2h0PSI1Mi40IiBmaWxsPSIjMGY2MmZlIi8+PHRleHQgY2xhc3M9ImJhcnZhbCIgeD0iNjQ4LjAiIHk9IjU4LjIiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjIzLjg8L3RleHQ+PHRleHQgY2xhc3M9InhsYWIiIHg9IjY0OC4wIiB5PSIyNzAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPuyghOyblOu5hDwvdGV4dD48cmVjdCB4PSIxOTAiIHk9IjI5MiIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjZGExZTI4Ii8+PHRleHQgY2xhc3M9ImxlZ2VuZCIgeD0iMjA1IiB5PSIzMDEiPuyDgeyKuTwvdGV4dD48cmVjdCB4PSIzMTUiIHk9IjI5MiIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjOGQ4ZDhkIi8+PHRleHQgY2xhc3M9ImxlZ2VuZCIgeD0iMzMwIiB5PSIzMDEiPuuztO2VqTwvdGV4dD48cmVjdCB4PSI0NDAiIHk9IjI5MiIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjMGY2MmZlIi8+PHRleHQgY2xhc3M9ImxlZ2VuZCIgeD0iNDU1IiB5PSIzMDEiPu2VmOudvTwvdGV4dD48L3N2Zz4=",
+                "caption": "빨강 상승·파랑 하락·회색 보합",
+                "source": "한국은행 ECOS 901Y009 · 기준월 2026.08 · 품목 수 기준 %"
+              },
+              {
+                "id": "section-03-core",
+                "title": "Core · 309개",
+                "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA3NjAgMzEwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9Iuq4sOqwhOuzhCDsg4Hsirkg7ZWY6529IO2SiOuqqSDruYTspJEiPjxsaW5lIGNsYXNzPSJncmlkIiB4MT0iNTUiIHkxPSIyNDguMCIgeDI9IjczNSIgeTI9IjI0OC4wIi8+PHRleHQgY2xhc3M9ImF4aXMiIHg9IjQ3IiB5PSIyNTIuMCIgdGV4dC1hbmNob3I9ImVuZCI+MCU8L3RleHQ+PGxpbmUgY2xhc3M9ImdyaWQiIHgxPSI1NSIgeTE9IjE5My4wIiB4Mj0iNzM1IiB5Mj0iMTkzLjAiLz48dGV4dCBjbGFzcz0iYXhpcyIgeD0iNDciIHk9IjE5Ny4wIiB0ZXh0LWFuY2hvcj0iZW5kIj4yNSU8L3RleHQ+PGxpbmUgY2xhc3M9ImdyaWQiIHgxPSI1NSIgeTE9IjEzOC4wIiB4Mj0iNzM1IiB5Mj0iMTM4LjAiLz48dGV4dCBjbGFzcz0iYXhpcyIgeD0iNDciIHk9IjE0Mi4wIiB0ZXh0LWFuY2hvcj0iZW5kIj41MCU8L3RleHQ+PGxpbmUgY2xhc3M9ImdyaWQiIHgxPSI1NSIgeTE9IjgzLjAiIHgyPSI3MzUiIHkyPSI4My4wIi8+PHRleHQgY2xhc3M9ImF4aXMiIHg9IjQ3IiB5PSI4Ny4wIiB0ZXh0LWFuY2hvcj0iZW5kIj43NSU8L3RleHQ+PGxpbmUgY2xhc3M9ImdyaWQiIHgxPSI1NSIgeTE9IjI4LjAiIHgyPSI3MzUiIHkyPSIyOC4wIi8+PHRleHQgY2xhc3M9ImF4aXMiIHg9IjQ3IiB5PSIzMi4wIiB0ZXh0LWFuY2hvcj0iZW5kIj4xMDAlPC90ZXh0PjxyZWN0IHg9IjEwMCIgeT0iNjcuMiIgd2lkdGg9Ijc2IiBoZWlnaHQ9IjE4MC44IiBmaWxsPSIjZGExZTI4Ii8+PHRleHQgY2xhc3M9ImJhcnZhbCIgeD0iMTM4LjAiIHk9IjE2MS42IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj44Mi4yPC90ZXh0PjxyZWN0IHg9IjEwMCIgeT0iNTUuMSIgd2lkdGg9Ijc2IiBoZWlnaHQ9IjEyLjEiIGZpbGw9IiM4ZDhkOGQiLz48cmVjdCB4PSIxMDAiIHk9IjI4LjAiIHdpZHRoPSI3NiIgaGVpZ2h0PSIyNy4xIiBmaWxsPSIjMGY2MmZlIi8+PHRleHQgY2xhc3M9ImJhcnZhbCIgeD0iMTM4LjAiIHk9IjQ1LjUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjEyLjM8L3RleHQ+PHRleHQgY2xhc3M9InhsYWIiIHg9IjEzOC4wIiB5PSIyNzAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjEy6rCc7JuUKOyghOuFhOuPmeyblOu5hCk8L3RleHQ+PHJlY3QgeD0iMjcwIiB5PSI4OS4yIiB3aWR0aD0iNzYiIGhlaWdodD0iMTU4LjgiIGZpbGw9IiNkYTFlMjgiLz48dGV4dCBjbGFzcz0iYmFydmFsIiB4PSIzMDguMCIgeT0iMTcyLjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjcyLjI8L3RleHQ+PHJlY3QgeD0iMjcwIiB5PSI1OC42IiB3aWR0aD0iNzYiIGhlaWdodD0iMzAuNiIgZmlsbD0iIzhkOGQ4ZCIvPjx0ZXh0IGNsYXNzPSJiYXJ2YWwiIHg9IjMwOC4wIiB5PSI3Ny45IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj4xMy45PC90ZXh0PjxyZWN0IHg9IjI3MCIgeT0iMjguMCIgd2lkdGg9Ijc2IiBoZWlnaHQ9IjMwLjYiIGZpbGw9IiMwZjYyZmUiLz48dGV4dCBjbGFzcz0iYmFydmFsIiB4PSIzMDguMCIgeT0iNDcuMyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+MTMuOTwvdGV4dD48dGV4dCBjbGFzcz0ieGxhYiIgeD0iMzA4LjAiIHk9IjI3MCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+NuqwnOyblCDriITsoIE8L3RleHQ+PHJlY3QgeD0iNDQwIiB5PSIxMTAuNiIgd2lkdGg9Ijc2IiBoZWlnaHQ9IjEzNy40IiBmaWxsPSIjZGExZTI4Ii8+PHRleHQgY2xhc3M9ImJhcnZhbCIgeD0iNDc4LjAiIHk9IjE4My4zIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj42Mi41PC90ZXh0PjxyZWN0IHg9IjQ0MCIgeT0iNTguNiIgd2lkdGg9Ijc2IiBoZWlnaHQ9IjUyLjAiIGZpbGw9IiM4ZDhkOGQiLz48dGV4dCBjbGFzcz0iYmFydmFsIiB4PSI0NzguMCIgeT0iODguNiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+MjMuNjwvdGV4dD48cmVjdCB4PSI0NDAiIHk9IjI4LjAiIHdpZHRoPSI3NiIgaGVpZ2h0PSIzMC42IiBmaWxsPSIjMGY2MmZlIi8+PHRleHQgY2xhc3M9ImJhcnZhbCIgeD0iNDc4LjAiIHk9IjQ3LjMiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjEzLjk8L3RleHQ+PHRleHQgY2xhc3M9InhsYWIiIHg9IjQ3OC4wIiB5PSIyNzAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjPqsJzsm5Qg64iE7KCBPC90ZXh0PjxyZWN0IHg9IjYxMCIgeT0iMTQzLjMiIHdpZHRoPSI3NiIgaGVpZ2h0PSIxMDQuNyIgZmlsbD0iI2RhMWUyOCIvPjx0ZXh0IGNsYXNzPSJiYXJ2YWwiIHg9IjY0OC4wIiB5PSIxOTkuNyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+NDcuNjwvdGV4dD48cmVjdCB4PSI2MTAiIHk9IjYyLjkiIHdpZHRoPSI3NiIgaGVpZ2h0PSI4MC41IiBmaWxsPSIjOGQ4ZDhkIi8+PHRleHQgY2xhc3M9ImJhcnZhbCIgeD0iNjQ4LjAiIHk9IjEwNy4xIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj4zNi42PC90ZXh0PjxyZWN0IHg9IjYxMCIgeT0iMjguMCIgd2lkdGg9Ijc2IiBoZWlnaHQ9IjM0LjkiIGZpbGw9IiMwZjYyZmUiLz48dGV4dCBjbGFzcz0iYmFydmFsIiB4PSI2NDguMCIgeT0iNDkuNCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+MTUuOTwvdGV4dD48dGV4dCBjbGFzcz0ieGxhYiIgeD0iNjQ4LjAiIHk9IjI3MCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+7KCE7JuU67mEPC90ZXh0PjxyZWN0IHg9IjE5MCIgeT0iMjkyIiB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9IiNkYTFlMjgiLz48dGV4dCBjbGFzcz0ibGVnZW5kIiB4PSIyMDUiIHk9IjMwMSI+7IOB7Iq5PC90ZXh0PjxyZWN0IHg9IjMxNSIgeT0iMjkyIiB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9IiM4ZDhkOGQiLz48dGV4dCBjbGFzcz0ibGVnZW5kIiB4PSIzMzAiIHk9IjMwMSI+67O07ZWpPC90ZXh0PjxyZWN0IHg9IjQ0MCIgeT0iMjkyIiB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9IiMwZjYyZmUiLz48dGV4dCBjbGFzcz0ibGVnZW5kIiB4PSI0NTUiIHk9IjMwMSI+7ZWY6529PC90ZXh0Pjwvc3ZnPg==",
+                "caption": "식료품·에너지 제외 방향 구성",
+                "source": "한국은행 ECOS 901Y009 · 기준월 2026.08 · 품목 수 기준 %"
+              }
+            ],
+            "insightLabel": "이 차트의 주장",
+            "insightTitle": "방향 너비 비교",
+            "insightBody": "동일 기간에서 헤드라인과 근원의 상승·보합·하락 비중 비교"
+          },
+          {
+            "id": "section-04-chart",
+            "type": "chart",
+            "title": "04 · 대부분 품목의 가격은 얼마나 변했나",
+            "columns": 2,
+            "charts": [
+              {
+                "id": "section-04-july",
+                "title": "2026.07 변화율 분포",
+                "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA3NjAgNDMwIiBkYXRhLWRvbWFpbj0iLTYwLDE4MCIgZGF0YS1tYXJnaW5zPSIyNiwyOCw0OCwyMjAiIHJvbGU9ImltZyIgYXJpYS1sYWJlbD0iMjAyNuuFhCA37JuUIEhlYWRsaW5lIENvcmUg7ZKI66qpIOuzgO2ZlOycqCDstZzshowgUDI1IOykkeyVmeqwkiBQNzUg7LWc64yAIj48bGluZSBjbGFzcz0iZ3JpZCIgeDE9IjIyMC4wIiB5MT0iMjYiIHgyPSIyMjAuMCIgeTI9IjM4MiIvPjx0ZXh0IGNsYXNzPSJheGlzIiB4PSIyMjAuMCIgeT0iNDEyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj4tNjAlPC90ZXh0PjxsaW5lIGNsYXNzPSJncmlkIiB4MT0iMzA1LjMiIHkxPSIyNiIgeDI9IjMwNS4zIiB5Mj0iMzgyIi8+PHRleHQgY2xhc3M9ImF4aXMiIHg9IjMwNS4zIiB5PSI0MTIiIHRleHQtYW5jaG9yPSJtaWRkbGUiPi0yMCU8L3RleHQ+PGxpbmUgY2xhc3M9ImdyaWQiIHgxPSIzOTAuNyIgeTE9IjI2IiB4Mj0iMzkwLjciIHkyPSIzODIiLz48dGV4dCBjbGFzcz0iYXhpcyIgeD0iMzkwLjciIHk9IjQxMiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+MjAlPC90ZXh0PjxsaW5lIGNsYXNzPSJncmlkIiB4MT0iNDc2LjAiIHkxPSIyNiIgeDI9IjQ3Ni4wIiB5Mj0iMzgyIi8+PHRleHQgY2xhc3M9ImF4aXMiIHg9IjQ3Ni4wIiB5PSI0MTIiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjYwJTwvdGV4dD48bGluZSBjbGFzcz0iZ3JpZCIgeDE9IjU2MS4zIiB5MT0iMjYiIHgyPSI1NjEuMyIgeTI9IjM4MiIvPjx0ZXh0IGNsYXNzPSJheGlzIiB4PSI1NjEuMyIgeT0iNDEyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj4xMDAlPC90ZXh0PjxsaW5lIGNsYXNzPSJncmlkIiB4MT0iNjQ2LjciIHkxPSIyNiIgeDI9IjY0Ni43IiB5Mj0iMzgyIi8+PHRleHQgY2xhc3M9ImF4aXMiIHg9IjY0Ni43IiB5PSI0MTIiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjE0MCU8L3RleHQ+PGxpbmUgY2xhc3M9ImdyaWQiIHgxPSI3MzIuMCIgeTE9IjI2IiB4Mj0iNzMyLjAiIHkyPSIzODIiLz48dGV4dCBjbGFzcz0iYXhpcyIgeD0iNzMyLjAiIHk9IjQxMiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+MTgwJTwvdGV4dD48ZyBkYXRhLW1pbj0iLTQxLjMiIGRhdGEtcDI1PSIwLjAiIGRhdGEtbWVkaWFuPSIxLjgiIGRhdGEtcDc1PSIzLjkiIGRhdGEtbWF4PSI0Ny41Ij48dGl0bGU+MTLqsJzsm5Qo7KCE64WE64+Z7JuU67mEKSBIZWFkbGluZTog7LWc7IaMIC00MS4zLCBQMjUgMC4wLCDspJHslZnqsJIgMS44LCBQNzUgMy45LCDstZzrjIAgNDcuNTwvdGl0bGU+PHRleHQgY2xhc3M9InhsYWIiIHg9IjIxMCIgeT0iNDgiIHRleHQtYW5jaG9yPSJlbmQiPjEy6rCc7JuUKOyghOuFhOuPmeyblOu5hCkgwrcgSGVhZGxpbmU8L3RleHQ+PGxpbmUgeDE9IjI1OS45IiB5MT0iNDQiIHgyPSI0NDkuMyIgeTI9IjQ0IiBzdHJva2U9IiM4ZDhkOGQiIHN0cm9rZS13aWR0aD0iMiIvPjxsaW5lIHgxPSIyNTkuOSIgeTE9IjM5IiB4Mj0iMjU5LjkiIHkyPSI0OSIgc3Ryb2tlPSIjOGQ4ZDhkIi8+PGxpbmUgeDE9IjQ0OS4zIiB5MT0iMzkiIHgyPSI0NDkuMyIgeTI9IjQ5IiBzdHJva2U9IiM4ZDhkOGQiLz48cmVjdCB4PSIzNDguMCIgeT0iMzUiIHdpZHRoPSI4LjMiIGhlaWdodD0iMTgiIGZpbGw9IiM1MjUyNTIiIG9wYWNpdHk9Ii43MiIvPjxsaW5lIHgxPSIzNTEuOCIgeTE9IjMxIiB4Mj0iMzUxLjgiIHkyPSI1NyIgc3Ryb2tlPSIjMTYxNjE2IiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PGcgZGF0YS1taW49Ii00MS4zIiBkYXRhLXAyNT0iMC40IiBkYXRhLW1lZGlhbj0iMi4wIiBkYXRhLXA3NT0iNC4wIiBkYXRhLW1heD0iNDcuNSI+PHRpdGxlPjEy6rCc7JuUKOyghOuFhOuPmeyblOu5hCkgQ29yZTog7LWc7IaMIC00MS4zLCBQMjUgMC40LCDspJHslZnqsJIgMi4wLCBQNzUgNC4wLCDstZzrjIAgNDcuNTwvdGl0bGU+PHRleHQgY2xhc3M9InhsYWIiIHg9IjIxMCIgeT0iOTAiIHRleHQtYW5jaG9yPSJlbmQiPjEy6rCc7JuUKOyghOuFhOuPmeyblOu5hCkgwrcgQ29yZTwvdGV4dD48bGluZSB4MT0iMjU5LjkiIHkxPSI4NiIgeDI9IjQ0OS4zIiB5Mj0iODYiIHN0cm9rZT0iIzhkOGQ4ZCIgc3Ryb2tlLXdpZHRoPSIyIi8+PGxpbmUgeDE9IjI1OS45IiB5MT0iODEiIHgyPSIyNTkuOSIgeTI9IjkxIiBzdHJva2U9IiM4ZDhkOGQiLz48bGluZSB4MT0iNDQ5LjMiIHkxPSI4MSIgeDI9IjQ0OS4zIiB5Mj0iOTEiIHN0cm9rZT0iIzhkOGQ4ZCIvPjxyZWN0IHg9IjM0OC45IiB5PSI3NyIgd2lkdGg9IjcuNyIgaGVpZ2h0PSIxOCIgZmlsbD0iIzBmNjJmZSIgb3BhY2l0eT0iLjcyIi8+PGxpbmUgeDE9IjM1Mi4zIiB5MT0iNzMiIHgyPSIzNTIuMyIgeTI9Ijk5IiBzdHJva2U9IiMxNjE2MTYiIHN0cm9rZS13aWR0aD0iMiIvPjwvZz48ZyBkYXRhLW1pbj0iLTUzLjQiIGRhdGEtcDI1PSIwLjAiIGRhdGEtbWVkaWFuPSIwLjkiIGRhdGEtcDc1PSIyLjMiIGRhdGEtbWF4PSIzMi41Ij48dGl0bGU+NuqwnOyblCDriITsoIEgSGVhZGxpbmU6IOy1nOyGjCAtNTMuNCwgUDI1IDAuMCwg7KSR7JWZ6rCSIDAuOSwgUDc1IDIuMywg7LWc64yAIDMyLjU8L3RpdGxlPjx0ZXh0IGNsYXNzPSJ4bGFiIiB4PSIyMTAiIHk9IjEzMiIgdGV4dC1hbmNob3I9ImVuZCI+NuqwnOyblCDriITsoIEgwrcgSGVhZGxpbmU8L3RleHQ+PGxpbmUgeDE9IjIzNC4xIiB5MT0iMTI4IiB4Mj0iNDE3LjMiIHkyPSIxMjgiIHN0cm9rZT0iIzhkOGQ4ZCIgc3Ryb2tlLXdpZHRoPSIyIi8+PGxpbmUgeDE9IjIzNC4xIiB5MT0iMTIzIiB4Mj0iMjM0LjEiIHkyPSIxMzMiIHN0cm9rZT0iIzhkOGQ4ZCIvPjxsaW5lIHgxPSI0MTcuMyIgeTE9IjEyMyIgeDI9IjQxNy4zIiB5Mj0iMTMzIiBzdHJva2U9IiM4ZDhkOGQiLz48cmVjdCB4PSIzNDguMCIgeT0iMTE5IiB3aWR0aD0iNC45IiBoZWlnaHQ9IjE4IiBmaWxsPSIjNTI1MjUyIiBvcGFjaXR5PSIuNzIiLz48bGluZSB4MT0iMzQ5LjkiIHkxPSIxMTUiIHgyPSIzNDkuOSIgeTI9IjE0MSIgc3Ryb2tlPSIjMTYxNjE2IiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PGcgZGF0YS1taW49Ii0xNy42IiBkYXRhLXAyNT0iMC4wIiBkYXRhLW1lZGlhbj0iMS4xIiBkYXRhLXA3NT0iMi40IiBkYXRhLW1heD0iMzIuNSI+PHRpdGxlPjbqsJzsm5Qg64iE7KCBIENvcmU6IOy1nOyGjCAtMTcuNiwgUDI1IDAuMCwg7KSR7JWZ6rCSIDEuMSwgUDc1IDIuNCwg7LWc64yAIDMyLjU8L3RpdGxlPjx0ZXh0IGNsYXNzPSJ4bGFiIiB4PSIyMTAiIHk9IjE3NCIgdGV4dC1hbmNob3I9ImVuZCI+NuqwnOyblCDriITsoIEgwrcgQ29yZTwvdGV4dD48bGluZSB4MT0iMzEwLjUiIHkxPSIxNzAiIHgyPSI0MTcuMyIgeTI9IjE3MCIgc3Ryb2tlPSIjOGQ4ZDhkIiBzdHJva2Utd2lkdGg9IjIiLz48bGluZSB4MT0iMzEwLjUiIHkxPSIxNjUiIHgyPSIzMTAuNSIgeTI9IjE3NSIgc3Ryb2tlPSIjOGQ4ZDhkIi8+PGxpbmUgeDE9IjQxNy4zIiB5MT0iMTY1IiB4Mj0iNDE3LjMiIHkyPSIxNzUiIHN0cm9rZT0iIzhkOGQ4ZCIvPjxyZWN0IHg9IjM0OC4wIiB5PSIxNjEiIHdpZHRoPSI1LjEiIGhlaWdodD0iMTgiIGZpbGw9IiMwZjYyZmUiIG9wYWNpdHk9Ii43MiIvPjxsaW5lIHgxPSIzNTAuMyIgeTE9IjE1NyIgeDI9IjM1MC4zIiB5Mj0iMTgzIiBzdHJva2U9IiMxNjE2MTYiIHN0cm9rZS13aWR0aD0iMiIvPjwvZz48ZyBkYXRhLW1pbj0iLTQyLjYiIGRhdGEtcDI1PSIwLjAiIGRhdGEtbWVkaWFuPSIwLjMiIGRhdGEtcDc1PSIxLjQiIGRhdGEtbWF4PSI3My4yIj48dGl0bGU+M+qwnOyblCDriITsoIEgSGVhZGxpbmU6IOy1nOyGjCAtNDIuNiwgUDI1IDAuMCwg7KSR7JWZ6rCSIDAuMywgUDc1IDEuNCwg7LWc64yAIDczLjI8L3RpdGxlPjx0ZXh0IGNsYXNzPSJ4bGFiIiB4PSIyMTAiIHk9IjIxNiIgdGV4dC1hbmNob3I9ImVuZCI+M+qwnOyblCDriITsoIEgwrcgSGVhZGxpbmU8L3RleHQ+PGxpbmUgeDE9IjI1Ny4xIiB5MT0iMjEyIiB4Mj0iNTA0LjIiIHkyPSIyMTIiIHN0cm9rZT0iIzhkOGQ4ZCIgc3Ryb2tlLXdpZHRoPSIyIi8+PGxpbmUgeDE9IjI1Ny4xIiB5MT0iMjA3IiB4Mj0iMjU3LjEiIHkyPSIyMTciIHN0cm9rZT0iIzhkOGQ4ZCIvPjxsaW5lIHgxPSI1MDQuMiIgeTE9IjIwNyIgeDI9IjUwNC4yIiB5Mj0iMjE3IiBzdHJva2U9IiM4ZDhkOGQiLz48cmVjdCB4PSIzNDguMCIgeT0iMjAzIiB3aWR0aD0iMy4wIiBoZWlnaHQ9IjE4IiBmaWxsPSIjNTI1MjUyIiBvcGFjaXR5PSIuNzIiLz48bGluZSB4MT0iMzQ4LjYiIHkxPSIxOTkiIHgyPSIzNDguNiIgeTI9IjIyNSIgc3Ryb2tlPSIjMTYxNjE2IiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PGcgZGF0YS1taW49Ii01LjIiIGRhdGEtcDI1PSIwLjAiIGRhdGEtbWVkaWFuPSIwLjQiIGRhdGEtcDc1PSIxLjMiIGRhdGEtbWF4PSIzNS4zIj48dGl0bGU+M+qwnOyblCDriITsoIEgQ29yZTog7LWc7IaMIC01LjIsIFAyNSAwLjAsIOykkeyVmeqwkiAwLjQsIFA3NSAxLjMsIOy1nOuMgCAzNS4zPC90aXRsZT48dGV4dCBjbGFzcz0ieGxhYiIgeD0iMjEwIiB5PSIyNTgiIHRleHQtYW5jaG9yPSJlbmQiPjPqsJzsm5Qg64iE7KCBIMK3IENvcmU8L3RleHQ+PGxpbmUgeDE9IjMzNi45IiB5MT0iMjU0IiB4Mj0iNDIzLjMiIHkyPSIyNTQiIHN0cm9rZT0iIzhkOGQ4ZCIgc3Ryb2tlLXdpZHRoPSIyIi8+PGxpbmUgeDE9IjMzNi45IiB5MT0iMjQ5IiB4Mj0iMzM2LjkiIHkyPSIyNTkiIHN0cm9rZT0iIzhkOGQ4ZCIvPjxsaW5lIHgxPSI0MjMuMyIgeTE9IjI0OSIgeDI9IjQyMy4zIiB5Mj0iMjU5IiBzdHJva2U9IiM4ZDhkOGQiLz48cmVjdCB4PSIzNDguMCIgeT0iMjQ1IiB3aWR0aD0iMi44IiBoZWlnaHQ9IjE4IiBmaWxsPSIjMGY2MmZlIiBvcGFjaXR5PSIuNzIiLz48bGluZSB4MT0iMzQ4LjkiIHkxPSIyNDEiIHgyPSIzNDguOSIgeTI9IjI2NyIgc3Ryb2tlPSIjMTYxNjE2IiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PGcgZGF0YS1taW49Ii0xOS41IiBkYXRhLXAyNT0iMC4wIiBkYXRhLW1lZGlhbj0iMC4wIiBkYXRhLXA3NT0iMC41IiBkYXRhLW1heD0iNDIuOCI+PHRpdGxlPuyghOyblOu5hCBIZWFkbGluZTog7LWc7IaMIC0xOS41LCBQMjUgMC4wLCDspJHslZnqsJIgMC4wLCBQNzUgMC41LCDstZzrjIAgNDIuODwvdGl0bGU+PHRleHQgY2xhc3M9InhsYWIiIHg9IjIxMCIgeT0iMzAwIiB0ZXh0LWFuY2hvcj0iZW5kIj7soITsm5TruYQgwrcgSGVhZGxpbmU8L3RleHQ+PGxpbmUgeDE9IjMwNi40IiB5MT0iMjk2IiB4Mj0iNDM5LjMiIHkyPSIyOTYiIHN0cm9rZT0iIzhkOGQ4ZCIgc3Ryb2tlLXdpZHRoPSIyIi8+PGxpbmUgeDE9IjMwNi40IiB5MT0iMjkxIiB4Mj0iMzA2LjQiIHkyPSIzMDEiIHN0cm9rZT0iIzhkOGQ4ZCIvPjxsaW5lIHgxPSI0MzkuMyIgeTE9IjI5MSIgeDI9IjQzOS4zIiB5Mj0iMzAxIiBzdHJva2U9IiM4ZDhkOGQiLz48cmVjdCB4PSIzNDguMCIgeT0iMjg3IiB3aWR0aD0iMi4wIiBoZWlnaHQ9IjE4IiBmaWxsPSIjNTI1MjUyIiBvcGFjaXR5PSIuNzIiLz48bGluZSB4MT0iMzQ4LjAiIHkxPSIyODMiIHgyPSIzNDguMCIgeTI9IjMwOSIgc3Ryb2tlPSIjMTYxNjE2IiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PGcgZGF0YS1taW49Ii00LjciIGRhdGEtcDI1PSIwLjAiIGRhdGEtbWVkaWFuPSIwLjAiIGRhdGEtcDc1PSIwLjQiIGRhdGEtbWF4PSIzMS4xIj48dGl0bGU+7KCE7JuU67mEIENvcmU6IOy1nOyGjCAtNC43LCBQMjUgMC4wLCDspJHslZnqsJIgMC4wLCBQNzUgMC40LCDstZzrjIAgMzEuMTwvdGl0bGU+PHRleHQgY2xhc3M9InhsYWIiIHg9IjIxMCIgeT0iMzQyIiB0ZXh0LWFuY2hvcj0iZW5kIj7soITsm5TruYQgwrcgQ29yZTwvdGV4dD48bGluZSB4MT0iMzM4LjAiIHkxPSIzMzgiIHgyPSI0MTQuMyIgeTI9IjMzOCIgc3Ryb2tlPSIjOGQ4ZDhkIiBzdHJva2Utd2lkdGg9IjIiLz48bGluZSB4MT0iMzM4LjAiIHkxPSIzMzMiIHgyPSIzMzguMCIgeTI9IjM0MyIgc3Ryb2tlPSIjOGQ4ZDhkIi8+PGxpbmUgeDE9IjQxNC4zIiB5MT0iMzMzIiB4Mj0iNDE0LjMiIHkyPSIzNDMiIHN0cm9rZT0iIzhkOGQ4ZCIvPjxyZWN0IHg9IjM0OC4wIiB5PSIzMjkiIHdpZHRoPSIyLjAiIGhlaWdodD0iMTgiIGZpbGw9IiMwZjYyZmUiIG9wYWNpdHk9Ii43MiIvPjxsaW5lIHgxPSIzNDguMCIgeTE9IjMyNSIgeDI9IjM0OC4wIiB5Mj0iMzUxIiBzdHJva2U9IiMxNjE2MTYiIHN0cm9rZS13aWR0aD0iMiIvPjwvZz48bGluZSB4MT0iMjYwIiB5MT0iNDA3IiB4Mj0iMjgwIiB5Mj0iNDA3IiBzdHJva2U9IiM1MjUyNTIiIHN0cm9rZS13aWR0aD0iOCIgb3BhY2l0eT0iLjcyIi8+PHRleHQgY2xhc3M9ImxlZ2VuZCIgeD0iMjg3IiB5PSI0MTEiPkhlYWRsaW5lPC90ZXh0PjxsaW5lIHgxPSI0MDUiIHkxPSI0MDciIHgyPSI0MjUiIHkyPSI0MDciIHN0cm9rZT0iIzBmNjJmZSIgc3Ryb2tlLXdpZHRoPSI4IiBvcGFjaXR5PSIuNzIiLz48dGV4dCBjbGFzcz0ibGVnZW5kIiB4PSI0MzIiIHk9IjQxMSI+Q29yZTwvdGV4dD48L3N2Zz4=",
+                "caption": "최소–P25–중앙값–P75–최대, Headline/Core × 4개 관찰창",
+                "source": "2026.07 보관 HTML · 한국은행 ECOS 901Y009 · 기준월 2026.07 · 비연율 %",
+                "insightLabel": "판독",
+                "insightTitle": "7월 원자료",
+                "insightBody": "보관본에서 정확히 옮긴 분포"
+              },
+              {
+                "id": "section-04-august",
+                "title": "2026.08 변화율 분포",
+                "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA3NjAgNDMwIiBkYXRhLWRvbWFpbj0iLTYwLDE4MCIgZGF0YS1tYXJnaW5zPSIyNiwyOCw0OCwyMjAiIHJvbGU9ImltZyIgYXJpYS1sYWJlbD0iMjAyNuuFhCA47JuUIEhlYWRsaW5lIENvcmUg7ZKI66qpIOuzgO2ZlOycqCDstZzshowgUDI1IOykkeyVmeqwkiBQNzUg7LWc64yAIj48bGluZSBjbGFzcz0iZ3JpZCIgeDE9IjIyMC4wIiB5MT0iMjYiIHgyPSIyMjAuMCIgeTI9IjM4MiIvPjx0ZXh0IGNsYXNzPSJheGlzIiB4PSIyMjAuMCIgeT0iNDEyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj4tNjAlPC90ZXh0PjxsaW5lIGNsYXNzPSJncmlkIiB4MT0iMzA1LjMiIHkxPSIyNiIgeDI9IjMwNS4zIiB5Mj0iMzgyIi8+PHRleHQgY2xhc3M9ImF4aXMiIHg9IjMwNS4zIiB5PSI0MTIiIHRleHQtYW5jaG9yPSJtaWRkbGUiPi0yMCU8L3RleHQ+PGxpbmUgY2xhc3M9ImdyaWQiIHgxPSIzOTAuNyIgeTE9IjI2IiB4Mj0iMzkwLjciIHkyPSIzODIiLz48dGV4dCBjbGFzcz0iYXhpcyIgeD0iMzkwLjciIHk9IjQxMiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+MjAlPC90ZXh0PjxsaW5lIGNsYXNzPSJncmlkIiB4MT0iNDc2LjAiIHkxPSIyNiIgeDI9IjQ3Ni4wIiB5Mj0iMzgyIi8+PHRleHQgY2xhc3M9ImF4aXMiIHg9IjQ3Ni4wIiB5PSI0MTIiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjYwJTwvdGV4dD48bGluZSBjbGFzcz0iZ3JpZCIgeDE9IjU2MS4zIiB5MT0iMjYiIHgyPSI1NjEuMyIgeTI9IjM4MiIvPjx0ZXh0IGNsYXNzPSJheGlzIiB4PSI1NjEuMyIgeT0iNDEyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj4xMDAlPC90ZXh0PjxsaW5lIGNsYXNzPSJncmlkIiB4MT0iNjQ2LjciIHkxPSIyNiIgeDI9IjY0Ni43IiB5Mj0iMzgyIi8+PHRleHQgY2xhc3M9ImF4aXMiIHg9IjY0Ni43IiB5PSI0MTIiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjE0MCU8L3RleHQ+PGxpbmUgY2xhc3M9ImdyaWQiIHgxPSI3MzIuMCIgeTE9IjI2IiB4Mj0iNzMyLjAiIHkyPSIzODIiLz48dGV4dCBjbGFzcz0iYXhpcyIgeD0iNzMyLjAiIHk9IjQxMiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+MTgwJTwvdGV4dD48ZyBkYXRhLW1pbj0iLTQwLjYiIGRhdGEtcDI1PSIwLjAiIGRhdGEtbWVkaWFuPSIxLjgiIGRhdGEtcDc1PSI0LjEiIGRhdGEtbWF4PSI0Ni44Ij48dGl0bGU+MTLqsJzsm5Qo7KCE64WE64+Z7JuU67mEKSBIZWFkbGluZTog7LWc7IaMIC00MC42LCBQMjUgMC4wLCDspJHslZnqsJIgMS44LCBQNzUgNC4xLCDstZzrjIAgNDYuODwvdGl0bGU+PHRleHQgY2xhc3M9InhsYWIiIHg9IjIxMCIgeT0iNDgiIHRleHQtYW5jaG9yPSJlbmQiPjEy6rCc7JuUKOyghOuFhOuPmeyblOu5hCkgwrcgSGVhZGxpbmU8L3RleHQ+PGxpbmUgeDE9IjI2MS40IiB5MT0iNDQiIHgyPSI0NDcuOCIgeTI9IjQ0IiBzdHJva2U9IiM4ZDhkOGQiIHN0cm9rZS13aWR0aD0iMiIvPjxsaW5lIHgxPSIyNjEuNCIgeTE9IjM5IiB4Mj0iMjYxLjQiIHkyPSI0OSIgc3Ryb2tlPSIjOGQ4ZDhkIi8+PGxpbmUgeDE9IjQ0Ny44IiB5MT0iMzkiIHgyPSI0NDcuOCIgeTI9IjQ5IiBzdHJva2U9IiM4ZDhkOGQiLz48cmVjdCB4PSIzNDguMCIgeT0iMzUiIHdpZHRoPSI4LjciIGhlaWdodD0iMTgiIGZpbGw9IiM1MjUyNTIiIG9wYWNpdHk9Ii43MiIvPjxsaW5lIHgxPSIzNTEuOCIgeTE9IjMxIiB4Mj0iMzUxLjgiIHkyPSI1NyIgc3Ryb2tlPSIjMTYxNjE2IiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PGcgZGF0YS1taW49Ii00MC42IiBkYXRhLXAyNT0iMC40IiBkYXRhLW1lZGlhbj0iMi4wIiBkYXRhLXA3NT0iNC4wIiBkYXRhLW1heD0iNDYuOCI+PHRpdGxlPjEy6rCc7JuUKOyghOuFhOuPmeyblOu5hCkgQ29yZTog7LWc7IaMIC00MC42LCBQMjUgMC40LCDspJHslZnqsJIgMi4wLCBQNzUgNC4wLCDstZzrjIAgNDYuODwvdGl0bGU+PHRleHQgY2xhc3M9InhsYWIiIHg9IjIxMCIgeT0iOTAiIHRleHQtYW5jaG9yPSJlbmQiPjEy6rCc7JuUKOyghOuFhOuPmeyblOu5hCkgwrcgQ29yZTwvdGV4dD48bGluZSB4MT0iMjYxLjQiIHkxPSI4NiIgeDI9IjQ0Ny44IiB5Mj0iODYiIHN0cm9rZT0iIzhkOGQ4ZCIgc3Ryb2tlLXdpZHRoPSIyIi8+PGxpbmUgeDE9IjI2MS40IiB5MT0iODEiIHgyPSIyNjEuNCIgeTI9IjkxIiBzdHJva2U9IiM4ZDhkOGQiLz48bGluZSB4MT0iNDQ3LjgiIHkxPSI4MSIgeDI9IjQ0Ny44IiB5Mj0iOTEiIHN0cm9rZT0iIzhkOGQ4ZCIvPjxyZWN0IHg9IjM0OC45IiB5PSI3NyIgd2lkdGg9IjcuNyIgaGVpZ2h0PSIxOCIgZmlsbD0iIzBmNjJmZSIgb3BhY2l0eT0iLjcyIi8+PGxpbmUgeDE9IjM1Mi4zIiB5MT0iNzMiIHgyPSIzNTIuMyIgeTI9Ijk5IiBzdHJva2U9IiMxNjE2MTYiIHN0cm9rZS13aWR0aD0iMiIvPjwvZz48ZyBkYXRhLW1pbj0iLTQ2LjkiIGRhdGEtcDI1PSIwLjAiIGRhdGEtbWVkaWFuPSIxLjAiIGRhdGEtcDc1PSIyLjgiIGRhdGEtbWF4PSI2NS4xIj48dGl0bGU+NuqwnOyblCDriITsoIEgSGVhZGxpbmU6IOy1nOyGjCAtNDYuOSwgUDI1IDAuMCwg7KSR7JWZ6rCSIDEuMCwgUDc1IDIuOCwg7LWc64yAIDY1LjE8L3RpdGxlPjx0ZXh0IGNsYXNzPSJ4bGFiIiB4PSIyMTAiIHk9IjEzMiIgdGV4dC1hbmNob3I9ImVuZCI+NuqwnOyblCDriITsoIEgwrcgSGVhZGxpbmU8L3RleHQ+PGxpbmUgeDE9IjI0Ny45IiB5MT0iMTI4IiB4Mj0iNDg2LjkiIHkyPSIxMjgiIHN0cm9rZT0iIzhkOGQ4ZCIgc3Ryb2tlLXdpZHRoPSIyIi8+PGxpbmUgeDE9IjI0Ny45IiB5MT0iMTIzIiB4Mj0iMjQ3LjkiIHkyPSIxMzMiIHN0cm9rZT0iIzhkOGQ4ZCIvPjxsaW5lIHgxPSI0ODYuOSIgeTE9IjEyMyIgeDI9IjQ4Ni45IiB5Mj0iMTMzIiBzdHJva2U9IiM4ZDhkOGQiLz48cmVjdCB4PSIzNDguMCIgeT0iMTE5IiB3aWR0aD0iNi4wIiBoZWlnaHQ9IjE4IiBmaWxsPSIjNTI1MjUyIiBvcGFjaXR5PSIuNzIiLz48bGluZSB4MT0iMzUwLjEiIHkxPSIxMTUiIHgyPSIzNTAuMSIgeTI9IjE0MSIgc3Ryb2tlPSIjMTYxNjE2IiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PGcgZGF0YS1taW49Ii0xOC4yIiBkYXRhLXAyNT0iMC4wIiBkYXRhLW1lZGlhbj0iMS4xIiBkYXRhLXA3NT0iMi41IiBkYXRhLW1heD0iMjcuOCI+PHRpdGxlPjbqsJzsm5Qg64iE7KCBIENvcmU6IOy1nOyGjCAtMTguMiwgUDI1IDAuMCwg7KSR7JWZ6rCSIDEuMSwgUDc1IDIuNSwg7LWc64yAIDI3Ljg8L3RpdGxlPjx0ZXh0IGNsYXNzPSJ4bGFiIiB4PSIyMTAiIHk9IjE3NCIgdGV4dC1hbmNob3I9ImVuZCI+NuqwnOyblCDriITsoIEgwrcgQ29yZTwvdGV4dD48bGluZSB4MT0iMzA5LjIiIHkxPSIxNzAiIHgyPSI0MDcuMyIgeTI9IjE3MCIgc3Ryb2tlPSIjOGQ4ZDhkIiBzdHJva2Utd2lkdGg9IjIiLz48bGluZSB4MT0iMzA5LjIiIHkxPSIxNjUiIHgyPSIzMDkuMiIgeTI9IjE3NSIgc3Ryb2tlPSIjOGQ4ZDhkIi8+PGxpbmUgeDE9IjQwNy4zIiB5MT0iMTY1IiB4Mj0iNDA3LjMiIHkyPSIxNzUiIHN0cm9rZT0iIzhkOGQ4ZCIvPjxyZWN0IHg9IjM0OC4wIiB5PSIxNjEiIHdpZHRoPSI1LjMiIGhlaWdodD0iMTgiIGZpbGw9IiMwZjYyZmUiIG9wYWNpdHk9Ii43MiIvPjxsaW5lIHgxPSIzNTAuMyIgeTE9IjE1NyIgeDI9IjM1MC4zIiB5Mj0iMTgzIiBzdHJva2U9IiMxNjE2MTYiIHN0cm9rZS13aWR0aD0iMiIvPjwvZz48ZyBkYXRhLW1pbj0iLTM5LjEiIGRhdGEtcDI1PSIwLjAiIGRhdGEtbWVkaWFuPSIwLjMiIGRhdGEtcDc1PSIxLjMiIGRhdGEtbWF4PSIxNjQuNyI+PHRpdGxlPjPqsJzsm5Qg64iE7KCBIEhlYWRsaW5lOiDstZzshowgLTM5LjEsIFAyNSAwLjAsIOykkeyVmeqwkiAwLjMsIFA3NSAxLjMsIOy1nOuMgCAxNjQuNzwvdGl0bGU+PHRleHQgY2xhc3M9InhsYWIiIHg9IjIxMCIgeT0iMjE2IiB0ZXh0LWFuY2hvcj0iZW5kIj4z6rCc7JuUIOuIhOyggSDCtyBIZWFkbGluZTwvdGV4dD48bGluZSB4MT0iMjY0LjYiIHkxPSIyMTIiIHgyPSI2OTkuNCIgeTI9IjIxMiIgc3Ryb2tlPSIjOGQ4ZDhkIiBzdHJva2Utd2lkdGg9IjIiLz48bGluZSB4MT0iMjY0LjYiIHkxPSIyMDciIHgyPSIyNjQuNiIgeTI9IjIxNyIgc3Ryb2tlPSIjOGQ4ZDhkIi8+PGxpbmUgeDE9IjY5OS40IiB5MT0iMjA3IiB4Mj0iNjk5LjQiIHkyPSIyMTciIHN0cm9rZT0iIzhkOGQ4ZCIvPjxyZWN0IHg9IjM0OC4wIiB5PSIyMDMiIHdpZHRoPSIyLjgiIGhlaWdodD0iMTgiIGZpbGw9IiM1MjUyNTIiIG9wYWNpdHk9Ii43MiIvPjxsaW5lIHgxPSIzNDguNiIgeTE9IjE5OSIgeDI9IjM0OC42IiB5Mj0iMjI1IiBzdHJva2U9IiMxNjE2MTYiIHN0cm9rZS13aWR0aD0iMiIvPjwvZz48ZyBkYXRhLW1pbj0iLTEzLjYiIGRhdGEtcDI1PSIwLjAiIGRhdGEtbWVkaWFuPSIwLjMiIGRhdGEtcDc1PSIxLjAiIGRhdGEtbWF4PSIyOC40Ij48dGl0bGU+M+qwnOyblCDriITsoIEgQ29yZTog7LWc7IaMIC0xMy42LCBQMjUgMC4wLCDspJHslZnqsJIgMC4zLCBQNzUgMS4wLCDstZzrjIAgMjguNDwvdGl0bGU+PHRleHQgY2xhc3M9InhsYWIiIHg9IjIxMCIgeT0iMjU4IiB0ZXh0LWFuY2hvcj0iZW5kIj4z6rCc7JuUIOuIhOyggSDCtyBDb3JlPC90ZXh0PjxsaW5lIHgxPSIzMTkuMCIgeTE9IjI1NCIgeDI9IjQwOC42IiB5Mj0iMjU0IiBzdHJva2U9IiM4ZDhkOGQiIHN0cm9rZS13aWR0aD0iMiIvPjxsaW5lIHgxPSIzMTkuMCIgeTE9IjI0OSIgeDI9IjMxOS4wIiB5Mj0iMjU5IiBzdHJva2U9IiM4ZDhkOGQiLz48bGluZSB4MT0iNDA4LjYiIHkxPSIyNDkiIHgyPSI0MDguNiIgeTI9IjI1OSIgc3Ryb2tlPSIjOGQ4ZDhkIi8+PHJlY3QgeD0iMzQ4LjAiIHk9IjI0NSIgd2lkdGg9IjIuMSIgaGVpZ2h0PSIxOCIgZmlsbD0iIzBmNjJmZSIgb3BhY2l0eT0iLjcyIi8+PGxpbmUgeDE9IjM0OC42IiB5MT0iMjQxIiB4Mj0iMzQ4LjYiIHkyPSIyNjciIHN0cm9rZT0iIzE2MTYxNiIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9nPjxnIGRhdGEtbWluPSItMTEuOCIgZGF0YS1wMjU9IjAuMCIgZGF0YS1tZWRpYW49IjAuMCIgZGF0YS1wNzU9IjAuNCIgZGF0YS1tYXg9IjY4LjIiPjx0aXRsZT7soITsm5TruYQgSGVhZGxpbmU6IOy1nOyGjCAtMTEuOCwgUDI1IDAuMCwg7KSR7JWZ6rCSIDAuMCwgUDc1IDAuNCwg7LWc64yAIDY4LjI8L3RpdGxlPjx0ZXh0IGNsYXNzPSJ4bGFiIiB4PSIyMTAiIHk9IjMwMCIgdGV4dC1hbmNob3I9ImVuZCI+7KCE7JuU67mEIMK3IEhlYWRsaW5lPC90ZXh0PjxsaW5lIHgxPSIzMjIuOCIgeTE9IjI5NiIgeDI9IjQ5My41IiB5Mj0iMjk2IiBzdHJva2U9IiM4ZDhkOGQiIHN0cm9rZS13aWR0aD0iMiIvPjxsaW5lIHgxPSIzMjIuOCIgeTE9IjI5MSIgeDI9IjMyMi44IiB5Mj0iMzAxIiBzdHJva2U9IiM4ZDhkOGQiLz48bGluZSB4MT0iNDkzLjUiIHkxPSIyOTEiIHgyPSI0OTMuNSIgeTI9IjMwMSIgc3Ryb2tlPSIjOGQ4ZDhkIi8+PHJlY3QgeD0iMzQ4LjAiIHk9IjI4NyIgd2lkdGg9IjIuMCIgaGVpZ2h0PSIxOCIgZmlsbD0iIzUyNTI1MiIgb3BhY2l0eT0iLjcyIi8+PGxpbmUgeDE9IjM0OC4wIiB5MT0iMjgzIiB4Mj0iMzQ4LjAiIHkyPSIzMDkiIHN0cm9rZT0iIzE2MTYxNiIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9nPjxnIGRhdGEtbWluPSItMTAuNSIgZGF0YS1wMjU9IjAuMCIgZGF0YS1tZWRpYW49IjAuMCIgZGF0YS1wNzU9IjAuMiIgZGF0YS1tYXg9IjE5LjkiPjx0aXRsZT7soITsm5TruYQgQ29yZTog7LWc7IaMIC0xMC41LCBQMjUgMC4wLCDspJHslZnqsJIgMC4wLCBQNzUgMC4yLCDstZzrjIAgMTkuOTwvdGl0bGU+PHRleHQgY2xhc3M9InhsYWIiIHg9IjIxMCIgeT0iMzQyIiB0ZXh0LWFuY2hvcj0iZW5kIj7soITsm5TruYQgwrcgQ29yZTwvdGV4dD48bGluZSB4MT0iMzI1LjYiIHkxPSIzMzgiIHgyPSIzOTAuNSIgeTI9IjMzOCIgc3Ryb2tlPSIjOGQ4ZDhkIiBzdHJva2Utd2lkdGg9IjIiLz48bGluZSB4MT0iMzI1LjYiIHkxPSIzMzMiIHgyPSIzMjUuNiIgeTI9IjM0MyIgc3Ryb2tlPSIjOGQ4ZDhkIi8+PGxpbmUgeDE9IjM5MC41IiB5MT0iMzMzIiB4Mj0iMzkwLjUiIHkyPSIzNDMiIHN0cm9rZT0iIzhkOGQ4ZCIvPjxyZWN0IHg9IjM0OC4wIiB5PSIzMjkiIHdpZHRoPSIyLjAiIGhlaWdodD0iMTgiIGZpbGw9IiMwZjYyZmUiIG9wYWNpdHk9Ii43MiIvPjxsaW5lIHgxPSIzNDguMCIgeTE9IjMyNSIgeDI9IjM0OC4wIiB5Mj0iMzUxIiBzdHJva2U9IiMxNjE2MTYiIHN0cm9rZS13aWR0aD0iMiIvPjwvZz48bGluZSB4MT0iMjYwIiB5MT0iNDA3IiB4Mj0iMjgwIiB5Mj0iNDA3IiBzdHJva2U9IiM1MjUyNTIiIHN0cm9rZS13aWR0aD0iOCIgb3BhY2l0eT0iLjcyIi8+PHRleHQgY2xhc3M9ImxlZ2VuZCIgeD0iMjg3IiB5PSI0MTEiPkhlYWRsaW5lPC90ZXh0PjxsaW5lIHgxPSI0MDUiIHkxPSI0MDciIHgyPSI0MjUiIHkyPSI0MDciIHN0cm9rZT0iIzBmNjJmZSIgc3Ryb2tlLXdpZHRoPSI4IiBvcGFjaXR5PSIuNzIiLz48dGV4dCBjbGFzcz0ibGVnZW5kIiB4PSI0MzIiIHk9IjQxMSI+Q29yZTwvdGV4dD48L3N2Zz4=",
+                "caption": "최소–P25–중앙값–P75–최대, Headline/Core × 4개 관찰창",
+                "source": "2026.08 현재 HTML · 한국은행 ECOS 901Y009 · 기준월 2026.08 · 비연율 %",
+                "insightLabel": "판독",
+                "insightTitle": "8월 원자료",
+                "insightBody": "현재본에서 정확히 옮긴 분포"
+              }
+            ],
+            "insightLabel": "이 차트의 주장",
+            "insightTitle": "같은 축의 월간 분포 비교",
+            "insightBody": "두 차트 모두 x축 -60~180%, viewBox 760×430, 동일 plot margins 적용"
+          },
+          {
+            "id": "section-04-median",
+            "type": "table",
+            "title": "04 · 7월→8월 중앙값 변화",
+            "columns": [
+              "기간",
+              "모집단",
+              "2026.07",
+              "2026.08",
+              "변화"
+            ],
+            "rows": [
+              [
+                "12개월(전년동월비)",
+                "Headline",
+                "1.8",
+                "1.8",
+                "+0.0"
+              ],
+              [
+                "12개월(전년동월비)",
+                "Core",
+                "2.0",
+                "2.0",
+                "+0.0"
+              ],
+              [
+                "6개월 누적",
+                "Headline",
+                "0.9",
+                "1.0",
+                "+0.1"
+              ],
+              [
+                "6개월 누적",
+                "Core",
+                "1.1",
+                "1.1",
+                "+0.0"
+              ],
+              [
+                "3개월 누적",
+                "Headline",
+                "0.3",
+                "0.3",
+                "+0.0"
+              ],
+              [
+                "3개월 누적",
+                "Core",
+                "0.4",
+                "0.3",
+                "-0.1"
+              ],
+              [
+                "전월비",
+                "Headline",
+                "0.0",
+                "0.0",
+                "+0.0"
+              ],
+              [
+                "전월비",
+                "Core",
+                "0.0",
+                "0.0",
+                "+0.0"
+              ]
+            ],
+            "insightLabel": "이 표의 주장",
+            "insightTitle": "한가운데 품목의 월간 변화",
+            "insightBody": "Headline/Core × 4개 관찰창 중앙값 비교"
+          },
+          {
+            "id": "section-04-august-detail",
+            "type": "table",
+            "title": "04 · 2026.08 상세 분포",
+            "columns": [
+              "기간",
+              "모집단",
+              "최소",
+              "하위 25% 경계(P25)",
+              "한가운데 품목(중앙값)",
+              "상위 25% 경계(P75)",
+              "최대"
+            ],
+            "rows": [
+              [
+                "12개월(전년동월비)",
+                "Headline",
+                "-40.6",
+                "0.0",
+                "1.8",
+                "4.1",
+                "46.8"
+              ],
+              [
+                "12개월(전년동월비)",
+                "Core",
+                "-40.6",
+                "0.4",
+                "2.0",
+                "4.0",
+                "46.8"
+              ],
+              [
+                "6개월 누적",
+                "Headline",
+                "-46.9",
+                "0.0",
+                "1.0",
+                "2.8",
+                "65.1"
+              ],
+              [
+                "6개월 누적",
+                "Core",
+                "-18.2",
+                "0.0",
+                "1.1",
+                "2.5",
+                "27.8"
+              ],
+              [
+                "3개월 누적",
+                "Headline",
+                "-39.1",
+                "0.0",
+                "0.3",
+                "1.3",
+                "164.7"
+              ],
+              [
+                "3개월 누적",
+                "Core",
+                "-13.6",
+                "0.0",
+                "0.3",
+                "1.0",
+                "28.4"
+              ],
+              [
+                "전월비",
+                "Headline",
+                "-11.8",
+                "0.0",
+                "0.0",
+                "0.4",
+                "68.2"
+              ],
+              [
+                "전월비",
+                "Core",
+                "-10.5",
+                "0.0",
+                "0.0",
+                "0.2",
+                "19.9"
+              ]
+            ],
+            "insightLabel": "이 표의 주장",
+            "insightTitle": "가운데 50%와 양쪽 극단 확인",
+            "insightBody": "최소·P25·중앙값·P75·최대의 원수치"
+          },
+          {
+            "id": "section-05-headline",
+            "type": "table",
+            "title": "05 · Headline 3개월 누적 상하위",
+            "columns": [
+              "#",
+              "상승 상위",
+              "가중치",
+              "3개월 누적",
+              "하락 하위",
+              "가중치",
+              "3개월 누적"
+            ],
+            "rows": [
+              [
+                "1",
+                "시금치",
+                "0.30",
+                "164.7",
+                "감자",
+                "0.60",
+                "-39.1"
+              ],
+              [
+                "2",
+                "열무",
+                "0.20",
+                "92.4",
+                "아보카도",
+                "0.10",
+                "-23.8"
+              ],
+              [
+                "3",
+                "상추",
+                "0.60",
+                "65.6",
+                "파프리카",
+                "0.60",
+                "-22.9"
+              ],
+              [
+                "4",
+                "오이",
+                "0.60",
+                "46.8",
+                "참외",
+                "1.00",
+                "-19.0"
+              ],
+              [
+                "5",
+                "부추",
+                "0.20",
+                "39.9",
+                "수박",
+                "1.00",
+                "-15.1"
+              ],
+              [
+                "6",
+                "호박",
+                "0.50",
+                "37.8",
+                "화초",
+                "0.70",
+                "-13.6"
+              ],
+              [
+                "7",
+                "미나리",
+                "0.20",
+                "36.7",
+                "전기료",
+                "16.10",
+                "-11.0"
+              ],
+              [
+                "8",
+                "체리",
+                "0.30",
+                "36.2",
+                "유산균",
+                "1.20",
+                "-10.5"
+              ],
+              [
+                "9",
+                "배추",
+                "1.30",
+                "35.8",
+                "보리쌀",
+                "0.20",
+                "-10.0"
+              ],
+              [
+                "10",
+                "파",
+                "0.90",
+                "30.9",
+                "해외단체여행비",
+                "5.50",
+                "-9.4"
+              ]
+            ],
+            "insightLabel": "이 표의 주장",
+            "insightTitle": "계절 식료품 극단치 확인",
+            "insightBody": "Headline 458개 가운데 3개월 누적 상승·하락 각 10개"
+          },
+          {
+            "id": "section-05-core",
+            "type": "table",
+            "title": "05 · Core 3개월 누적 상하위",
+            "columns": [
+              "#",
+              "상승 상위",
+              "가중치",
+              "3개월 누적",
+              "하락 하위",
+              "가중치",
+              "3개월 누적"
+            ],
+            "rows": [
+              [
+                "1",
+                "콘도이용료",
+                "0.80",
+                "28.4",
+                "화초",
+                "0.70",
+                "-13.6"
+              ],
+              [
+                "2",
+                "휴양시설이용료",
+                "1.40",
+                "20.7",
+                "유산균",
+                "1.20",
+                "-10.5"
+              ],
+              [
+                "3",
+                "휴대용멀티미디어기기",
+                "1.20",
+                "15.9",
+                "해외단체여행비",
+                "5.50",
+                "-9.4"
+              ],
+              [
+                "4",
+                "컴퓨터수리비",
+                "0.10",
+                "13.5",
+                "국제항공료",
+                "2.90",
+                "-8.5"
+              ],
+              [
+                "5",
+                "가정용비닐용품",
+                "0.60",
+                "13.2",
+                "국내항공료",
+                "1.00",
+                "-5.3"
+              ],
+              [
+                "6",
+                "호텔숙박료",
+                "2.10",
+                "12.7",
+                "습기제거제",
+                "0.10",
+                "-4.1"
+              ],
+              [
+                "7",
+                "건강기기렌탈비",
+                "1.50",
+                "12.6",
+                "칫솔",
+                "0.40",
+                "-4.1"
+              ],
+              [
+                "8",
+                "우편료",
+                "0.10",
+                "12.3",
+                "선풍기",
+                "0.40",
+                "-3.7"
+              ],
+              [
+                "9",
+                "인삼",
+                "0.30",
+                "11.2",
+                "세탁세제",
+                "1.70",
+                "-3.5"
+              ],
+              [
+                "10",
+                "홍삼",
+                "1.10",
+                "11.1",
+                "치약",
+                "0.50",
+                "-3.0"
+              ]
+            ],
+            "insightLabel": "이 표의 주장",
+            "insightTitle": "근원 내부 상하위 확인",
+            "insightBody": "식료품·에너지를 제외한 309개 가운데 3개월 누적 상승·하락 각 10개"
+          },
+          {
+            "id": "section-06-chart",
+            "type": "chart",
+            "title": "06 · 개인서비스 가격 상승의 폭",
+            "columns": 1,
+            "charts": [
+              {
+                "id": "section-06-personal",
+                "title": "개인서비스·외식·외식제외",
+                "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA3NjAgMzMwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IuqwnOyduOyEnOu5hOyKpCDsmbjsi50g7Jm47Iud7KCc7Jm4IOq0gOywsOq4sOqwhOuzhCDsg4Hsirkg7ZKI66qpIOu5hOykkSI+PGxpbmUgY2xhc3M9ImdyaWQiIHgxPSI2MiIgeTE9IjI1NS4wIiB4Mj0iNzMyIiB5Mj0iMjU1LjAiLz48dGV4dCBjbGFzcz0iYXhpcyIgeD0iNTMiIHk9IjI1OS4wIiB0ZXh0LWFuY2hvcj0iZW5kIj41MCU8L3RleHQ+PGxpbmUgY2xhc3M9ImdyaWQiIHgxPSI2MiIgeTE9IjIxMC44IiB4Mj0iNzMyIiB5Mj0iMjEwLjgiLz48dGV4dCBjbGFzcz0iYXhpcyIgeD0iNTMiIHk9IjIxNC44IiB0ZXh0LWFuY2hvcj0iZW5kIj42MCU8L3RleHQ+PGxpbmUgY2xhc3M9ImdyaWQiIHgxPSI2MiIgeTE9IjE2Ni42IiB4Mj0iNzMyIiB5Mj0iMTY2LjYiLz48dGV4dCBjbGFzcz0iYXhpcyIgeD0iNTMiIHk9IjE3MC42IiB0ZXh0LWFuY2hvcj0iZW5kIj43MCU8L3RleHQ+PGxpbmUgY2xhc3M9ImdyaWQiIHgxPSI2MiIgeTE9IjEyMi40IiB4Mj0iNzMyIiB5Mj0iMTIyLjQiLz48dGV4dCBjbGFzcz0iYXhpcyIgeD0iNTMiIHk9IjEyNi40IiB0ZXh0LWFuY2hvcj0iZW5kIj44MCU8L3RleHQ+PGxpbmUgY2xhc3M9ImdyaWQiIHgxPSI2MiIgeTE9Ijc4LjIiIHgyPSI3MzIiIHkyPSI3OC4yIi8+PHRleHQgY2xhc3M9ImF4aXMiIHg9IjUzIiB5PSI4Mi4yIiB0ZXh0LWFuY2hvcj0iZW5kIj45MCU8L3RleHQ+PGxpbmUgY2xhc3M9ImdyaWQiIHgxPSI2MiIgeTE9IjM0LjAiIHgyPSI3MzIiIHkyPSIzNC4wIi8+PHRleHQgY2xhc3M9ImF4aXMiIHg9IjUzIiB5PSIzOC4wIiB0ZXh0LWFuY2hvcj0iZW5kIj4xMDAlPC90ZXh0Pjxwb2x5bGluZSBwb2ludHM9IjYyLjAsNzkuNyAyODUuMyw3OS43IDUwOC43LDEyNS40IDczMi4wLDE5Ny44IiBmaWxsPSJub25lIiBzdHJva2U9IiNkYTFlMjgiIHN0cm9rZS13aWR0aD0iMyIvPjxjaXJjbGUgY3g9IjYyLjAiIGN5PSI3OS43IiByPSI1IiBmaWxsPSIjZGExZTI4Ii8+PHRleHQgY2xhc3M9InZhbHVlIiB4PSI2Mi4wIiB5PSI2OC43IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj44OS43JTwvdGV4dD48Y2lyY2xlIGN4PSIyODUuMyIgY3k9Ijc5LjciIHI9IjUiIGZpbGw9IiNkYTFlMjgiLz48dGV4dCBjbGFzcz0idmFsdWUiIHg9IjI4NS4zIiB5PSI2OC43IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj44OS43JTwvdGV4dD48Y2lyY2xlIGN4PSI1MDguNyIgY3k9IjEyNS40IiByPSI1IiBmaWxsPSIjZGExZTI4Ii8+PHRleHQgY2xhc3M9InZhbHVlIiB4PSI1MDguNyIgeT0iMTE0LjQiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjc5LjMlPC90ZXh0PjxjaXJjbGUgY3g9IjczMi4wIiBjeT0iMTk3LjgiIHI9IjUiIGZpbGw9IiNkYTFlMjgiLz48dGV4dCBjbGFzcz0idmFsdWUiIHg9IjczMi4wIiB5PSIxODYuOCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+NjIuOSU8L3RleHQ+PHBvbHlsaW5lIHBvaW50cz0iNjIuMCw0NS4zIDI4NS4zLDQ1LjMgNTA4LjcsNjguMCA3MzIuMCwxNDcuMyIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjOGExYzFjIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1kYXNoYXJyYXk9IjcgNCIvPjxjaXJjbGUgY3g9IjYyLjAiIGN5PSI0NS4zIiByPSI1IiBmaWxsPSIjOGExYzFjIi8+PHRleHQgY2xhc3M9InZhbHVlIiB4PSI2Mi4wIiB5PSIzNC4zIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj45Ny40JTwvdGV4dD48Y2lyY2xlIGN4PSIyODUuMyIgY3k9IjQ1LjMiIHI9IjUiIGZpbGw9IiM4YTFjMWMiLz48dGV4dCBjbGFzcz0idmFsdWUiIHg9IjI4NS4zIiB5PSIzNC4zIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj45Ny40JTwvdGV4dD48Y2lyY2xlIGN4PSI1MDguNyIgY3k9IjY4LjAiIHI9IjUiIGZpbGw9IiM4YTFjMWMiLz48dGV4dCBjbGFzcz0idmFsdWUiIHg9IjUwOC43IiB5PSI1Ny4wIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj45Mi4zJTwvdGV4dD48Y2lyY2xlIGN4PSI3MzIuMCIgY3k9IjE0Ny4zIiByPSI1IiBmaWxsPSIjOGExYzFjIi8+PHRleHQgY2xhc3M9InZhbHVlIiB4PSI3MzIuMCIgeT0iMTM2LjMiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjc0LjQlPC90ZXh0Pjxwb2x5bGluZSBwb2ludHM9IjYyLjAsOTcuMSAyODUuMyw5Ny4xIDUwOC43LDE1NC41IDczMi4wLDIyMy40IiBmaWxsPSJub25lIiBzdHJva2U9IiNmYTRkNTYiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWRhc2hhcnJheT0iMiA0Ii8+PGNpcmNsZSBjeD0iNjIuMCIgY3k9Ijk3LjEiIHI9IjUiIGZpbGw9IiNmYTRkNTYiLz48dGV4dCBjbGFzcz0idmFsdWUiIHg9IjYyLjAiIHk9IjExNi4xIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj44NS43JTwvdGV4dD48Y2lyY2xlIGN4PSIyODUuMyIgY3k9Ijk3LjEiIHI9IjUiIGZpbGw9IiNmYTRkNTYiLz48dGV4dCBjbGFzcz0idmFsdWUiIHg9IjI4NS4zIiB5PSIxMTYuMSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+ODUuNyU8L3RleHQ+PGNpcmNsZSBjeD0iNTA4LjciIGN5PSIxNTQuNSIgcj0iNSIgZmlsbD0iI2ZhNGQ1NiIvPjx0ZXh0IGNsYXNzPSJ2YWx1ZSIgeD0iNTA4LjciIHk9IjE3My41IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj43Mi43JTwvdGV4dD48Y2lyY2xlIGN4PSI3MzIuMCIgY3k9IjIyMy40IiByPSI1IiBmaWxsPSIjZmE0ZDU2Ii8+PHRleHQgY2xhc3M9InZhbHVlIiB4PSI3MzIuMCIgeT0iMjQyLjQiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjU3LjElPC90ZXh0Pjx0ZXh0IGNsYXNzPSJ4bGFiIiB4PSI2Mi4wIiB5PSIyODYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjEy6rCc7JuUKOyghOuFhOuPmeyblOu5hCk8L3RleHQ+PHRleHQgY2xhc3M9InhsYWIiIHg9IjI4NS4zIiB5PSIyODYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjbqsJzsm5Qg64iE7KCBPC90ZXh0Pjx0ZXh0IGNsYXNzPSJ4bGFiIiB4PSI1MDguNyIgeT0iMjg2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj4z6rCc7JuUIOuIhOyggTwvdGV4dD48dGV4dCBjbGFzcz0ieGxhYiIgeD0iNzMyLjAiIHk9IjI4NiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+7KCE7JuU67mEPC90ZXh0PjxsaW5lIHgxPSIxMTUiIHkxPSIzMTgiIHgyPSIxNDMiIHkyPSIzMTgiIHN0cm9rZT0iI2RhMWUyOCIgc3Ryb2tlLXdpZHRoPSIzIi8+PHRleHQgY2xhc3M9ImxlZ2VuZCIgeD0iMTUwIiB5PSIzMjIiPuqwnOyduOyEnOu5hOyKpCAxMTY8L3RleHQ+PGxpbmUgeDE9IjMyNSIgeTE9IjMxOCIgeDI9IjM1MyIgeTI9IjMxOCIgc3Ryb2tlPSIjOGExYzFjIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1kYXNoYXJyYXk9IjcgNCIvPjx0ZXh0IGNsYXNzPSJsZWdlbmQiIHg9IjM2MCIgeT0iMzIyIj7smbjsi50gMzk8L3RleHQ+PGxpbmUgeDE9IjUzNSIgeTE9IjMxOCIgeDI9IjU2MyIgeTI9IjMxOCIgc3Ryb2tlPSIjZmE0ZDU2IiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1kYXNoYXJyYXk9IjIgNCIvPjx0ZXh0IGNsYXNzPSJsZWdlbmQiIHg9IjU3MCIgeT0iMzIyIj7smbjsi53soJzsmbggNzc8L3RleHQ+PC9zdmc+",
+                "caption": "모두 2026.08을 끝점으로 하는 서로 다른 관찰창이며 시계열 아님",
+                "source": "KOSIS DT_1J22112 공식 분류 · 한국은행 ECOS 901Y009 월별 품목지수 · 품목 수 기준 %",
+                "insightLabel": "판독",
+                "insightTitle": "3개월 개인서비스 79.3%",
+                "insightBody": "외식 92.3%, 외식제외 72.7%, 근원 전체 62.5%"
+              }
+            ]
+          },
+          {
+            "id": "section-06-detail",
+            "type": "table",
+            "title": "06 · 개인서비스 방향·가중치·중앙값",
+            "columns": [
+              "기간",
+              "분류",
+              "상승",
+              "하락",
+              "보합",
+              "가중 상승",
+              "순확산",
+              "중앙값"
+            ],
+            "rows": [
+              [
+                "12개월(전년동월비)",
+                "개인서비스 116",
+                "104개 / 89.7%",
+                "8개 / 6.9%",
+                "4개 / 3.4%",
+                "93.9%",
+                "82.8p",
+                "2.5%"
+              ],
+              [
+                "12개월(전년동월비)",
+                "외식 39",
+                "38개 / 97.4%",
+                "1개 / 2.6%",
+                "0개 / 0.0%",
+                "99.8%",
+                "94.9p",
+                "2.9%"
+              ],
+              [
+                "12개월(전년동월비)",
+                "외식제외 77",
+                "66개 / 85.7%",
+                "7개 / 9.1%",
+                "4개 / 5.2%",
+                "89.7%",
+                "76.6p",
+                "2.1%"
+              ],
+              [
+                "6개월 누적",
+                "개인서비스 116",
+                "104개 / 89.7%",
+                "4개 / 3.4%",
+                "8개 / 6.9%",
+                "92.6%",
+                "86.2p",
+                "1.2%"
+              ],
+              [
+                "6개월 누적",
+                "외식 39",
+                "38개 / 97.4%",
+                "0개 / 0.0%",
+                "1개 / 2.6%",
+                "97.0%",
+                "97.4p",
+                "1.3%"
+              ],
+              [
+                "6개월 누적",
+                "외식제외 77",
+                "66개 / 85.7%",
+                "4개 / 5.2%",
+                "7개 / 9.1%",
+                "89.5%",
+                "80.5p",
+                "1.1%"
+              ],
+              [
+                "3개월 누적",
+                "개인서비스 116",
+                "92개 / 79.3%",
+                "8개 / 6.9%",
+                "16개 / 13.8%",
+                "82.0%",
+                "72.4p",
+                "0.4%"
+              ],
+              [
+                "3개월 누적",
+                "외식 39",
+                "36개 / 92.3%",
+                "0개 / 0.0%",
+                "3개 / 7.7%",
+                "90.8%",
+                "92.3p",
+                "0.5%"
+              ],
+              [
+                "3개월 누적",
+                "외식제외 77",
+                "56개 / 72.7%",
+                "8개 / 10.4%",
+                "13개 / 16.9%",
+                "75.7%",
+                "62.3p",
+                "0.3%"
+              ],
+              [
+                "전월비",
+                "개인서비스 116",
+                "73개 / 62.9%",
+                "10개 / 8.6%",
+                "33개 / 28.4%",
+                "67.4%",
+                "54.3p",
+                "0.1%"
+              ],
+              [
+                "전월비",
+                "외식 39",
+                "29개 / 74.4%",
+                "3개 / 7.7%",
+                "7개 / 17.9%",
+                "73.5%",
+                "66.7p",
+                "0.2%"
+              ],
+              [
+                "전월비",
+                "외식제외 77",
+                "44개 / 57.1%",
+                "7개 / 9.1%",
+                "26개 / 33.8%",
+                "63.1%",
+                "48.1p",
+                "0.0%"
+              ]
+            ],
+            "insightLabel": "이 표의 주장",
+            "insightTitle": "개인서비스 3개 모집단 비교",
+            "insightBody": "개인서비스 전체·외식·외식제외의 12·6·3·1개월 확산"
+          },
+          {
+            "id": "section-06-tails",
+            "type": "table",
+            "title": "06 · 개인서비스 3개월 누적 상하위",
+            "columns": [
+              "#",
+              "상승 상위",
+              "가중치",
+              "3개월 누적",
+              "하락 하위",
+              "가중치",
+              "3개월 누적"
+            ],
+            "rows": [
+              [
+                "1",
+                "콘도이용료",
+                "0.80",
+                "28.4",
+                "해외단체여행비",
+                "5.50",
+                "-9.4"
+              ],
+              [
+                "2",
+                "휴양시설이용료",
+                "1.40",
+                "20.7",
+                "국내항공료",
+                "1.00",
+                "-5.3"
+              ],
+              [
+                "3",
+                "컴퓨터수리비",
+                "0.10",
+                "13.5",
+                "학교보충교육비",
+                "1.40",
+                "-2.4"
+              ],
+              [
+                "4",
+                "호텔숙박료",
+                "2.10",
+                "12.7",
+                "골프장이용료",
+                "3.00",
+                "-1.7"
+              ],
+              [
+                "5",
+                "건강기기렌탈비",
+                "1.50",
+                "12.6",
+                "독서실비",
+                "0.80",
+                "-1.1"
+              ],
+              [
+                "6",
+                "가전제품수리비",
+                "2.40",
+                "10.1",
+                "골프연습장이용료",
+                "2.30",
+                "-0.4"
+              ],
+              [
+                "7",
+                "국내단체여행비",
+                "2.00",
+                "7.5",
+                "병원검사료",
+                "1.10",
+                "-0.1"
+              ],
+              [
+                "8",
+                "놀이시설이용료",
+                "2.30",
+                "7.0",
+                "택배이용료",
+                "1.90",
+                "-0.0"
+              ],
+              [
+                "9",
+                "도시락",
+                "0.60",
+                "3.7",
+                "가전제품렌탈비",
+                "2.50",
+                "0.0"
+              ],
+              [
+                "10",
+                "승용차임차료",
+                "3.20",
+                "3.7",
+                "자동차검사료",
+                "0.30",
+                "0.0"
+              ]
+            ],
+            "insightLabel": "이 표의 주장",
+            "insightTitle": "공식 개인서비스 내부 꼬리 확인",
+            "insightBody": "3개월 누적 변동이 가장 큰 10개와 가장 낮은 10개"
+          },
+          {
+            "id": "section-07-method",
+            "type": "text",
+            "title": "07 · 계산 경로와 모집단 검산",
+            "body": "근원 정의 | ECOS 최상위 A 계층의 식료품 140개(가중치 142.0)와 검증 코드로 고정한 에너지 9개(75.8)를 제외. 남은 309개 가중치 합 782.2.\n\n개인서비스 분류 | KOSIS DT_1J22112 공식 분류의 F01 외식 39개(138.0)와 F02 외식제외 77개(195.3)를 사용. 합계 116개·333.3이며 ECOS leaf 코드·이름과 대조.\n\n계산 원천 | 모집단 분류는 KOSIS DT_1J22112, 월별 품목지수·가중치는 ECOS 901Y009. 공식 aggregate 지수를 혼합하지 않음.\n\n변환 | 전년동월비=(I_t/I_t−12−1)×100. 6·3개월 누적·전월비=(I_t/I_t−h−1)×100. 연율 환산 없음.\n\n주의 | 비계절조정 원계열. 단기 관찰창은 계절성을 포함하는 지속성 확인용 스냅샷. 이 결과만으로 추세 전환을 판정하지 않음.\n\n빈티지 | ECOS·KOSIS는 ALFRED식 as-of 조회 미제공. 수집 시점 최신 공표치이며 과거 실시간 빈티지 재현 아님.",
+            "style": "plain"
+          },
+          {
+            "id": "section-08-episodes",
+            "type": "table",
+            "title": "08 · 2001년 이후 정책국면 정의",
+            "columns": [
+              "국면",
+              "기간",
+              "월말 기준금리",
+              "표본",
+              "용도"
+            ],
+            "rows": [
+              [
+                "동결기 1",
+                "2001.01~2001.01",
+                "5.25→5.25%",
+                "1개월",
+                "과거 비교표본"
+              ],
+              [
+                "인하기 1",
+                "2001.02~2001.09",
+                "5.00→4.00%",
+                "8개월",
+                "과거 비교표본"
+              ],
+              [
+                "동결기 2",
+                "2001.10~2002.04",
+                "4.00→4.00%",
+                "7개월",
+                "과거 비교표본"
+              ],
+              [
+                "인상기 1",
+                "2002.05~2002.05",
+                "4.25→4.25%",
+                "1개월",
+                "과거 비교표본"
+              ],
+              [
+                "동결기 3",
+                "2002.06~2003.04",
+                "4.25→4.25%",
+                "11개월",
+                "과거 비교표본"
+              ],
+              [
+                "인하기 2",
+                "2003.05~2004.11",
+                "4.00→3.25%",
+                "19개월",
+                "과거 비교표본"
+              ],
+              [
+                "동결기 4",
+                "2004.12~2005.09",
+                "3.25→3.25%",
+                "10개월",
+                "과거 비교표본"
+              ],
+              [
+                "인상기 2",
+                "2005.10~2008.08",
+                "3.50→5.25%",
+                "35개월",
+                "과거 비교표본"
+              ],
+              [
+                "동결기 5",
+                "2008.09~2008.09",
+                "5.25→5.25%",
+                "1개월",
+                "과거 비교표본"
+              ],
+              [
+                "인하기 3",
+                "2008.10~2009.02",
+                "4.25→2.00%",
+                "5개월",
+                "과거 비교표본"
+              ],
+              [
+                "동결기 6",
+                "2009.03~2010.06",
+                "2.00→2.00%",
+                "16개월",
+                "과거 비교표본"
+              ],
+              [
+                "인상기 3",
+                "2010.07~2011.06",
+                "2.25→3.25%",
+                "12개월",
+                "과거 비교표본"
+              ],
+              [
+                "동결기 7",
+                "2011.07~2012.06",
+                "3.25→3.25%",
+                "12개월",
+                "과거 비교표본"
+              ],
+              [
+                "인하기 4",
+                "2012.07~2016.06",
+                "3.00→1.25%",
+                "48개월",
+                "과거 비교표본"
+              ],
+              [
+                "동결기 8",
+                "2016.07~2017.10",
+                "1.25→1.25%",
+                "16개월",
+                "과거 비교표본"
+              ],
+              [
+                "인상기 4",
+                "2017.11~2018.11",
+                "1.50→1.75%",
+                "13개월",
+                "과거 비교표본"
+              ],
+              [
+                "동결기 9",
+                "2018.12~2019.06",
+                "1.75→1.75%",
+                "7개월",
+                "과거 비교표본"
+              ],
+              [
+                "인하기 5",
+                "2019.07~2020.05",
+                "1.50→0.50%",
+                "11개월",
+                "과거 비교표본"
+              ],
+              [
+                "동결기 10",
+                "2020.06~2021.07",
+                "0.50→0.50%",
+                "14개월",
+                "과거 비교표본"
+              ],
+              [
+                "인상기 5",
+                "2021.08~2023.01",
+                "0.75→3.50%",
+                "18개월",
+                "과거 비교표본"
+              ],
+              [
+                "동결기 11",
+                "2023.02~2024.09",
+                "3.50→3.50%",
+                "20개월",
+                "과거 비교표본"
+              ],
+              [
+                "인하기 6",
+                "2024.10~2025.05",
+                "3.25→2.50%",
+                "8개월",
+                "과거 비교표본"
+              ],
+              [
+                "동결기 12",
+                "2025.06~2026.06",
+                "2.50→2.50%",
+                "13개월",
+                "과거 비교표본"
+              ],
+              [
+                "인상기 6",
+                "2026.07~2026.08",
+                "2.75→3.00%",
+                "2개월",
+                "현재 비교점"
+              ]
+            ],
+            "insightLabel": "이 표의 주장",
+            "insightTitle": "308개월을 24개 에피소드로 분류",
+            "insightBody": "2026년 7~8월 재인상기는 과거 인상기 표본에서 제외한 현재 비교점"
+          },
+          {
+            "id": "section-08-chart",
+            "type": "chart",
+            "title": "08 · 정책국면별 3개월 상승 품목 비중",
+            "columns": 1,
+            "charts": [
+              {
+                "id": "section-08-breadth",
+                "title": "Headline·Core·개인서비스 고정패널",
+                "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA3NjAgMzQwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9Iuygleyxheq1reuptOuzhCAz6rCc7JuUIOyDgeyKuSDtkojrqqkg67mE7KSRIj48c3R5bGU+Lmd7c3Ryb2tlOiNkN2Q3ZDd9LmEsLmwsLnZ7Zm9udDoxMXB4IG1vbm9zcGFjZTtmaWxsOiM1MjUyNTJ9LnZ7Zm9udC13ZWlnaHQ6NzAwfTwvc3R5bGU+PGxpbmUgY2xhc3M9ImciIHgxPSI2MiIgeTE9IjI2OC4wIiB4Mj0iNzMyIiB5Mj0iMjY4LjAiLz48dGV4dCBjbGFzcz0iYSIgeD0iNTQiIHk9IjI3Mi4wIiB0ZXh0LWFuY2hvcj0iZW5kIj40MCU8L3RleHQ+PGxpbmUgY2xhc3M9ImciIHgxPSI2MiIgeTE9IjIyMS4yIiB4Mj0iNzMyIiB5Mj0iMjIxLjIiLz48dGV4dCBjbGFzcz0iYSIgeD0iNTQiIHk9IjIyNS4yIiB0ZXh0LWFuY2hvcj0iZW5kIj41MCU8L3RleHQ+PGxpbmUgY2xhc3M9ImciIHgxPSI2MiIgeTE9IjE3NC40IiB4Mj0iNzMyIiB5Mj0iMTc0LjQiLz48dGV4dCBjbGFzcz0iYSIgeD0iNTQiIHk9IjE3OC40IiB0ZXh0LWFuY2hvcj0iZW5kIj42MCU8L3RleHQ+PGxpbmUgY2xhc3M9ImciIHgxPSI2MiIgeTE9IjEyNy42IiB4Mj0iNzMyIiB5Mj0iMTI3LjYiLz48dGV4dCBjbGFzcz0iYSIgeD0iNTQiIHk9IjEzMS42IiB0ZXh0LWFuY2hvcj0iZW5kIj43MCU8L3RleHQ+PGxpbmUgY2xhc3M9ImciIHgxPSI2MiIgeTE9IjgwLjgiIHgyPSI3MzIiIHkyPSI4MC44Ii8+PHRleHQgY2xhc3M9ImEiIHg9IjU0IiB5PSI4NC44IiB0ZXh0LWFuY2hvcj0iZW5kIj44MCU8L3RleHQ+PGxpbmUgY2xhc3M9ImciIHgxPSI2MiIgeTE9IjM0LjAiIHgyPSI3MzIiIHkyPSIzNC4wIi8+PHRleHQgY2xhc3M9ImEiIHg9IjU0IiB5PSIzOC4wIiB0ZXh0LWFuY2hvcj0iZW5kIj45MCU8L3RleHQ+PHRleHQgY2xhc3M9ImwiIHg9IjYyLjAiIHk9IjI5OCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+6rO86rGwIOyduOyDgeq4sDwvdGV4dD48dGV4dCBjbGFzcz0ibCIgeD0iMjg1LjMiIHk9IjI5OCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+64+Z6rKw6riwPC90ZXh0Pjx0ZXh0IGNsYXNzPSJsIiB4PSI1MDguNyIgeT0iMjk4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7snbjtlZjquLA8L3RleHQ+PHRleHQgY2xhc3M9ImwiIHg9IjczMi4wIiB5PSIyOTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjIwMjYuMDg8L3RleHQ+PHBvbHlsaW5lIHBvaW50cz0iNjIuMCwxODYuOSAyODUuMywxOTMuMyA1MDguNywxOTcuNCA3MzIuMCwxNjkuNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZGExZTI4IiBzdHJva2Utd2lkdGg9IjMiLz48Y2lyY2xlIGN4PSI2Mi4wIiBjeT0iMTg2LjkiIHI9IjQuNSIgZmlsbD0iI2RhMWUyOCIvPjx0ZXh0IGNsYXNzPSJ2IiB4PSI2Mi4wIiB5PSIxNzYuOSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+NTcuMzwvdGV4dD48Y2lyY2xlIGN4PSIyODUuMyIgY3k9IjE5My4zIiByPSI0LjUiIGZpbGw9IiNkYTFlMjgiLz48dGV4dCBjbGFzcz0idiIgeD0iMjg1LjMiIHk9IjE4My4zIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj41Ni4wPC90ZXh0PjxjaXJjbGUgY3g9IjUwOC43IiBjeT0iMTk3LjQiIHI9IjQuNSIgZmlsbD0iI2RhMWUyOCIvPjx0ZXh0IGNsYXNzPSJ2IiB4PSI1MDguNyIgeT0iMTg3LjQiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjU1LjE8L3RleHQ+PGNpcmNsZSBjeD0iNzMyLjAiIGN5PSIxNjkuNCIgcj0iNC41IiBmaWxsPSIjZGExZTI4Ii8+PHRleHQgY2xhc3M9InYiIHg9IjczMi4wIiB5PSIxNTkuNCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+NjEuMTwvdGV4dD48cG9seWxpbmUgcG9pbnRzPSI2Mi4wLDE5NC4wIDI4NS4zLDE5NS42IDUwOC43LDIwMC44IDczMi4wLDE3MC4wIiBmaWxsPSJub25lIiBzdHJva2U9IiM4YTFjMWMiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWRhc2hhcnJheT0iNyA0Ii8+PGNpcmNsZSBjeD0iNjIuMCIgY3k9IjE5NC4wIiByPSI0LjUiIGZpbGw9IiM4YTFjMWMiLz48dGV4dCBjbGFzcz0idiIgeD0iNjIuMCIgeT0iMTg0LjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjU1Ljg8L3RleHQ+PGNpcmNsZSBjeD0iMjg1LjMiIGN5PSIxOTUuNiIgcj0iNC41IiBmaWxsPSIjOGExYzFjIi8+PHRleHQgY2xhc3M9InYiIHg9IjI4NS4zIiB5PSIxODUuNiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+NTUuNTwvdGV4dD48Y2lyY2xlIGN4PSI1MDguNyIgY3k9IjIwMC44IiByPSI0LjUiIGZpbGw9IiM4YTFjMWMiLz48dGV4dCBjbGFzcz0idiIgeD0iNTA4LjciIHk9IjE5MC44IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj41NC40PC90ZXh0PjxjaXJjbGUgY3g9IjczMi4wIiBjeT0iMTcwLjAiIHI9IjQuNSIgZmlsbD0iIzhhMWMxYyIvPjx0ZXh0IGNsYXNzPSJ2IiB4PSI3MzIuMCIgeT0iMTYwLjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjYwLjk8L3RleHQ+PHBvbHlsaW5lIHBvaW50cz0iNjIuMCwxMDQuMyAyODUuMywxMTAuNiA1MDguNywxMTcuNCA3MzIuMCw4MS45IiBmaWxsPSJub25lIiBzdHJva2U9IiMwMDdkNzkiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWRhc2hhcnJheT0iMiA0Ii8+PGNpcmNsZSBjeD0iNjIuMCIgY3k9IjEwNC4zIiByPSI0LjUiIGZpbGw9IiMwMDdkNzkiLz48dGV4dCBjbGFzcz0idiIgeD0iNjIuMCIgeT0iOTQuMyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+NzUuMDwvdGV4dD48Y2lyY2xlIGN4PSIyODUuMyIgY3k9IjExMC42IiByPSI0LjUiIGZpbGw9IiMwMDdkNzkiLz48dGV4dCBjbGFzcz0idiIgeD0iMjg1LjMiIHk9IjEwMC42IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj43My42PC90ZXh0PjxjaXJjbGUgY3g9IjUwOC43IiBjeT0iMTE3LjQiIHI9IjQuNSIgZmlsbD0iIzAwN2Q3OSIvPjx0ZXh0IGNsYXNzPSJ2IiB4PSI1MDguNyIgeT0iMTA3LjQiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjcyLjI8L3RleHQ+PGNpcmNsZSBjeD0iNzMyLjAiIGN5PSI4MS45IiByPSI0LjUiIGZpbGw9IiMwMDdkNzkiLz48dGV4dCBjbGFzcz0idiIgeD0iNzMyLjAiIHk9IjcxLjkiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjc5Ljg8L3RleHQ+PGxpbmUgeDE9IjEwNSIgeTE9IjMyOCIgeDI9IjEzMyIgeTI9IjMyOCIgc3Ryb2tlPSIjZGExZTI4IiBzdHJva2Utd2lkdGg9IjMiLz48dGV4dCBjbGFzcz0ibCIgeD0iMTQwIiB5PSIzMzIiPkhlYWRsaW5lIDM1NzwvdGV4dD48bGluZSB4MT0iMzEwIiB5MT0iMzI4IiB4Mj0iMzM4IiB5Mj0iMzI4IiBzdHJva2U9IiM4YTFjMWMiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWRhc2hhcnJheT0iNyA0Ii8+PHRleHQgY2xhc3M9ImwiIHg9IjM0NSIgeT0iMzMyIj5Db3JlIDIzMzwvdGV4dD48bGluZSB4MT0iNTE1IiB5MT0iMzI4IiB4Mj0iNTQzIiB5Mj0iMzI4IiBzdHJva2U9IiMwMDdkNzkiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWRhc2hhcnJheT0iMiA0Ii8+PHRleHQgY2xhc3M9ImwiIHg9IjU1MCIgeT0iMzMyIj7qsJzsnbjshJzruYTsiqQgODQ8L3RleHQ+PC9zdmc+",
+                "caption": "2001.01~2026.08 동일품목 비가중 비중; 과거 국면은 월별 평균, 2026.08은 단월",
+                "source": "한국은행 ECOS 901Y009 · 한국은행 기준금리 추이",
+                "insightLabel": "판독",
+                "insightTitle": "현재와 2001년 이후 과거 인상기 비교",
+                "insightBody": "2001년 이후 동일품목 고정패널(357·233·84개)에서 2026년 8월 3개월 상승 품목 비중은 헤드라인 61.1%, 근원 60.9%, 개인서비스 79.8%. 과거 인상기 평균보다 각각 +3.7p, +5.1p, +4.8p이며, 과거 인상기 월별 분포에서 각각 65·73·72퍼센타일이다. 현재 전체 바스켓(458·309·116개)의 같은 비중은 62.9·62.5·79.3%다."
+              }
+            ]
+          },
+          {
+            "id": "section-08-breadth",
+            "type": "table",
+            "title": "08 · 국면별 관찰창 상승 품목 비중",
+            "columns": [
+              "국면",
+              "모집단",
+              "표본월",
+              "12개월 상승",
+              "6개월 상승",
+              "3개월 상승",
+              "전월 상승"
+            ],
+            "rows": [
+              [
+                "과거 인상기",
+                "Headline 357",
+                "79",
+                "71.4",
+                "64.4",
+                "57.3",
+                "47.0"
+              ],
+              [
+                "과거 인상기",
+                "Core 233",
+                "79",
+                "72.0",
+                "64.2",
+                "55.8",
+                "43.8"
+              ],
+              [
+                "과거 인상기",
+                "개인서비스 84",
+                "79",
+                "86.6",
+                "81.2",
+                "75.0",
+                "61.2"
+              ],
+              [
+                "동결기",
+                "Headline 357",
+                "128",
+                "71.1",
+                "63.0",
+                "56.0",
+                "46.6"
+              ],
+              [
+                "동결기",
+                "Core 233",
+                "128",
+                "72.6",
+                "64.2",
+                "55.5",
+                "43.8"
+              ],
+              [
+                "동결기",
+                "개인서비스 84",
+                "128",
+                "85.1",
+                "79.9",
+                "73.6",
+                "59.6"
+              ],
+              [
+                "인하기",
+                "Headline 357",
+                "99",
+                "67.9",
+                "61.7",
+                "55.1",
+                "45.6"
+              ],
+              [
+                "인하기",
+                "Core 233",
+                "99",
+                "69.8",
+                "62.4",
+                "54.4",
+                "42.7"
+              ],
+              [
+                "인하기",
+                "개인서비스 84",
+                "99",
+                "84.6",
+                "79.0",
+                "72.2",
+                "56.6"
+              ],
+              [
+                "2026.08",
+                "Headline 357",
+                "1",
+                "73.9",
+                "67.5",
+                "61.1",
+                "49.9"
+              ],
+              [
+                "2026.08",
+                "Core 233",
+                "1",
+                "82.4",
+                "71.2",
+                "60.9",
+                "47.6"
+              ],
+              [
+                "2026.08",
+                "개인서비스 84",
+                "1",
+                "89.3",
+                "88.1",
+                "79.8",
+                "65.5"
+              ]
+            ],
+            "insightLabel": "이 표의 주장",
+            "insightTitle": "같은 변화율 정의로 세 국면과 현재 비교",
+            "insightBody": "12개월은 전년동월비, 6·3개월은 누적, 전월은 전월비"
+          },
+          {
+            "id": "section-09-chart",
+            "type": "chart",
+            "title": "09 · 헤드라인 3개월 상승·보합·하락",
+            "columns": 1,
+            "charts": [
+              {
+                "id": "section-09-direction",
+                "title": "품목 수 기준 방향 구성",
+                "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA3NjAgMzMwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9Iuygleyxheq1reuptOuzhCAz6rCc7JuUIO2XpOuTnOudvOyduCDrsKntlqUg6rWs7ISxIj48c3R5bGU+Lmd7c3Ryb2tlOiNkN2Q3ZDd9LmEsLmwsLnZ7Zm9udDoxMXB4IG1vbm9zcGFjZTtmaWxsOiM1MjUyNTJ9Lnd7Zm9udDoxMHB4IG1vbm9zcGFjZTtmaWxsOndoaXRlfTwvc3R5bGU+PGxpbmUgY2xhc3M9ImciIHgxPSI1NSIgeTE9IjI2MC4wIiB4Mj0iNzM1IiB5Mj0iMjYwLjAiLz48dGV4dCBjbGFzcz0iYSIgeD0iNDciIHk9IjI2NC4wIiB0ZXh0LWFuY2hvcj0iZW5kIj4wJTwvdGV4dD48bGluZSBjbGFzcz0iZyIgeDE9IjU1IiB5MT0iMjAyLjAiIHgyPSI3MzUiIHkyPSIyMDIuMCIvPjx0ZXh0IGNsYXNzPSJhIiB4PSI0NyIgeT0iMjA2LjAiIHRleHQtYW5jaG9yPSJlbmQiPjI1JTwvdGV4dD48bGluZSBjbGFzcz0iZyIgeDE9IjU1IiB5MT0iMTQ0LjAiIHgyPSI3MzUiIHkyPSIxNDQuMCIvPjx0ZXh0IGNsYXNzPSJhIiB4PSI0NyIgeT0iMTQ4LjAiIHRleHQtYW5jaG9yPSJlbmQiPjUwJTwvdGV4dD48bGluZSBjbGFzcz0iZyIgeDE9IjU1IiB5MT0iODYuMCIgeDI9IjczNSIgeTI9Ijg2LjAiLz48dGV4dCBjbGFzcz0iYSIgeD0iNDciIHk9IjkwLjAiIHRleHQtYW5jaG9yPSJlbmQiPjc1JTwvdGV4dD48bGluZSBjbGFzcz0iZyIgeDE9IjU1IiB5MT0iMjguMCIgeDI9IjczNSIgeTI9IjI4LjAiLz48dGV4dCBjbGFzcz0iYSIgeD0iNDciIHk9IjMyLjAiIHRleHQtYW5jaG9yPSJlbmQiPjEwMCU8L3RleHQ+PHJlY3QgeD0iODEuMCIgeT0iMTI3LjAiIHdpZHRoPSI3OCIgaGVpZ2h0PSIxMzMuMCIgZmlsbD0iI2RhMWUyOCIvPjx0ZXh0IGNsYXNzPSJ3IiB4PSIxMjAiIHk9IjE5Ny41IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj41Ny4zPC90ZXh0PjxyZWN0IHg9IjgxLjAiIHk9Ijg1LjMiIHdpZHRoPSI3OCIgaGVpZ2h0PSI0MS43IiBmaWxsPSIjOGQ4ZDhkIi8+PHRleHQgY2xhc3M9InciIHg9IjEyMCIgeT0iMTEwLjIiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjE4LjA8L3RleHQ+PHJlY3QgeD0iODEuMCIgeT0iMjguMCIgd2lkdGg9Ijc4IiBoZWlnaHQ9IjU3LjMiIGZpbGw9IiMwZjYyZmUiLz48dGV4dCBjbGFzcz0idyIgeD0iMTIwIiB5PSI2MC42IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj4yNC43PC90ZXh0Pjx0ZXh0IGNsYXNzPSJsIiB4PSIxMjAiIHk9IjI4OCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+6rO86rGwIOyduOyDgeq4sDwvdGV4dD48cmVjdCB4PSIyNTEuMCIgeT0iMTMwLjEiIHdpZHRoPSI3OCIgaGVpZ2h0PSIxMjkuOSIgZmlsbD0iI2RhMWUyOCIvPjx0ZXh0IGNsYXNzPSJ3IiB4PSIyOTAiIHk9IjE5OS4xIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj41Ni4wPC90ZXh0PjxyZWN0IHg9IjI1MS4wIiB5PSI5My4xIiB3aWR0aD0iNzgiIGhlaWdodD0iMzcuMCIgZmlsbD0iIzhkOGQ4ZCIvPjx0ZXh0IGNsYXNzPSJ3IiB4PSIyOTAiIHk9IjExNS42IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj4xNi4wPC90ZXh0PjxyZWN0IHg9IjI1MS4wIiB5PSIyOC4wIiB3aWR0aD0iNzgiIGhlaWdodD0iNjUuMSIgZmlsbD0iIzBmNjJmZSIvPjx0ZXh0IGNsYXNzPSJ3IiB4PSIyOTAiIHk9IjY0LjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjI4LjE8L3RleHQ+PHRleHQgY2xhc3M9ImwiIHg9IjI5MCIgeT0iMjg4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7rj5nqsrDquLA8L3RleHQ+PHJlY3QgeD0iNDIxLjAiIHk9IjEzMi4yIiB3aWR0aD0iNzgiIGhlaWdodD0iMTI3LjgiIGZpbGw9IiNkYTFlMjgiLz48dGV4dCBjbGFzcz0idyIgeD0iNDYwIiB5PSIyMDAuMSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+NTUuMTwvdGV4dD48cmVjdCB4PSI0MjEuMCIgeT0iOTQuMiIgd2lkdGg9Ijc4IiBoZWlnaHQ9IjM4LjAiIGZpbGw9IiM4ZDhkOGQiLz48dGV4dCBjbGFzcz0idyIgeD0iNDYwIiB5PSIxMTcuMiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+MTYuNDwvdGV4dD48cmVjdCB4PSI0MjEuMCIgeT0iMjguMCIgd2lkdGg9Ijc4IiBoZWlnaHQ9IjY2LjIiIGZpbGw9IiMwZjYyZmUiLz48dGV4dCBjbGFzcz0idyIgeD0iNDYwIiB5PSI2NS4xIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj4yOC41PC90ZXh0Pjx0ZXh0IGNsYXNzPSJsIiB4PSI0NjAiIHk9IjI4OCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+7J247ZWY6riwPC90ZXh0PjxyZWN0IHg9IjU5MS4wIiB5PSIxMTguMyIgd2lkdGg9Ijc4IiBoZWlnaHQ9IjE0MS43IiBmaWxsPSIjZGExZTI4Ii8+PHRleHQgY2xhc3M9InciIHg9IjYzMCIgeT0iMTkzLjIiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjYxLjE8L3RleHQ+PHJlY3QgeD0iNTkxLjAiIHk9IjgwLjYiIHdpZHRoPSI3OCIgaGVpZ2h0PSIzNy43IiBmaWxsPSIjOGQ4ZDhkIi8+PHRleHQgY2xhc3M9InciIHg9IjYzMCIgeT0iMTAzLjUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjE2LjI8L3RleHQ+PHJlY3QgeD0iNTkxLjAiIHk9IjI4LjAiIHdpZHRoPSI3OCIgaGVpZ2h0PSI1Mi42IiBmaWxsPSIjMGY2MmZlIi8+PHRleHQgY2xhc3M9InciIHg9IjYzMCIgeT0iNTguMyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+MjIuNzwvdGV4dD48dGV4dCBjbGFzcz0ibCIgeD0iNjMwIiB5PSIyODgiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjIwMjYuMDg8L3RleHQ+PHJlY3QgeD0iMjQ1IiB5PSIzMTAiIHdpZHRoPSIxMSIgaGVpZ2h0PSIxMSIgZmlsbD0iI2RhMWUyOCIvPjx0ZXh0IGNsYXNzPSJsIiB4PSIyNjIiIHk9IjMyMCI+7IOB7Iq5PC90ZXh0PjxyZWN0IHg9IjM2MCIgeT0iMzEwIiB3aWR0aD0iMTEiIGhlaWdodD0iMTEiIGZpbGw9IiM4ZDhkOGQiLz48dGV4dCBjbGFzcz0ibCIgeD0iMzc3IiB5PSIzMjAiPuuztO2VqTwvdGV4dD48cmVjdCB4PSI0NzUiIHk9IjMxMCIgd2lkdGg9IjExIiBoZWlnaHQ9IjExIiBmaWxsPSIjMGY2MmZlIi8+PHRleHQgY2xhc3M9ImwiIHg9IjQ5MiIgeT0iMzIwIj7tlZjrnb08L3RleHQ+PC9zdmc+",
+                "caption": "과거 국면은 월별 방향 비중의 평균, 2026.08은 단월",
+                "source": "한국은행 ECOS 901Y009",
+                "insightLabel": "판독",
+                "insightTitle": "상승만 보지 않고 하락·보합까지 함께 비교",
+                "insightBody": "세 비중의 합은 각 국면에서 100%"
+              }
+            ]
+          },
+          {
+            "id": "section-09-direction",
+            "type": "table",
+            "title": "09 · 헤드라인 3개월 방향 구성",
+            "columns": [
+              "국면",
+              "상승",
+              "보합",
+              "하락",
+              "순확산"
+            ],
+            "rows": [
+              [
+                "과거 인상기",
+                "57.3",
+                "18.0",
+                "24.7",
+                "32.6"
+              ],
+              [
+                "동결기",
+                "56.0",
+                "16.0",
+                "28.1",
+                "27.9"
+              ],
+              [
+                "인하기",
+                "55.1",
+                "16.4",
+                "28.5",
+                "26.5"
+              ],
+              [
+                "2026.08",
+                "61.1",
+                "16.2",
+                "22.7",
+                "38.4"
+              ]
+            ],
+            "insightLabel": "이 표의 주장",
+            "insightTitle": "현재 가중치를 과거에 소급하지 않음",
+            "insightBody": "장기 비교는 고정 공통패널의 비가중 상승·보합·하락 품목 비중"
+          },
+          {
+            "id": "section-09-transitions",
+            "type": "table",
+            "title": "09 · 국면별 3개월 우세방향 비교",
+            "columns": [
+              "비교",
+              "기준 국면 우세",
+              "비교 국면 우세",
+              "품목 수"
+            ],
+            "rows": [
+              [
+                "인상기 대비 동결기",
+                "하락 우세",
+                "하락 우세",
+                "14"
+              ],
+              [
+                "인상기 대비 동결기",
+                "하락 우세",
+                "혼합·보합",
+                "7"
+              ],
+              [
+                "인상기 대비 동결기",
+                "하락 우세",
+                "상승 우세",
+                "15"
+              ],
+              [
+                "인상기 대비 동결기",
+                "혼합·보합",
+                "하락 우세",
+                "6"
+              ],
+              [
+                "인상기 대비 동결기",
+                "혼합·보합",
+                "혼합·보합",
+                "78"
+              ],
+              [
+                "인상기 대비 동결기",
+                "혼합·보합",
+                "상승 우세",
+                "12"
+              ],
+              [
+                "인상기 대비 동결기",
+                "상승 우세",
+                "하락 우세",
+                "9"
+              ],
+              [
+                "인상기 대비 동결기",
+                "상승 우세",
+                "혼합·보합",
+                "18"
+              ],
+              [
+                "인상기 대비 동결기",
+                "상승 우세",
+                "상승 우세",
+                "198"
+              ],
+              [
+                "동결기 대비 인하기",
+                "하락 우세",
+                "하락 우세",
+                "16"
+              ],
+              [
+                "동결기 대비 인하기",
+                "하락 우세",
+                "혼합·보합",
+                "4"
+              ],
+              [
+                "동결기 대비 인하기",
+                "하락 우세",
+                "상승 우세",
+                "9"
+              ],
+              [
+                "동결기 대비 인하기",
+                "혼합·보합",
+                "하락 우세",
+                "8"
+              ],
+              [
+                "동결기 대비 인하기",
+                "혼합·보합",
+                "혼합·보합",
+                "84"
+              ],
+              [
+                "동결기 대비 인하기",
+                "혼합·보합",
+                "상승 우세",
+                "11"
+              ],
+              [
+                "동결기 대비 인하기",
+                "상승 우세",
+                "하락 우세",
+                "18"
+              ],
+              [
+                "동결기 대비 인하기",
+                "상승 우세",
+                "혼합·보합",
+                "12"
+              ],
+              [
+                "동결기 대비 인하기",
+                "상승 우세",
+                "상승 우세",
+                "195"
+              ]
+            ],
+            "insightLabel": "이 표의 주장",
+            "insightTitle": "같은 품목의 국면별 우세방향을 비교",
+            "insightBody": "시간순 전이확률이 아니며, 국면 내 절반을 초과해 상승·하락한 경우만 우세로 분류"
+          },
+          {
+            "id": "section-09-items",
+            "type": "table",
+            "title": "09 · 과거 인상기와 방향이 달라진 고가중 품목",
+            "columns": [
+              "현재 방향",
+              "품목",
+              "현행 가중치(참고)",
+              "인상기 상승월",
+              "동결기 상승월",
+              "인하기 상승월",
+              "2026.08 3개월"
+            ],
+            "rows": [
+              [
+                "새로 상승",
+                "휴대전화료",
+                "29.8",
+                "19.0",
+                "24.2",
+                "5.1",
+                "0.0"
+              ],
+              [
+                "새로 상승",
+                "휴대전화기",
+                "10.4",
+                "20.3",
+                "21.9",
+                "21.2",
+                "1.9"
+              ],
+              [
+                "새로 상승",
+                "돼지고기",
+                "9.8",
+                "46.8",
+                "52.3",
+                "54.5",
+                "0.4"
+              ],
+              [
+                "새로 상승",
+                "국산쇠고기",
+                "8.6",
+                "45.6",
+                "57.0",
+                "73.7",
+                "0.3"
+              ],
+              [
+                "새로 상승",
+                "다목적승용차",
+                "7.7",
+                "49.4",
+                "57.8",
+                "36.4",
+                "1.4"
+              ],
+              [
+                "새로 상승",
+                "기초화장품",
+                "4.5",
+                "45.6",
+                "49.2",
+                "46.5",
+                "1.3"
+              ],
+              [
+                "새로 상승",
+                "햄버거",
+                "4.3",
+                "39.2",
+                "37.5",
+                "37.4",
+                "0.7"
+              ],
+              [
+                "새로 상승",
+                "대형승용차",
+                "3.2",
+                "49.4",
+                "50.0",
+                "33.3",
+                "7.9"
+              ],
+              [
+                "새로 상승",
+                "승용차임차료",
+                "3.2",
+                "32.9",
+                "44.5",
+                "30.3",
+                "3.7"
+              ],
+              [
+                "새로 상승",
+                "택시료",
+                "3.2",
+                "30.4",
+                "45.3",
+                "33.3",
+                "0.5"
+              ],
+              [
+                "새로 하락",
+                "휘발유",
+                "24.1",
+                "67.1",
+                "65.6",
+                "43.4",
+                "-7.6"
+              ],
+              [
+                "새로 하락",
+                "경유",
+                "16.3",
+                "75.9",
+                "63.3",
+                "38.4",
+                "-8.2"
+              ],
+              [
+                "새로 하락",
+                "전기료",
+                "16.1",
+                "32.9",
+                "15.6",
+                "17.2",
+                "-11.0"
+              ],
+              [
+                "새로 하락",
+                "해외단체여행비",
+                "5.5",
+                "62.0",
+                "53.9",
+                "51.5",
+                "-9.4"
+              ],
+              [
+                "새로 하락",
+                "쌀",
+                "4.2",
+                "62.0",
+                "40.6",
+                "46.5",
+                "-0.1"
+              ],
+              [
+                "새로 하락",
+                "수입쇠고기",
+                "3.1",
+                "60.8",
+                "61.7",
+                "64.6",
+                "-1.7"
+              ],
+              [
+                "새로 하락",
+                "골프장이용료",
+                "3.0",
+                "84.8",
+                "67.2",
+                "64.6",
+                "-1.7"
+              ],
+              [
+                "새로 하락",
+                "국제항공료",
+                "2.9",
+                "62.0",
+                "60.2",
+                "43.4",
+                "-8.5"
+              ],
+              [
+                "새로 하락",
+                "등유",
+                "2.4",
+                "81.0",
+                "59.4",
+                "34.3",
+                "-2.5"
+              ],
+              [
+                "새로 하락",
+                "사과",
+                "2.3",
+                "53.2",
+                "61.7",
+                "51.5",
+                "-5.4"
+              ]
+            ],
+            "insightLabel": "이 표의 주장",
+            "insightTitle": "현재 방향 전환 품목을 가중치 순으로 확인",
+            "insightBody": "과거 인상기 3개월 방향이 현재와 달라진 품목 가운데 가중치 상위 각 10개"
+          },
+          {
+            "id": "section-10-current",
+            "type": "text",
+            "title": "10 · 현재 위치와 한국은행 렌즈",
+            "body": "2001년 이후 동일품목 고정패널(357·233·84개)에서 2026년 8월 3개월 상승 품목 비중은 헤드라인 61.1%, 근원 60.9%, 개인서비스 79.8%. 과거 인상기 평균보다 각각 +3.7p, +5.1p, +4.8p이며, 과거 인상기 월별 분포에서 각각 65·73·72퍼센타일이다. 현재 전체 바스켓(458·309·116개)의 같은 비중은 62.9·62.5·79.3%다.\n\n한은 렌즈 | 현재 재인상국면의 근원·개인서비스 확산도는 2001년 이후 과거 인상기 중상단에 있다. 다만 현재 단월과 과거 월별 분포의 조건부 비교이며 금리의 인과효과나 추세 전환을 뜻하지 않는다.\n\n계산 경로 | ECOS 901Y009의 2000.01~2026.08 개별 품목지수에서 결측 없는 고정 공통패널 357개(근원 233, 개인서비스 84)를 고정하고, 매월 12·6·3·1개월 변화율과 비가중 품목 확산도를 계산.\n\n국면 정의 | 2001.01 이후를 한국은행 공식 금리 변경일에 따라 월 단위로 분류했다. 같은 방향의 첫 변경월부터 마지막 변경월까지를 인상기·인하기로, 그 다음 달부터 다음 변경 직전 달까지를 동결기로 두었다. 현재 비교점은 2026.07~2026.08 인상기 6이며 해당 에피소드는 과거 국면 표본에서 제외했다.\n\n제도 단절 | 2008년 2월까지는 콜금리 목표, 2008년 3월부터는 한국은행 기준금리\n\n주의 | 비계절조정 원계열이며 현재 2026.08 단월과 과거 여러 달 평균 비교다. 금리 변화의 인과효과나 추세 전환을 뜻하지 않음.\n\n빈티지 | ECOS 과거값은 2026-09-07 수집 시점 최신 개정계열이며 실시간 빈티지 재현이 아님.",
+            "style": "bar"
+          }
+        ]
+      }
+    }
+  },
+  "dataNotes": {
+    "frequency": "monthly",
+    "seasonalAdjustment": "not seasonally adjusted",
+    "transformation": "12m year-over-year; 6m, 3m and 1m cumulative, not annualized",
+    "interpolation": false,
+    "estimation": false,
+    "latestCommonPeriod": "202608",
+    "policyRegimeMethod": "2001.01 이후를 한국은행 공식 금리 변경일에 따라 월 단위로 분류했다. 같은 방향의 첫 변경월부터 마지막 변경월까지를 인상기·인하기로, 그 다음 달부터 다음 변경 직전 달까지를 동결기로 두었다. 현재 비교점은 2026.07~2026.08 인상기 6이며 해당 에피소드는 과거 국면 표본에서 제외했다.",
+    "policyRegimePanel": "ECOS 901Y009 현행 458개 품목 중 2000.01~2026.08 모든 월의 유효 지수가 있는 고정 공통패널 / 2020년 기준 현재 가중치를 과거에 소급하지 않고, 장기 국면 비교는 비가중 품목 비중을 주지표로 사용",
+    "policyRateSeriesBreak": "2008년 2월까지는 콜금리 목표, 2008년 3월부터는 한국은행 기준금리",
+    "policyRegimeVintageLimit": "ECOS 과거값은 2026-09-07 수집 시점 최신 개정계열이며 실시간 빈티지 재현이 아님."
+  }
+}
