@@ -115,9 +115,14 @@ export const UNAUTHORIZED_MESSAGE = "인증이 필요합니다 — 로그인 후
 /**
  * 이름은 명단에 있으나 전화번호가 아직 등록되지 않은 경우의 메시지.
  * 이 사실은 로그인 화면이 이미 hasPhone으로 표시하고 있으므로 새로 노출되는 정보가 없다.
+ *
+ * 문구는 DAAI(mp-scoring-app `src/app/login/LoginForm.tsx`)와 **글자까지 같게** 맞춘다 —
+ * 같은 사람들이 두 앱을 쓰므로 같은 상황에서 다른 문장이 뜨면 다른 고장으로 읽힌다.
+ * 로그인 화면(클라이언트)과 /api/login(서버)이 이 함수 하나만 쓴다.
  */
-export const NO_PHONE_MESSAGE =
-  "전화번호가 등록되지 않았습니다 — 관리자에게 번호 등록을 요청하세요";
+export function noPhoneMessage(name: string): string {
+  return `${name} 계정은 전화번호가 등록되지 않았습니다. 관리자에게 등록을 요청하세요.`;
+}
 
 /** ADMIN 전용 경로에 STAFF가 들어왔을 때의 API 응답 메시지 */
 export const FORBIDDEN_MESSAGE = "권한이 없습니다 — 관리자 전용입니다";

@@ -78,9 +78,14 @@ Deployment Protection의 비밀번호 보호)는 **현재 요금제에서 사용
 - `proxy.ts` (Next 16에서 `middleware.ts`가 개명된 파일) — matcher 없이 **모든 요청**이 게이트를 통과하고, 예외 경로는 `lib/auth-config.ts`의 명명 상수로 판정한다
 - 세션 쿠키 `report_studio_session` = `v2.<만료ms>.<base64url(id|역할|이름)>.<HMAC-SHA256>` — 전화번호도 뒤 4자리도 쿠키에 넣지 않는다. 유효기간 30일, httpOnly·secure·SameSite=Lax, 비교는 `timingSafeEqual`
 - 서명이 유효해도 **명단에 없으면 거부**한다(`verifySessionToken`이 매 요청 명단을 재조회) — 명단에서 뺀 사람의 쿠키는 즉시 죽는다. 역할·이름도 쿠키가 아니라 명단이 정본이다
-- **명단 단일 소스는 환경변수 `APP_ROSTER`** (`lib/roster.ts`). 형식은 `이름:역할:salt:해시`를 `;`로 이은 한 줄. 역할 `A`=관리자 / `S`=팀원
+- **명단 단일 소스는 환경변수 `APP_ROSTER`** (`lib/roster.ts`). 엔트리를 `;`로 이은 한 줄. 역할 `A`=관리자 / `S`=팀원
+  - `이름:역할:salt:해시` — 번호 등록됨 (로그인 가능)
+  - `이름:역할` — **번호 미등록** (명단에는 보이되 로그인 불가). 이름을 먼저 등록해 두고 번호는 나중에 채우기 위한 형식이다
+- **번호 미등록 항목으로 인증이 성공하는 경로는 없다.** 빈 입력·`0000`·타인의 뒤 4자리·폼을 건너뛴 `/api/login` 직접 호출 모두 401이고 세션 쿠키가 발급되지 않는다. 방어는 세 겹이다 — `verifyCredential`이 해시 비교 전에 `no_phone`으로 거부, `createSessionToken`이 토큰 발급 거부, `verifySessionToken`이 그 id의 쿠키 거부(위조 토큰·번호가 지워진 뒤 남은 쿠키까지)
+  - `APP_ROSTER`를 손으로 고치다 salt·해시 중 한쪽만 남기거나 hex가 아니게 만들면 그 엔트리는 **통째로 버려진다** — "해시만 지운 명단"이 통과 경로가 되지 않게 하기 위해서다. 4필드인데 둘 다 빈 경우만 번호 미등록으로 읽는다
+  - 이 불변조건은 `node scripts/roster-selftest.mjs`가 항목별로 시험한다(뒤 4자리 전수 10,000건 실호출 포함)
 - **전화번호는 저장하지 않는다.** 뒤 4자리를 엔트리별 salt + `scrypt`로 해시해 보관한다. 이 저장소는 PUBLIC이므로 명단 값이 코드·문서에 들어가면 안 된다
-- 클라이언트로는 `{id, name}`만 내려간다(`publicRoster`) — 전화번호·해시·salt는 어떤 경로로도 브라우저에 가지 않는다
+- 클라이언트로는 `{id, name, hasPhone}`만 내려간다(`publicRoster`) — 전화번호·해시·salt는 어떤 경로로도 브라우저에 가지 않는다. `hasPhone`이 `false`면 드롭다운에 `(번호 미등록)`으로 표시되고, 고르면 4자리 입력칸이 잠기며 DAAI와 같은 안내가 뜬다(`{이름} 계정은 전화번호가 등록되지 않았습니다. 관리자에게 등록을 요청하세요.`)
 - 로그인 실패는 이름이 틀렸는지 4자리가 틀렸는지 구분하지 않고, 항상 같은 지연(`FAIL_DELAY_MS` 700ms)을 거친다 — 뒤 4자리는 경우의 수 1만뿐이라 시간 비용만 올릴 수 있다
 - 환경변수 `APP_ROSTER`(필수) / `APP_SECRET`(선택 — 미설정 시 `APP_ROSTER`에서 서명키 파생. 미설정이면 명단을 고칠 때마다 전원이 다시 로그인해야 한다)
 - **프로덕션에서 `APP_ROSTER`가 없으면 전면 차단**(페이지는 안내 화면, API는 503). 로컬 개발에서만 미설정 시 무인증 통과
@@ -97,12 +102,23 @@ Deployment Protection의 비밀번호 보호)는 **현재 요금제에서 사용
 # 전화번호는 인자가 아니라 프롬프트로 받는다. 셸 히스토리에 남지 않는다.
 node scripts/roster.mjs add "홍길동" admin
 
-# 기존 명단에 이어 붙이려면 APP_ROSTER를 환경에 둔 채로 실행
-node scripts/roster.mjs list
+# 이름만 여러 명 한 번에 — 전화번호를 받지 않는다(명단 먼저, 번호는 나중에).
+# 이름 뒤 :admin 을 붙이면 관리자. 이미 있는 사람은 건너뛴다(등록된 번호를 덮어쓰지 않는다).
+node scripts/roster.mjs names "가나다" "라마바" "사아자:admin"
+
+node scripts/roster.mjs list        # 이름·역할·번호 등록 여부
+node scripts/roster-selftest.mjs    # 번호 미등록으로 뚫리지 않는지 항목별 시험
+
+# 기존 명단에 이어 붙이려면 APP_ROSTER를 환경에 둔 채로 실행한다.
+# (미설정 상태로 돌리면 새로 추가되는 부분만 나오므로 경고가 뜬다.)
+APP_ROSTER="$(cat)" node scripts/roster.mjs names "홍길동"
 ```
 
+안내는 stderr로, **명단 값 한 줄만 stdout**으로 나온다 — `2>/dev/null | pbcopy` 로 바로 복사된다.
 출력된 한 줄을 Vercel → Settings → Environment Variables의 `APP_ROSTER`에 넣고 재배포한다.
 그 뒤로는 앱에 로그인해 **`/admin/roster`** 화면에서 추가·삭제하고, 생성된 값을 같은 자리에 덮어쓴다.
+그 화면에서 전화번호는 **선택 입력**이다 — 비우고 추가하면 "미등록"으로 명단에만 오르고, 표의 그 줄에
+번호를 넣으면 채워진다. 등록된 번호는 해시로만 남아 다시 볼 수 없으므로 "등록/미등록"만 표시된다.
 
 ## 실행
 

@@ -20,7 +20,7 @@ import {
   SESSION_MAX_AGE_SECONDS,
   type GateMode,
 } from "./auth-config";
-import { ROSTER_ENV_NAME, loadRoster, type RosterEntry, type RosterRole } from "./roster";
+import { ROSTER_ENV_NAME, hasCredential, loadRoster, type RosterEntry, type RosterRole } from "./roster";
 
 export * from "./auth-config";
 
@@ -82,6 +82,11 @@ export type SessionUser = { id: string; name: string; role: RosterRole };
 export function createSessionToken(entry: RosterEntry, now: number = Date.now()): string | null {
   const key = signingKey();
   if (!key) return null;
+  // 번호 미등록 엔트리에는 어떤 경우에도 세션을 내주지 않는다.
+  // verifyCredential이 no_phone으로 먼저 막지만, **세션이 만들어지는 창구는 이 함수 하나**다.
+  // 여기에 조건을 두지 않으면 "인증에 성공하지 못한 사람의 유효한 세션"이 만들어질 수 있는 상태로 남는다
+  // (2026-09-07 실측: 이 줄이 없을 때 번호 미등록 엔트리로 유효 토큰이 발급됐다).
+  if (!hasCredential(entry)) return null;
   const expiresAt = now + SESSION_MAX_AGE_SECONDS * 1000;
   const claims = Buffer.from(
     `${entry.id}|${entry.role}|${entry.name}`,
@@ -130,6 +135,11 @@ export function verifySessionToken(
   // 서명이 맞아도 명단에 없으면 거부한다 — 역할·이름도 쿠키가 아니라 명단을 정본으로 쓴다.
   const entry = loadRoster().find((e) => e.id === id);
   if (!entry) return null;
+
+  // 번호 미등록인 사람의 세션은 존재할 수 없다 — 발급 경로가 없기 때문이다.
+  // 그런 토큰이 들어왔다면 위조(APP_ROSTER가 유출되면 파생 서명키를 만들 수 있다)이거나
+  // 번호가 지워진 뒤 남은 쿠키다. 둘 다 거부한다 = 번호 미등록으로 로그인된 상태가 성립하지 않는다.
+  if (!hasCredential(entry)) return null;
 
   return { id: entry.id, name: entry.name, role: entry.role };
 }
