@@ -11,7 +11,8 @@
  * 규칙을 여기에 다시 적지 않으므로 둘이 어긋날 수 없다.
  *
  * 사용법:
- *   node scripts/roster.mjs add "홍길동" [admin|staff]
+ *   node scripts/roster.mjs add   "홍길동" [admin|staff]     번호까지 넣어 등록(프롬프트로 입력)
+ *   node scripts/roster.mjs names "홍길동" "김철수" …        이름만 등록(번호는 나중에)
  *   node scripts/roster.mjs list
  *
  *   전화번호는 인자로 받지 않고 **입력 프롬프트로 받는다** — 셸 히스토리·프로세스 목록에
@@ -92,12 +93,63 @@ async function main() {
       console.error("(명단이 비어 있습니다 — APP_ROSTER 미설정)");
       return;
     }
-    for (const e of current) console.log(`${e.name}\t${e.role}`);
+    for (const e of current) {
+      console.log(`${e.name}\t${e.role}\t${roster.hasCredential(e) ? "번호등록" : "번호미등록(로그인불가)"}`);
+    }
+    return;
+  }
+
+  // 이름만 여러 명 한 번에 — 번호는 나중에 앱의 /admin/roster 에서 채운다.
+  // 이름만 있는 엔트리에는 자격증명이 없으므로 이 명령은 비밀을 다루지 않는다.
+  if (command === "names") {
+    const names = process.argv.slice(3);
+    if (names.length === 0) {
+      console.error('사용법: node scripts/roster.mjs names "홍길동" "김철수" …');
+      console.error("        이름 뒤에 :admin 을 붙이면 관리자로 등록됩니다 (예: \"전소영:admin\")");
+      process.exitCode = 1;
+      return;
+    }
+
+    const next = [...current];
+    for (const raw of names) {
+      // "이름:admin" 처럼 역할을 붙일 수 있게 한다. 명단 구분자와 겹치므로 여기서만 해석한다.
+      const isAdmin = /:admin$/i.test(raw);
+      const bare = raw.replace(/:(admin|staff)$/i, "");
+      const check = roster.validateName(bare);
+      if (!check.ok) {
+        console.error(`오류: "${raw}" — ${check.error}`);
+        process.exitCode = 1;
+        return;
+      }
+      if (next.some((e) => e.name === check.value)) {
+        // 이미 있는 사람은 건너뛴다 — 번호가 등록된 사람을 이름만으로 덮어써 자격증명을 지우면 안 된다.
+        console.error(`건너뜀: 이미 명단에 있습니다 — ${check.value}`);
+        continue;
+      }
+      next.push(roster.makeNameOnlyEntry(check.value, isAdmin ? "ADMIN" : "STAFF"));
+    }
+
+    const added = next.length - current.length;
+    const noPhone = next.filter((e) => !roster.hasCredential(e)).map((e) => e.name);
+    console.error("");
+    console.error(`${added}명 추가 — 명단 ${next.length}명`);
+    if (noPhone.length > 0) {
+      console.error(`번호 미등록 ${noPhone.length}명(로그인 불가): ${noPhone.join(", ")}`);
+      console.error("이 사람들은 관리자가 /admin/roster 에서 번호를 채우기 전까지 들어오지 못합니다.");
+    }
+    if (current.length === 0) {
+      console.error("");
+      console.error("⚠ 기존 APP_ROSTER 를 읽지 못했습니다(환경변수 미설정).");
+      console.error("  기존 값 뒤에 세미콜론(;)으로 이어 붙이세요. 아래는 새로 추가되는 부분만입니다.");
+    }
+    console.error("");
+    console.log(roster.formatRoster(next));
     return;
   }
 
   if (command !== "add") {
-    console.error('사용법: node scripts/roster.mjs add "이름" [admin|staff]');
+    console.error('사용법: node scripts/roster.mjs add   "이름" [admin|staff]');
+    console.error('        node scripts/roster.mjs names "이름" "이름" …');
     console.error("        node scripts/roster.mjs list");
     process.exitCode = 1;
     return;

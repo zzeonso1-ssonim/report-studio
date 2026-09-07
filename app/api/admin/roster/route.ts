@@ -3,8 +3,10 @@ import { FORBIDDEN_MESSAGE, isAdminRequest } from "@/lib/auth";
 import {
   ROSTER_ENV_NAME,
   formatRoster,
+  hasCredential,
   loadRoster,
   makeEntry,
+  makeNameOnlyEntry,
   parseRoster,
   validateName,
   validatePhone,
@@ -29,8 +31,13 @@ import {
  *   base는 이미 그 관리자가 화면에서 보고 있는 값이라 새로 노출되는 정보가 없고,
  *   어차피 ADMIN은 환경변수를 직접 쓸 수 있으므로 권한이 늘어나지도 않는다.
  *
- * 응답: { ok, roster, entries: [{id, name, role}], count }
+ * 응답: { ok, roster, entries: [{id, name, role, hasPhone}], count }
  *   roster 는 salt·해시를 포함하지만 전화번호는 포함하지 않는다.
+ *
+ * action:
+ *   add      — 이름(+선택적 전화번호). 번호를 비우면 **이름만** 등록되고 로그인은 막힌다.
+ *   setPhone — 이름만 있던 사람에게 번호를 채운다(번호 교체도 같은 창구).
+ *   remove   — 명단에서 뺀다.
  */
 export async function POST(request: Request) {
   // proxy(/api/admin 접두사)가 이미 막지만, 경로 목록이 어긋날 때를 대비해 여기서도 확인한다.
@@ -77,8 +84,6 @@ export async function POST(request: Request) {
   if (action === "add") {
     const nameCheck = validateName(name);
     if (!nameCheck.ok) return NextResponse.json({ error: nameCheck.error }, { status: 400 });
-    const phoneCheck = validatePhone(phone);
-    if (!phoneCheck.ok) return NextResponse.json({ error: phoneCheck.error }, { status: 400 });
 
     // 동명이인은 로그인 화면에서 구분이 안 된다 — 이름을 다르게 등록하도록 막는다.
     if (current.some((e) => e.name === nameCheck.value)) {
@@ -88,7 +93,27 @@ export async function POST(request: Request) {
       );
     }
 
+    // 전화번호는 선택이다 — 비우면 이름만 등록되고, 그 사람은 번호를 넣기 전까지 로그인할 수 없다.
+    // 빈 문자열이 "아무 번호나 통과"로 새지 않도록 여기서 두 갈래를 명확히 나눈다.
+    if (!phone.trim()) {
+      return NextResponse.json(buildResponse([...current, makeNameOnlyEntry(nameCheck.value, role)]));
+    }
+    const phoneCheck = validatePhone(phone);
+    if (!phoneCheck.ok) return NextResponse.json({ error: phoneCheck.error }, { status: 400 });
+
     const next = [...current, makeEntry(nameCheck.value, phoneCheck.value, role)];
+    return NextResponse.json(buildResponse(next));
+  }
+
+  // 이름만 있던 사람에게 번호를 채운다(번호 교체에도 같은 창구를 쓴다).
+  if (action === "setPhone") {
+    const target = current.find((e) => e.id === id);
+    if (!target) return NextResponse.json({ error: "해당 사용자를 찾지 못했습니다" }, { status: 404 });
+    const phoneCheck = validatePhone(phone);
+    if (!phoneCheck.ok) return NextResponse.json({ error: phoneCheck.error }, { status: 400 });
+
+    const filled = makeEntry(target.name, phoneCheck.value, target.role);
+    const next = current.map((e) => (e.id === target.id ? filled : e));
     return NextResponse.json(buildResponse(next));
   }
 
@@ -100,7 +125,10 @@ export async function POST(request: Request) {
     return NextResponse.json(buildResponse(next));
   }
 
-  return NextResponse.json({ error: "action은 add 또는 remove 여야 합니다" }, { status: 400 });
+  return NextResponse.json(
+    { error: "action은 add, setPhone, remove 중 하나여야 합니다" },
+    { status: 400 }
+  );
 }
 
 function buildResponse(entries: RosterEntry[]) {
@@ -108,7 +136,12 @@ function buildResponse(entries: RosterEntry[]) {
     ok: true,
     envName: ROSTER_ENV_NAME,
     roster: formatRoster(entries),
-    entries: entries.map((e) => ({ id: e.id, name: e.name, role: e.role })),
+    entries: entries.map((e) => ({
+      id: e.id,
+      name: e.name,
+      role: e.role,
+      hasPhone: hasCredential(e),
+    })),
     count: entries.length,
   };
 }

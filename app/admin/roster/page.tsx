@@ -1,7 +1,7 @@
 import { connection } from "next/server";
 import Link from "next/link";
 import { currentUser } from "@/lib/auth";
-import { ROSTER_ENV_NAME, loadRoster } from "@/lib/roster";
+import { ROSTER_ENV_NAME, hasCredential, loadRoster } from "@/lib/roster";
 import RosterManager from "./roster-manager";
 
 export const metadata = { title: "명단 관리 — Report Studio" };
@@ -30,7 +30,12 @@ export default async function AdminRosterPage() {
     );
   }
 
-  const entries = loadRoster().map((e) => ({ id: e.id, name: e.name, role: e.role }));
+  const entries = loadRoster().map((e) => ({
+    id: e.id,
+    name: e.name,
+    role: e.role,
+    hasPhone: hasCredential(e),
+  }));
 
   return (
     <main className="mx-auto w-full max-w-3xl px-6 py-10">
@@ -47,7 +52,10 @@ export default async function AdminRosterPage() {
       >
         <p className="font-semibold">반영 절차 — 이 화면은 저장하지 않습니다</p>
         <ol className="mt-2 list-decimal space-y-1 pl-5" style={{ color: "var(--muted)" }}>
-          <li>아래에서 이름·전화번호를 넣으면 새 명단 값이 만들어집니다.</li>
+          <li>
+            아래에서 이름을 넣으면 새 명단 값이 만들어집니다. <strong>전화번호는 비워도 됩니다</strong> —
+            이름만 먼저 넣고 나중에 채울 수 있습니다(번호가 없으면 그 사람은 로그인할 수 없습니다).
+          </li>
           <li>
             그 값을 Vercel → Settings → Environment Variables의 <code>{ROSTER_ENV_NAME}</code>에
             덮어씁니다.

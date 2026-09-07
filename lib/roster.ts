@@ -19,12 +19,19 @@
  *
  * APP_ROSTER 형식 — 엔트리를 `;`로 잇고, 필드를 `:`로 나눈다(한 줄, Vercel 환경변수 UI에 붙여넣기 좋게).
  *
- *     이름:역할:salt(hex):해시(hex)
+ *     이름:역할:salt(hex):해시(hex)   ← 번호 등록됨(로그인 가능)
+ *     이름:역할                        ← 번호 미등록(명단에 보이되 로그인 불가)
  *
- *   예) 전소영:A:9f3c…:1a2b…;홍길동:S:77de…:c4f1…
+ *   예) 전소영:A:9f3c…:1a2b…;정우범:S
  *
  *   역할 A = ADMIN(명단 관리 화면 접근 가능), S = STAFF.
  *   이름에는 `:` `;` 를 쓸 수 없다(생성 시 거부한다).
+ *
+ * ★ 번호 미등록 엔트리(DAAI의 hasPhone=false와 같다)를 두는 이유는 이름을 먼저 넣고 번호를 나중에
+ *   채우기 위해서다. 여기에는 단 하나의 불변조건이 걸려 있다 —
+ *   **salt·해시가 없는 엔트리로 인증이 성공하는 경로는 존재하지 않는다.**
+ *   빈 입력, 0000, 남의 뒤 4자리, 폼을 건너뛴 API 직접호출, 해시 필드를 비운 조작 명단까지
+ *   전부 막힌다. scripts/roster-selftest.mjs 가 이 경로들을 항목별로 시험한다.
  */
 import crypto from "node:crypto";
 import { CREDENTIAL_DIGITS, type RosterPublicEntry } from "./auth-config";
@@ -59,13 +66,22 @@ export type RosterEntry = {
   id: string;
   name: string;
   role: RosterRole;
-  salt: string;
-  hash: string;
+  /** 번호 미등록이면 null — 이 상태로는 어떤 입력도 통과하지 못한다 */
+  salt: string | null;
+  /** 번호 미등록이면 null */
+  hash: string | null;
 };
 
-// 로그인 화면이 받는 것은 RosterPublicEntry({id, name})뿐이다.
-// DAAI가 `{id, name, hasPhone}`만 내려보내는 것과 같은 취지 — 전화번호는 포함되지 않는다.
-// 여기서는 해시 없이 엔트리가 존재할 수 없으므로 hasPhone에 해당하는 필드가 필요 없다.
+/**
+ * 이 엔트리로 로그인이 가능한가 — salt·해시가 **둘 다** 있어야 한다.
+ * 한쪽만 있는 엔트리는 parseRoster가 아예 버리지만, 검증 경로도 이 함수 하나만 본다.
+ */
+export function hasCredential(e: RosterEntry): boolean {
+  return typeof e.salt === "string" && e.salt.length > 0 && typeof e.hash === "string" && e.hash.length > 0;
+}
+
+// 로그인 화면이 받는 것은 RosterPublicEntry({id, name, hasPhone})뿐이다 — DAAI와 같은 모양이다.
+// 전화번호·뒤 4자리·salt·해시는 어떤 경우에도 포함되지 않는다.
 
 /** 하이픈·공백·국가번호 표기를 흡수하고 숫자만 남긴다. "+82 10-1234-5678" → "821012345678" */
 export function digitsOnly(v: string): string {
@@ -83,9 +99,13 @@ function derive(last4: string, saltHex: string): string {
   return crypto.scryptSync(last4, Buffer.from(saltHex, "hex"), HASH_BYTES).toString("hex");
 }
 
-/** 엔트리 식별자 — 이름과 salt에서 파생한 불투명 값(역산해도 전화번호가 나오지 않는다) */
-function entryId(name: string, saltHex: string): string {
-  return crypto.createHash("sha256").update(`${name} ${saltHex}`).digest("hex").slice(0, 12);
+/**
+ * 엔트리 식별자 — 이름과 salt에서 파생한 불투명 값(역산해도 전화번호가 나오지 않는다).
+ * 번호 미등록이면 salt가 없으므로 이름만으로 파생한다.
+ * 나중에 번호를 넣으면 salt가 생겨 id가 바뀌는데, 그 사람은 아직 로그인한 적이 없으므로 깨질 세션이 없다.
+ */
+function entryId(name: string, saltHex: string | null): string {
+  return crypto.createHash("sha256").update(`${name} ${saltHex ?? ""}`).digest("hex").slice(0, 12);
 }
 
 /** 관리자 화면이 넣는 이름 검증 — 구분자가 섞이면 명단이 통째로 깨진다 */
@@ -120,10 +140,30 @@ export function makeEntry(name: string, phone: string, role: RosterRole): Roster
   return { id: entryId(name, salt), name, role, salt, hash: derive(last4, salt) };
 }
 
+/**
+ * 이름만 있는 엔트리 — 번호는 나중에 채운다.
+ * 로그인 화면에는 보이지만 이 상태로는 인증이 성립하지 않는다(hasCredential=false).
+ */
+export function makeNameOnlyEntry(name: string, role: RosterRole): RosterEntry {
+  return { id: entryId(name, null), name, role, salt: null, hash: null };
+}
+
+/** 기존 엔트리에 전화번호를 채운다(원문은 여기서 끝나고 뒤 4자리 해시만 남는다) */
+export function withPhone(entry: RosterEntry, phone: string): RosterEntry {
+  const filled = makeEntry(entry.name, phone, entry.role);
+  return filled;
+}
+
 /** 엔트리 배열 → APP_ROSTER 환경변수 값(한 줄) */
 export function formatRoster(entries: RosterEntry[]): string {
   return entries
-    .map((e) => [e.name, e.role === "ADMIN" ? "A" : "S", e.salt, e.hash].join(FIELD_SEPARATOR))
+    .map((e) => {
+      const head = [e.name, e.role === "ADMIN" ? "A" : "S"];
+      // 번호 미등록이면 2필드로만 적는다 — 빈 salt·해시 자리를 남기면 조작 표적이 된다.
+      return hasCredential(e)
+        ? [...head, e.salt, e.hash].join(FIELD_SEPARATOR)
+        : head.join(FIELD_SEPARATOR);
+    })
     .join(ENTRY_SEPARATOR);
 }
 
@@ -135,18 +175,30 @@ export function parseRoster(raw: string | undefined | null): RosterEntry[] {
   for (const chunk of value.split(ENTRY_SEPARATOR)) {
     const part = chunk.trim();
     if (!part) continue;
-    const fields = part.split(FIELD_SEPARATOR);
-    if (fields.length !== 4) continue;
-    const [name, roleRaw, salt, hash] = fields.map((f) => f.trim());
-    if (!name || !salt || !hash) continue;
+    const fields = part.split(FIELD_SEPARATOR).map((f) => f.trim());
+    // 2필드(이름만) 또는 4필드(이름+번호) 외에는 읽지 않는다.
+    if (fields.length !== 2 && fields.length !== 4) continue;
+    const [name, roleRaw, saltRaw, hashRaw] = fields;
+    if (!name) continue;
+    const role: RosterRole = roleRaw.toUpperCase().startsWith("A") ? "ADMIN" : "STAFF";
+
+    if (fields.length === 2) {
+      out.push({ id: entryId(name, null), name, role, salt: null, hash: null });
+      continue;
+    }
+
+    const salt = saltRaw ?? "";
+    const hash = hashRaw ?? "";
+    // 4필드인데 salt·해시가 둘 다 비었으면 "번호 미등록"으로 읽는다(구 표기 호환).
+    if (!salt && !hash) {
+      out.push({ id: entryId(name, null), name, role, salt: null, hash: null });
+      continue;
+    }
+    // ★ 한쪽만 있거나 hex가 아니면 엔트리를 통째로 버린다.
+    //   "해시만 지운 명단"을 번호 미등록으로 강등시켜 통과 경로를 만들지 않기 위해서다.
+    if (!salt || !hash) continue;
     if (!/^[0-9a-f]+$/i.test(salt) || !/^[0-9a-f]+$/i.test(hash)) continue;
-    out.push({
-      id: entryId(name, salt),
-      name,
-      role: roleRaw.toUpperCase().startsWith("A") ? "ADMIN" : "STAFF",
-      salt,
-      hash,
-    });
+    out.push({ id: entryId(name, salt), name, role, salt, hash });
   }
   return out;
 }
@@ -158,12 +210,12 @@ export function loadRoster(): RosterEntry[] {
 
 /** 로그인 화면용 — 이름과 불투명 id만. 전화번호·해시·salt는 포함되지 않는다. */
 export function publicRoster(entries: RosterEntry[] = loadRoster()): RosterPublicEntry[] {
-  return entries.map((e) => ({ id: e.id, name: e.name }));
+  return entries.map((e) => ({ id: e.id, name: e.name, hasPhone: hasCredential(e) }));
 }
 
 export type VerifyResult =
   | { ok: true; entry: RosterEntry }
-  | { ok: false; reason: "invalid" };
+  | { ok: false; reason: "invalid" | "no_phone" };
 
 /**
  * 이름(id) + 뒤 4자리 검증.
@@ -175,19 +227,30 @@ export async function verifyCredential(id: string, input: string): Promise<Verif
     return { ok: false, reason: "invalid" };
   };
 
+  const noPhone = async (): Promise<VerifyResult> => {
+    await new Promise((r) => setTimeout(r, FAIL_DELAY_MS));
+    return { ok: false, reason: "no_phone" };
+  };
+
   const typed = digitsOnly(input);
   if (typed.length !== CREDENTIAL_DIGITS) return fail();
 
   const entry = loadRoster().find((e) => e.id === id);
   if (!entry) return fail();
 
+  // ★ 번호 미등록 엔트리는 여기서 끝난다. 아래 해시 비교로 내려가지 않는다.
+  //   (내려가더라도 길이 불일치로 실패하지만, 통과 여부를 우연에 맡기지 않는다.)
+  if (!hasCredential(entry)) return noPhone();
+  const salt = entry.salt as string;
+  const hashHex = entry.hash as string;
+
   let actual: Buffer;
   try {
-    actual = Buffer.from(derive(typed, entry.salt), "hex");
+    actual = Buffer.from(derive(typed, salt), "hex");
   } catch {
     return fail();
   }
-  const expected = Buffer.from(entry.hash, "hex");
+  const expected = Buffer.from(hashHex, "hex");
   if (actual.length !== expected.length || !crypto.timingSafeEqual(actual, expected)) return fail();
 
   return { ok: true, entry };

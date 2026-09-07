@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  NO_PHONE_MESSAGE,
   SESSION_COOKIE_OPTIONS,
   SESSION_MAX_AGE_SECONDS,
   UNCONFIGURED_MESSAGE,
@@ -46,7 +47,11 @@ export async function POST(request: Request) {
 
   const result = await verifyCredential(userId, last4);
   if (!result.ok) {
-    return NextResponse.json({ error: INVALID_MESSAGE }, { status: 401 });
+    // 번호 미등록만 사유를 구분해 알려준다 — 로그인 화면이 이미 hasPhone으로 표시하는 사실이라
+    // 새로 노출되는 정보가 없고, 대신 "왜 안 되는지"를 몰라 관리자에게 문의가 몰리는 것을 막는다.
+    // 어느 쪽이든 401이고 세션은 발급되지 않는다.
+    const message = result.reason === "no_phone" ? NO_PHONE_MESSAGE : INVALID_MESSAGE;
+    return NextResponse.json({ error: message }, { status: 401 });
   }
 
   const token = createSessionToken(result.entry);

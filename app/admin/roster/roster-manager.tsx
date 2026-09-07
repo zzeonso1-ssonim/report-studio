@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ADMIN_ROSTER_API_PATH } from "@/lib/auth-config";
 
-type Entry = { id: string; name: string; role: "ADMIN" | "STAFF" };
+type Entry = { id: string; name: string; role: "ADMIN" | "STAFF"; hasPhone: boolean };
 
 const ROLE_LABEL: Record<Entry["role"], string> = { ADMIN: "관리자", STAFF: "팀원" };
 
@@ -27,6 +27,9 @@ export default function RosterManager({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  // 번호를 채워 넣는 중인 사람(id) — 한 번에 한 명만 연다
+  const [phoneTarget, setPhoneTarget] = useState<string | null>(null);
+  const [phoneFill, setPhoneFill] = useState("");
   // 한 번이라도 편집했으면 이후 요청은 화면의 명단을 기준으로 삼는다(환경변수로 되돌아가지 않게).
   const [edited, setEdited] = useState(false);
 
@@ -62,12 +65,21 @@ export default function RosterManager({
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
-    if (busy || !name.trim() || !phone.trim()) return;
+    // 전화번호는 선택 — 비우면 이름만 등록된다(그 사람은 번호를 넣기 전까지 로그인 불가).
+    if (busy || !name.trim()) return;
     await send({ action: "add", name, phone, role });
     // 전화번호는 화면에 남기지 않는다
     setPhone("");
     setName("");
     setRole("STAFF");
+  }
+
+  async function fillPhone(e: React.FormEvent) {
+    e.preventDefault();
+    if (busy || !phoneTarget || !phoneFill.trim()) return;
+    await send({ action: "setPhone", id: phoneTarget, phone: phoneFill });
+    setPhoneFill("");
+    setPhoneTarget(null);
   }
 
   const fieldStyle = {
@@ -95,13 +107,12 @@ export default function RosterManager({
           />
         </label>
         <label className="flex flex-col gap-1 text-xs" style={{ color: "var(--muted)" }}>
-          전화번호 (로그인용)
+          전화번호 (선택 — 나중에 채워도 됩니다)
           <input
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            placeholder="예: 010-1234-5678"
+            placeholder="비워두면 이름만 등록"
             autoComplete="off"
-            required
             className="rounded-lg border px-3 py-2 text-sm outline-none"
             style={fieldStyle}
           />
@@ -140,13 +151,14 @@ export default function RosterManager({
             <tr className="text-left" style={{ color: "var(--muted)" }}>
               <th className="px-4 py-2.5 font-normal">이름</th>
               <th className="px-4 py-2.5 font-normal">역할</th>
+              <th className="px-4 py-2.5 font-normal">전화번호</th>
               <th className="px-4 py-2.5 font-normal">관리</th>
             </tr>
           </thead>
           <tbody>
             {entries.length === 0 && (
               <tr>
-                <td colSpan={3} className="px-4 py-6 text-center" style={{ color: "var(--muted)" }}>
+                <td colSpan={4} className="px-4 py-6 text-center" style={{ color: "var(--muted)" }}>
                   등록된 사용자가 없습니다.
                 </td>
               </tr>
@@ -157,16 +169,58 @@ export default function RosterManager({
                 <td className="px-4 py-3" style={{ color: "var(--muted)" }}>
                   {ROLE_LABEL[e.role]}
                 </td>
+                <td className="px-4 py-3" style={{ color: "var(--muted)" }}>
+                  {e.hasPhone ? (
+                    "등록됨"
+                  ) : (
+                    <span style={{ color: "var(--primary)" }}>미등록 — 로그인 불가</span>
+                  )}
+                </td>
                 <td className="px-4 py-3">
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => send({ action: "remove", id: e.id })}
-                    className="rounded-lg border px-3 py-1.5 text-xs disabled:opacity-40"
-                    style={{ borderColor: "var(--border)", color: "var(--muted)" }}
-                  >
-                    빼기
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => {
+                        setPhoneFill("");
+                        setPhoneTarget(phoneTarget === e.id ? null : e.id);
+                      }}
+                      className="rounded-lg border px-3 py-1.5 text-xs disabled:opacity-40"
+                      style={{ borderColor: "var(--border)", color: "var(--muted)" }}
+                    >
+                      {e.hasPhone ? "번호 교체" : "번호 등록"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => send({ action: "remove", id: e.id })}
+                      className="rounded-lg border px-3 py-1.5 text-xs disabled:opacity-40"
+                      style={{ borderColor: "var(--border)", color: "var(--muted)" }}
+                    >
+                      빼기
+                    </button>
+                  </div>
+                  {phoneTarget === e.id && (
+                    <form onSubmit={fillPhone} className="mt-2 flex flex-wrap items-center gap-2">
+                      <input
+                        value={phoneFill}
+                        onChange={(ev) => setPhoneFill(ev.target.value)}
+                        placeholder="010-1234-5678"
+                        autoComplete="off"
+                        autoFocus
+                        className="rounded-lg border px-3 py-1.5 text-xs outline-none"
+                        style={fieldStyle}
+                      />
+                      <button
+                        type="submit"
+                        disabled={busy || !phoneFill.trim()}
+                        className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+                        style={{ background: "var(--primary)" }}
+                      >
+                        저장
+                      </button>
+                    </form>
+                  )}
                 </td>
               </tr>
             ))}

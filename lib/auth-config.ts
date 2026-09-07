@@ -24,10 +24,14 @@ export const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 export const CREDENTIAL_DIGITS = 4;
 
 /**
- * 로그인 화면으로 내려보내는 최소 정보 — 이름과 불투명 id뿐.
+ * 로그인 화면으로 내려보내는 최소 정보 — 이름·불투명 id·번호 등록 여부뿐.
  * 전화번호·뒤 4자리·해시·salt는 어떤 경우에도 클라이언트로 가지 않는다.
+ *
+ * hasPhone은 DAAI(mp-scoring-app)가 내려보내는 것과 같은 필드다.
+ * 번호가 없는 사람도 명단에는 보이되 로그인은 막힌다 — 이름만 먼저 넣고 번호를 나중에 채우기 위해서다.
+ * 이 값이 false인 항목으로 인증이 성공하는 경로는 존재하지 않는다(scripts/roster-selftest.mjs가 시험한다).
  */
-export type RosterPublicEntry = { id: string; name: string };
+export type RosterPublicEntry = { id: string; name: string; hasPhone: boolean };
 
 /** 로그인 화면 경로 (게이트 예외) */
 export const LOGIN_PATH = "/login";
@@ -107,6 +111,13 @@ export type GateMode =
 
 /** 게이트가 요청을 막았을 때 API 응답 메시지 */
 export const UNAUTHORIZED_MESSAGE = "인증이 필요합니다 — 로그인 후 이용하세요";
+
+/**
+ * 이름은 명단에 있으나 전화번호가 아직 등록되지 않은 경우의 메시지.
+ * 이 사실은 로그인 화면이 이미 hasPhone으로 표시하고 있으므로 새로 노출되는 정보가 없다.
+ */
+export const NO_PHONE_MESSAGE =
+  "전화번호가 등록되지 않았습니다 — 관리자에게 번호 등록을 요청하세요";
 
 /** ADMIN 전용 경로에 STAFF가 들어왔을 때의 API 응답 메시지 */
 export const FORBIDDEN_MESSAGE = "권한이 없습니다 — 관리자 전용입니다";

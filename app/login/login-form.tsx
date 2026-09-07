@@ -15,7 +15,11 @@ export default function LoginForm({ from, roster }: { from: string; roster: Rost
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const ready = userId !== "" && last4.length === CREDENTIAL_DIGITS;
+  const selected = roster.find((r) => r.id === userId) ?? null;
+  // 번호 미등록자는 화면에서부터 막는다. 서버(lib/roster.ts verifyCredential)도 같은 조건을
+  // 독립적으로 확인하므로, 이 화면을 건너뛰고 API를 직접 호출해도 통과하지 않는다.
+  const blocked = selected !== null && !selected.hasPhone;
+  const ready = userId !== "" && !blocked && last4.length === CREDENTIAL_DIGITS;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -73,7 +77,7 @@ export default function LoginForm({ from, roster }: { from: string; roster: Rost
           <option value="">선택하세요</option>
           {roster.map((r) => (
             <option key={r.id} value={r.id}>
-              {r.name}
+              {r.hasPhone ? r.name : `${r.name} (번호 미등록)`}
             </option>
           ))}
         </select>
@@ -86,6 +90,7 @@ export default function LoginForm({ from, roster }: { from: string; roster: Rost
           inputMode="numeric"
           autoComplete="off"
           maxLength={CREDENTIAL_DIGITS}
+          disabled={blocked}
           value={last4}
           onChange={(e) => setLast4(e.target.value.replace(/\D/g, "").slice(0, CREDENTIAL_DIGITS))}
           aria-label={`전화번호 뒤 ${CREDENTIAL_DIGITS}자리`}
@@ -103,6 +108,12 @@ export default function LoginForm({ from, roster }: { from: string; roster: Rost
       >
         {submitting ? "확인 중…" : "로그인"}
       </button>
+
+      {blocked && (
+        <p className="text-sm" role="alert" style={{ color: "var(--muted)" }}>
+          ⚠ 전화번호가 등록되지 않았습니다 — 관리자에게 번호 등록을 요청하세요.
+        </p>
+      )}
 
       {error && (
         <p className="text-sm" role="alert" style={{ color: "var(--muted)" }}>
