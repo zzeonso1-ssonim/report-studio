@@ -84,13 +84,16 @@ export function hasCredential(e: RosterEntry): boolean {
 // 전화번호·뒤 4자리·salt·해시는 어떤 경우에도 포함되지 않는다.
 
 /** 하이픈·공백·국가번호 표기를 흡수하고 숫자만 남긴다. "+82 10-1234-5678" → "821012345678" */
-export function digitsOnly(v: string): string {
-  return (v ?? "").replace(/\D/g, "");
+export function digitsOnly(v: unknown): string {
+  // unknown으로 받는다 — 요청 본문에서 온 값을 처음 만지는 지점이라 숫자·객체·null이 들어올 수 있다.
+  // 문자열이 아니면 "숫자가 하나도 없다"로 취급한다. (string으로만 받던 때는 비문자열에 예외를 던져
+  // 401이 아니라 500이 났다. 인증이 뚫리진 않지만, 자격증명 검증이 예외로 끝나는 경로는 남기지 않는다.)
+  return typeof v === "string" ? v.replace(/\D/g, "") : "";
 }
 
 /** 전화번호에서 뒤 4자리. 숫자가 4개 미만이면 null(자격증명으로 못 씀). */
-export function last4Of(phone: string | null | undefined): string | null {
-  const d = digitsOnly(phone ?? "");
+export function last4Of(phone: unknown): string | null {
+  const d = digitsOnly(phone);
   return d.length >= CREDENTIAL_DIGITS ? d.slice(-CREDENTIAL_DIGITS) : null;
 }
 
@@ -215,21 +218,23 @@ export function publicRoster(entries: RosterEntry[] = loadRoster()): RosterPubli
 
 export type VerifyResult =
   | { ok: true; entry: RosterEntry }
-  | { ok: false; reason: "invalid" | "no_phone" };
+  | { ok: false; reason: "invalid" }
+  /** 번호 미등록 — 안내 문구에 이름을 넣어야 해서 이름만 함께 돌려준다(해시·salt는 나가지 않는다) */
+  | { ok: false; reason: "no_phone"; name: string };
 
 /**
  * 이름(id) + 뒤 4자리 검증.
  * 실패는 사유를 구분하지 않고 항상 같은 지연을 거친다 — 어느 쪽이 틀렸는지 알려주면 전수 대입이 쉬워진다.
  */
-export async function verifyCredential(id: string, input: string): Promise<VerifyResult> {
+export async function verifyCredential(id: unknown, input: unknown): Promise<VerifyResult> {
   const fail = async (): Promise<VerifyResult> => {
     await new Promise((r) => setTimeout(r, FAIL_DELAY_MS));
     return { ok: false, reason: "invalid" };
   };
 
-  const noPhone = async (): Promise<VerifyResult> => {
+  const noPhone = async (name: string): Promise<VerifyResult> => {
     await new Promise((r) => setTimeout(r, FAIL_DELAY_MS));
-    return { ok: false, reason: "no_phone" };
+    return { ok: false, reason: "no_phone", name };
   };
 
   const typed = digitsOnly(input);
@@ -240,7 +245,7 @@ export async function verifyCredential(id: string, input: string): Promise<Verif
 
   // ★ 번호 미등록 엔트리는 여기서 끝난다. 아래 해시 비교로 내려가지 않는다.
   //   (내려가더라도 길이 불일치로 실패하지만, 통과 여부를 우연에 맡기지 않는다.)
-  if (!hasCredential(entry)) return noPhone();
+  if (!hasCredential(entry)) return noPhone(entry.name);
   const salt = entry.salt as string;
   const hashHex = entry.hash as string;
 

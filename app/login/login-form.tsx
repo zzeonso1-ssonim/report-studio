@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 // 클라이언트 번들이라 lib/roster.ts(node:crypto 의존)를 직접 참조하지 않는다.
-import { CREDENTIAL_DIGITS, LOGIN_API_PATH, type RosterPublicEntry } from "@/lib/auth-config";
+import {
+  CREDENTIAL_DIGITS,
+  LOGIN_API_PATH,
+  noPhoneMessage,
+  type RosterPublicEntry,
+} from "@/lib/auth-config";
 
 /**
  * 이름 + 전화번호 뒤 4자리 로그인 폼 (DAAI/mp-scoring-app과 같은 UX).
@@ -109,9 +114,9 @@ export default function LoginForm({ from, roster }: { from: string; roster: Rost
         {submitting ? "확인 중…" : "로그인"}
       </button>
 
-      {blocked && (
+      {blocked && selected && (
         <p className="text-sm" role="alert" style={{ color: "var(--muted)" }}>
-          ⚠ 전화번호가 등록되지 않았습니다 — 관리자에게 번호 등록을 요청하세요.
+          ⚠ {noPhoneMessage(selected.name)}
         </p>
       )}
 
