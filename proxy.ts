@@ -1,5 +1,7 @@
 /**
- * 앱 전체 비밀번호 게이트 (Next 16 Proxy — 구 middleware).
+ * 앱 전체 접근 게이트 (Next 16 Proxy — 구 middleware).
+ *
+ * 로그인은 **이름 선택 + 전화번호 뒤 4자리**(DAAI/mp-scoring-app과 동일). 공용 비밀번호 방식은 폐지했다.
  *
  * Next 16부터 middleware.ts는 proxy.ts로 이름이 바뀌었고, 프로젝트 루트에서
  * `proxy` 함수(또는 default export)를 내보낸다. 런타임 기본값은 Node.js라서
@@ -15,6 +17,8 @@ import type { NextRequest } from "next/server";
 import {
   API_PATH_PREFIX,
   AUTH_COOKIE_NAME,
+  DEFAULT_REDIRECT_PATH,
+  FORBIDDEN_MESSAGE,
   FROM_PARAM,
   LOGIN_API_PATH,
   LOGIN_PATH,
@@ -22,6 +26,7 @@ import {
   UNAUTHORIZED_MESSAGE,
   UNCONFIGURED_MESSAGE,
   gateMode,
+  isAdminPath,
   isPublicAsset,
   safeInternalPath,
   verifySessionToken,
@@ -46,10 +51,11 @@ export function proxy(request: NextRequest): NextResponse {
   const isApi = pathname === "/api" || pathname.startsWith(API_PATH_PREFIX);
   const mode = gateMode();
 
-  // 2) 로컬 개발(APP_PASSWORD 미설정, 비프로덕션)만 무인증 통과
+  // 2) 로컬 개발(APP_ROSTER 미설정, 비프로덕션)만 무인증 통과
   if (mode === "open") return NextResponse.next();
 
-  // 3) 프로덕션인데 APP_PASSWORD가 없다 → 전면 차단 + 설정 안내 화면
+  // 3) 프로덕션인데 명단이 없다 → 전면 차단 + 설정 안내 화면
+  //    (명단을 넣기 전에 배포되더라도 무인증으로 열리는 창이 생기지 않는다)
   if (mode === "unconfigured") {
     if (isApi) {
       return NextResponse.json({ error: UNCONFIGURED_MESSAGE }, { status: 503 });
@@ -58,11 +64,11 @@ export function proxy(request: NextRequest): NextResponse {
     return redirectToLogin(request, false);
   }
 
-  // 4) 정상 게이트 — 쿠키 서명·만료 검증
-  const authenticated = verifySessionToken(request.cookies.get(AUTH_COOKIE_NAME)?.value);
+  // 4) 정상 게이트 — 쿠키 서명·만료 검증 + 명단 재확인
+  const user = verifySessionToken(request.cookies.get(AUTH_COOKIE_NAME)?.value);
 
   if (pathname === LOGIN_PATH) {
-    if (!authenticated) return NextResponse.next();
+    if (!user) return NextResponse.next();
     // 이미 로그인 상태면 원래 가려던 곳(없으면 홈)으로 되돌린다
     const url = request.nextUrl.clone();
     url.pathname = safeInternalPath(request.nextUrl.searchParams.get(FROM_PARAM));
@@ -70,15 +76,29 @@ export function proxy(request: NextRequest): NextResponse {
     return NextResponse.redirect(url);
   }
 
-  // 로그인/로그아웃 API는 게이트 대상에서 제외 (자체적으로 비밀번호를 검증한다)
+  // 로그인/로그아웃 API는 게이트 대상에서 제외 (자체적으로 자격증명을 검증한다)
   if (pathname === LOGIN_API_PATH || pathname === LOGOUT_API_PATH) {
     return NextResponse.next();
   }
 
-  if (authenticated) return NextResponse.next();
-
-  if (isApi) {
-    return NextResponse.json({ error: UNAUTHORIZED_MESSAGE }, { status: 401 });
+  if (!user) {
+    if (isApi) {
+      return NextResponse.json({ error: UNAUTHORIZED_MESSAGE }, { status: 401 });
+    }
+    return redirectToLogin(request, true);
   }
-  return redirectToLogin(request, true);
+
+  // 5) 명단 관리 화면·API는 ADMIN만.
+  //    인증만으로 열어두면 팀원 누구나 명단을 다시 발급해 게이트를 스스로 열 수 있다.
+  if (isAdminPath(pathname) && user.role !== "ADMIN") {
+    if (isApi) {
+      return NextResponse.json({ error: FORBIDDEN_MESSAGE }, { status: 403 });
+    }
+    const url = request.nextUrl.clone();
+    url.pathname = DEFAULT_REDIRECT_PATH;
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
+  return NextResponse.next();
 }

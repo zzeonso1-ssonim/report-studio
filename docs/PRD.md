@@ -133,8 +133,10 @@ Vercel 플랫폼 기능(프로덕션 Vercel Authentication, Advanced Deployment 
 
 - `proxy.ts` — matcher 없이 **모든 요청**이 게이트를 통과. 예외 경로는 정규식이 아니라 `lib/auth-config.ts`의 명명 상수로 판정.
 - 세션 쿠키 `econ_cockpit_session` = `v1.<만료ms>.<HMAC-SHA256>`. **평문 비밀번호는 쿠키에 넣지 않는다.** 유효기간 30일, httpOnly·secure·SameSite=Lax. 비교는 전부 `timingSafeEqual`.
-- 서명키: `APP_SECRET`(있으면) → 없으면 `APP_PASSWORD`에서 HMAC 파생(비밀번호를 바꾸면 기존 세션 자동 무효화).
-- 게이트 상태 3종: `APP_PASSWORD` 설정 → `enforced` / 미설정+로컬 → `open`(개발 편의) / **미설정+프로덕션 → `unconfigured`(전면 차단 + 설정 안내)**.
+- 로그인: **이름 선택 + 전화번호 뒤 4자리**(DAAI 방식). 명단은 `APP_ROSTER` 환경변수 단일 소스, 뒤 4자리는 salt+scrypt 해시로만 보관(`lib/roster.ts`).
+- 서명키: `APP_SECRET`(있으면) → 없으면 `APP_ROSTER`에서 HMAC 파생(명단을 바꾸면 기존 세션 자동 무효화).
+- 게이트 상태 3종: `APP_ROSTER` 설정 → `enforced` / 미설정+로컬 → `open`(개발 편의) / **미설정+프로덕션 → `unconfigured`(전면 차단 + 설정 안내)**.
+- 역할 2종: ADMIN(명단 관리 `/admin/roster` 접근) / STAFF. proxy와 라우트 핸들러에서 이중 확인.
 - 차단 응답: 페이지는 `/login?from=…`으로 리다이렉트(오픈 리다이렉트 방지 검증), API는 401 JSON(미설정 시 503).
 - 실측(2026-07-25): `/` → 307 `/login?from=%2F`, `/login` → 200, `/api/indicators` → 401 JSON.
 - 비밀번호 값은 Vercel 환경변수에만 두고 저장소·문서에 기록하지 않는다.
