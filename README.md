@@ -69,20 +69,46 @@ KRX는 채권지수 서비스(`idx/bon_dd_trd`)가 미승인 상태지만 불필
 
 ## 접근 보호
 
-공개 URL이므로 앱 전체에 비밀번호 게이트를 둔다. Vercel 플랫폼 보호(프로덕션 Vercel Authentication, Advanced
+공개 URL이므로 앱 전체에 접근 게이트를 둔다. Vercel 플랫폼 보호(프로덕션 Vercel Authentication, Advanced
 Deployment Protection의 비밀번호 보호)는 **현재 요금제에서 사용 불가**여서(설정 API가 428 응답) 앱 레벨로 구현했다.
 
+로그인은 **이름 선택 + 전화번호 뒤 4자리**다 — DAAI(`mp-scoring-app`)와 같은 개인 인증이다.
+공용 비밀번호(`APP_PASSWORD`) 방식은 2026-09-07에 폐지했다(누가 들어왔는지 알 수 없고, 한 명에게 알려주면 회수가 안 된다).
+
 - `proxy.ts` (Next 16에서 `middleware.ts`가 개명된 파일) — matcher 없이 **모든 요청**이 게이트를 통과하고, 예외 경로는 `lib/auth-config.ts`의 명명 상수로 판정한다
-- 세션 쿠키 `econ_cockpit_session` = `v1.<만료ms>.<HMAC-SHA256>` — 평문 비밀번호는 쿠키에 넣지 않는다. 유효기간 30일, httpOnly·secure·SameSite=Lax, 비교는 `timingSafeEqual`
-- 환경변수 `APP_PASSWORD`(필수) / `APP_SECRET`(선택 — 미설정 시 `APP_PASSWORD`에서 서명키 파생, 비밀번호를 바꾸면 기존 세션이 자동 무효화)
-- **프로덕션에서 `APP_PASSWORD`가 없으면 전면 차단**(페이지는 안내 화면, API는 503). 로컬 개발에서만 미설정 시 무인증 통과
+- 세션 쿠키 `report_studio_session` = `v2.<만료ms>.<base64url(id|역할|이름)>.<HMAC-SHA256>` — 전화번호도 뒤 4자리도 쿠키에 넣지 않는다. 유효기간 30일, httpOnly·secure·SameSite=Lax, 비교는 `timingSafeEqual`
+- 서명이 유효해도 **명단에 없으면 거부**한다(`verifySessionToken`이 매 요청 명단을 재조회) — 명단에서 뺀 사람의 쿠키는 즉시 죽는다. 역할·이름도 쿠키가 아니라 명단이 정본이다
+- **명단 단일 소스는 환경변수 `APP_ROSTER`** (`lib/roster.ts`). 형식은 `이름:역할:salt:해시`를 `;`로 이은 한 줄. 역할 `A`=관리자 / `S`=팀원
+- **전화번호는 저장하지 않는다.** 뒤 4자리를 엔트리별 salt + `scrypt`로 해시해 보관한다. 이 저장소는 PUBLIC이므로 명단 값이 코드·문서에 들어가면 안 된다
+- 클라이언트로는 `{id, name}`만 내려간다(`publicRoster`) — 전화번호·해시·salt는 어떤 경로로도 브라우저에 가지 않는다
+- 로그인 실패는 이름이 틀렸는지 4자리가 틀렸는지 구분하지 않고, 항상 같은 지연(`FAIL_DELAY_MS` 700ms)을 거친다 — 뒤 4자리는 경우의 수 1만뿐이라 시간 비용만 올릴 수 있다
+- 환경변수 `APP_ROSTER`(필수) / `APP_SECRET`(선택 — 미설정 시 `APP_ROSTER`에서 서명키 파생. 미설정이면 명단을 고칠 때마다 전원이 다시 로그인해야 한다)
+- **프로덕션에서 `APP_ROSTER`가 없으면 전면 차단**(페이지는 안내 화면, API는 503). 로컬 개발에서만 미설정 시 무인증 통과
 - 차단 시 페이지는 `/login?from=…`으로 리다이렉트(오픈 리다이렉트 방지 검증), API는 401 JSON
+- `/admin/roster`·`/api/admin/*`는 **ADMIN 역할만** 통과한다(`proxy.ts`에서 1차, 라우트에서 `isAdminRequest()`로 2차)
+
+### 명단 등록
+
+이 앱에는 DB가 없다(보고서 초안도 브라우저 `localStorage`에만 있다). 그래서 명단은 환경변수에만 있고,
+등록 화면은 저장 대신 **붙여넣을 `APP_ROSTER` 값**을 만들어 준다.
+
+```bash
+# 최초 관리자 1명 (닭과 달걀 — 명단이 비면 아무도 로그인할 수 없다)
+# 전화번호는 인자가 아니라 프롬프트로 받는다. 셸 히스토리에 남지 않는다.
+node scripts/roster.mjs add "홍길동" admin
+
+# 기존 명단에 이어 붙이려면 APP_ROSTER를 환경에 둔 채로 실행
+node scripts/roster.mjs list
+```
+
+출력된 한 줄을 Vercel → Settings → Environment Variables의 `APP_ROSTER`에 넣고 재배포한다.
+그 뒤로는 앱에 로그인해 **`/admin/roster`** 화면에서 추가·삭제하고, 생성된 값을 같은 자리에 덮어쓴다.
 
 ## 실행
 
 ```bash
 npm install
-cp .env.example .env.local   # APP_PASSWORD + 기관 키 입력
+cp .env.example .env.local   # APP_ROSTER + 기관 키 입력 (.env.example은 아직 APP_PASSWORD로 표기돼 있다 — 구식)
 npm run dev
 ```
 
@@ -102,7 +128,7 @@ Vercel 프로젝트 `econ-cockpit` — **Git 자동배포가 아니라 수동 �
 vercel deploy --prod
 ```
 
-`APP_PASSWORD`·`OPENAI_API_KEY`·기관 키는 Vercel 환경변수(Production)에 등록되어 있어야 한다.
+`APP_ROSTER`·`OPENAI_API_KEY`·기관 키는 Vercel 환경변수(Production)에 등록되어 있어야 한다.
 
 UI는 AI OS 민트 팔레트, 차트 시리즈 색은 색약 검증(validate_palette) 통과 팔레트(그린·블루·오렌지·슬레이트) 사용.
 계열이 5개를 넘으면 색만으로는 구분이 어려워 5번째부터 파선(`SERIES_DASH`)을 함께 입힌다 — 색 확장분(`--series-5~10`)은 색약 검증을 다시 돌리지 않았으므로, 색 단독 구분에 의존하지 말 것.
@@ -147,14 +173,13 @@ python3 scripts/korean-query-battery.py --live --label after --out /tmp/after.js
 OPENAI_MODEL=gpt-5 npx next dev --webpack -p 3500                # 모델 A/B는 서버 환경변수로
 ```
 
-로컬에서 `APP_PASSWORD`를 빈 값으로 띄우면 게이트가 열린다(`APP_PASSWORD= npm run dev -- -p 3500`).
-비워두지 않으면 스크립트가 `.env.local`의 `APP_PASSWORD`를 직접 읽어 로그인한다(셸로 export할 필요 없다).
+로컬에서 `APP_ROSTER`를 빈 값으로 띄우면 게이트가 열린다(`APP_ROSTER= npm run dev -- -p 3500`).
 
 색인 부재 테스트만 별도 서버가 필요하다.
 
 ```bash
-APP_PASSWORD= ECOS_ITEM_INDEX_PATH=/tmp/econ-idx-test.json npx next dev --webpack -p 3501
-APP_PASSWORD= python3 scripts/index-missing-check.py --live --index-path /tmp/econ-idx-test.json
+APP_ROSTER= ECOS_ITEM_INDEX_PATH=/tmp/econ-idx-test.json npx next dev --webpack -p 3501
+APP_ROSTER= python3 scripts/index-missing-check.py --live --index-path /tmp/econ-idx-test.json
 ```
 
 배터리는 실행마다 눈금 4개를 함께 낸다 — **정답률 / 라운드 평균·최대 / 질의당 비용 USD / 응답시간**

@@ -15,7 +15,7 @@ flowchart LR
   end
 
   subgraph GATE["접근 게이트 (proxy.ts — 모든 요청)"]
-    PX["비밀번호 게이트<br/>HMAC 서명 쿠키 30일<br/>APP_PASSWORD · APP_SECRET<br/>미설정+프로덕션 → 전면 차단"]
+    PX["개인 인증 게이트<br/>이름+전화번호 뒤 4자리<br/>HMAC 서명 쿠키 30일<br/>APP_ROSTER · APP_SECRET<br/>미설정+프로덕션 → 전면 차단"]
   end
 
   subgraph SERVER["Next.js 서버 — API 키·캐시 (서버 전용)"]
