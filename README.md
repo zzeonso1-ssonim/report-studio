@@ -108,7 +108,7 @@ node scripts/roster.mjs list
 
 ```bash
 npm install
-cp .env.example .env.local   # APP_ROSTER + 기관 키 입력 (.env.example은 아직 APP_PASSWORD로 표기돼 있다 — 구식)
+cp .env.example .env.local   # APP_ROSTER + 기관 키 입력
 npm run dev
 ```
 
