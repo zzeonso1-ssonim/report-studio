@@ -1281,11 +1281,11 @@ body.report-authoring-printing { display: block !important; background: #fff !im
 .report-authoring-paginated-print .report-authoring-body-copy { font-size: 10pt; line-height: 1.58; }
 .report-authoring-paginated-print .report-authoring-table-wrap { overflow: visible; }
 .report-authoring-paginated-print .report-authoring-table-wrap table { font-size: 9pt; }
-.report-authoring-paginated-print .report-authoring-image { max-height: 86mm; }
+.report-authoring-paginated-print .report-authoring-image { width: 100%; height: auto; max-height: none; }
 .report-authoring-paginated-print .report-authoring-chart-grid { gap: 3mm; margin-top: 3mm; }
 .report-authoring-paginated-print .report-authoring-chart-card { padding: 3mm; }
 .report-authoring-paginated-print .report-authoring-chart-card > img,
-.report-authoring-paginated-print .report-authoring-chart-grid.columns-3 .report-authoring-chart-card > img { height: 36mm; }
+.report-authoring-paginated-print .report-authoring-chart-grid.columns-3 .report-authoring-chart-card > img { width: 100%; height: auto; max-height: none; }
 
 .report-authoring-palette {
   position: sticky;
@@ -1402,7 +1402,7 @@ body.report-authoring-printing { display: block !important; background: #fff !im
 .report-authoring-chart-layout button[aria-pressed="true"] { border-color: var(--author-blue); background: #edf5ff; color: var(--author-blue); font-weight: 700; }
 .report-authoring-chart-layout > span { margin-right: 4px; color: var(--author-muted); font-size: 11px; }
 
-.report-authoring-image { display: block; max-width: 100%; max-height: 560px; margin: 14px auto 0; object-fit: contain; }
+.report-authoring-image { display: block; width: 100%; height: auto; max-width: 100%; margin: 14px 0 0; object-fit: contain; }
 .report-authoring-image-empty { min-height: 220px; display: grid; place-items: center; margin-top: 12px; background: var(--author-soft); color: var(--author-muted); font-size: 12px; }
 .report-authoring-image-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
 .report-authoring-image-controls label { display: grid; gap: 5px; color: var(--author-muted); font-size: 11px; }
@@ -1420,14 +1420,15 @@ body.report-authoring-printing { display: block !important; background: #fff !im
 .report-authoring-insight-editor textarea { min-width: 0; width: 100%; border: 1px dashed var(--author-blue); padding: 7px; background: #fff; color: var(--author-ink); font: inherit; font-size: 12px; }
 .report-authoring-insight-editor textarea { grid-column: 1 / -1; resize: vertical; }
 
-.report-authoring-chart-grid { display: grid; gap: 8px; margin-top: 12px; }
+.report-authoring-chart-grid { display: grid; align-items: start; gap: 8px; margin-top: 12px; }
 .report-authoring-chart-grid.columns-1 { grid-template-columns: 1fr; }
 .report-authoring-chart-grid.columns-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .report-authoring-chart-grid.columns-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .report-authoring-chart-card { min-width: 0; margin: 0; border: 1px solid var(--author-line); padding: 10px; background: #fff; }
 .report-authoring-chart-card h3 { margin: 0 0 8px; color: var(--author-blue); font-size: 15px; line-height: 1.3; }
-.report-authoring-chart-card > img { display: block; width: 100%; height: 230px; object-fit: contain; background: #fff; }
-.report-authoring-chart-grid.columns-3 .report-authoring-chart-card > img { height: 175px; }
+/* 이미지 박스의 고정 높이를 없애 슬롯 너비를 채우고 원본 비율대로 높이를 계산한다. */
+.report-authoring-chart-card > img,
+.report-authoring-chart-grid.columns-3 .report-authoring-chart-card > img { display: block; width: 100%; height: auto; max-height: none; object-fit: contain; background: #fff; }
 .report-authoring-chart-empty { height: 210px; display: grid; place-items: center; background: var(--author-soft); color: var(--author-muted); font-size: 11px; text-align: center; }
 .report-authoring-chart-grid.columns-3 .report-authoring-chart-empty { height: 165px; }
 .report-authoring-chart-title { width: 100%; margin-bottom: 8px; border: 1px dashed var(--author-blue); padding: 7px; background: #f3f7ff; color: var(--author-blue); font: inherit; font-size: 14px; font-weight: 700; }
@@ -1546,7 +1547,7 @@ body.report-authoring-printing { display: block !important; background: #fff !im
   .report-authoring-block-table,
   .report-authoring-block-chart,
   .report-authoring-chart-card { break-inside: avoid; }
-  .report-authoring-image { max-height: 98mm; margin-top: 3mm; }
+  .report-authoring-image { width: 100%; height: auto; max-height: none; margin-top: 3mm; }
   .report-authoring-table-wrap { overflow: visible; }
   .report-authoring-table-wrap table { font-size: 9pt; }
   .report-authoring-table-wrap th,
@@ -1558,7 +1559,7 @@ body.report-authoring-printing { display: block !important; background: #fff !im
   .report-authoring-chart-card { padding: 3mm; }
   .report-authoring-chart-card h3 { margin-bottom: 2.5mm; font-size: 10.5pt; line-height: 1.35; }
   .report-authoring-chart-card > img,
-  .report-authoring-chart-grid.columns-3 .report-authoring-chart-card > img { height: 45mm; }
+  .report-authoring-chart-grid.columns-3 .report-authoring-chart-card > img { width: 100%; height: auto; max-height: none; }
   .report-authoring-chart-empty,
   .report-authoring-chart-grid.columns-3 .report-authoring-chart-empty { height: 42mm; }
   .report-authoring-insight { margin-top: 2.5mm; border-top-width: .8mm; padding: 3mm; }
@@ -1581,11 +1582,11 @@ body.report-authoring-printing { display: block !important; background: #fff !im
   .report-authoring-print-compact .report-authoring-chart-grid { break-inside: auto; page-break-inside: auto; }
   .report-authoring-print-compact .report-authoring-block { orphans: 2; widows: 2; }
   .report-authoring-print-compact .report-authoring-body-copy { orphans: 3; widows: 3; }
-  .report-authoring-print-compact .report-authoring-image { max-height: 90mm; margin-top: 2mm; }
+  .report-authoring-print-compact .report-authoring-image { width: 100%; height: auto; max-height: none; margin-top: 2mm; }
   .report-authoring-print-compact .report-authoring-chart-grid { gap: 2mm; margin-top: 2mm; }
   .report-authoring-print-compact .report-authoring-chart-card { padding: 2mm; }
   .report-authoring-print-compact .report-authoring-chart-card > img,
-  .report-authoring-print-compact .report-authoring-chart-grid.columns-3 .report-authoring-chart-card > img { height: 40mm; }
+  .report-authoring-print-compact .report-authoring-chart-grid.columns-3 .report-authoring-chart-card > img { width: 100%; height: auto; max-height: none; }
   .report-authoring-print-compact .report-authoring-insight { margin-top: 1.5mm; padding: 2mm; }
   .report-authoring-print-compact .report-authoring-insight p { margin-top: 1mm; font-size: 10pt; line-height: 1.42; }
   .report-authoring-print-compact .report-authoring-block-body > h2,
