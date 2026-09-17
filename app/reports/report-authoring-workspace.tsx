@@ -1,15 +1,66 @@
 "use client";
 
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 
 type ReportKind = "outlook" | "weekly" | "issue";
 type TextStyle = "plain" | "bullet" | "bar";
-type InsightFields = { insightLabel: string; insightTitle: string; insightBody: string };
-type TextBlock = { id: string; type: "text"; title: string; body: string; style: TextStyle };
-type ImageBlock = { id: string; type: "image"; title: string; src: string; caption: string; source: string } & InsightFields;
-type TableBlock = { id: string; type: "table"; title: string; columns: string[]; rows: string[][] } & InsightFields;
-type ChartItem = { id: string; title: string; src: string; caption: string; source: string } & InsightFields;
-type ChartBlock = { id: string; type: "chart"; title: string; columns: 1 | 2 | 3; charts: ChartItem[] };
+type InsightFields = {
+  insightLabel: string;
+  insightTitle: string;
+  insightBody: string;
+};
+type TextBlock = {
+  id: string;
+  type: "text";
+  title: string;
+  body: string;
+  style: TextStyle;
+};
+type Annotation = {
+  id: string;
+  kind: "line" | "ellipse" | "rect";
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  color: string;
+};
+type ImagePresentation = {
+  annotations?: Annotation[];
+  imageFit?: "natural" | "uniform";
+};
+type ImageBlock = {
+  id: string;
+  type: "image";
+  title: string;
+  src: string;
+  caption: string;
+  source: string;
+} & InsightFields &
+  ImagePresentation;
+type TableBlock = {
+  id: string;
+  type: "table";
+  title: string;
+  columns: string[];
+  rows: string[][];
+} & InsightFields;
+type ChartItem = {
+  id: string;
+  title: string;
+  src: string;
+  caption: string;
+  source: string;
+} & InsightFields &
+  ImagePresentation;
+type ChartBlock = {
+  id: string;
+  type: "chart";
+  title: string;
+  columns: 1 | 2 | 3;
+  charts: ChartItem[];
+};
 type ReportBlock = TextBlock | ImageBlock | TableBlock | ChartBlock;
 type ReportDraft = {
   kicker: string;
@@ -48,15 +99,32 @@ function textBlock(title: string, body: string): TextBlock {
 
 function imageBlock(title = "근거 이미지"): ImageBlock {
   return {
-    id: blockId("image"), type: "image", title, src: "", caption: "이미지 설명 입력", source: "자료 출처 입력",
-    insightLabel: "INSIGHT", insightTitle: "핵심 해석 입력", insightBody: "차트가 말하는 방향과 시장 함의를 입력",
+    id: blockId("image"),
+    type: "image",
+    title,
+    src: "",
+    caption: "",
+    source: "",
+    insightLabel: "INSIGHT",
+    insightTitle: "",
+    insightBody: "",
   };
 }
 
-function tableBlock(title: string, columns: string[], rows: string[][]): TableBlock {
+function tableBlock(
+  title: string,
+  columns: string[],
+  rows: string[][],
+): TableBlock {
   return {
-    id: blockId("table"), type: "table", title, columns, rows,
-    insightLabel: "INSIGHT", insightTitle: "표의 핵심 판단 입력", insightBody: "수치 비교에서 확인되는 결론과 전략 함의를 입력",
+    id: blockId("table"),
+    type: "table",
+    title,
+    columns,
+    rows,
+    insightLabel: "INSIGHT",
+    insightTitle: "",
+    insightBody: "",
   };
 }
 
@@ -65,25 +133,31 @@ function chartItem(index: number): ChartItem {
     id: `${blockId("chart")}-${index}`,
     title: `차트 ${index + 1} 제목`,
     src: "",
-    caption: "차트 설명 입력",
-    source: "자료 출처 입력",
+    caption: "",
+    source: "",
     insightLabel: "INSIGHT",
-    insightTitle: "핵심 해석 입력",
-    insightBody: "차트가 말하는 방향과 시장 함의를 입력",
+    insightTitle: "",
+    insightBody: "",
   };
 }
 
 function chartBlock(columns: 1 | 2 | 3 = 2): ChartBlock {
-  return { id: blockId("chart"), type: "chart", title: "근거 차트", columns, charts: Array.from({ length: columns }, (_, index) => chartItem(index)) };
+  return {
+    id: blockId("chart"),
+    type: "chart",
+    title: "근거 차트",
+    columns,
+    charts: Array.from({ length: columns }, (_, index) => chartItem(index)),
+  };
 }
 
 function reportMeta() {
   return {
     date: localDateStamp(),
     desk: "채권전략팀",
-    workspaceLabel: "LIVE REPORT WORKSPACE",
-    templateLabel: "TEMPLATE",
-    templateName: "GitHub bond-strategy-reports",
+    workspaceLabel: "",
+    templateLabel: "",
+    templateName: "",
   };
 }
 
@@ -96,13 +170,23 @@ function createTemplates(): DraftMap {
       title: "한국 경제전망",
       subtitle: "공식 통계 기반 섹터 점검과 전망 판단",
       blocks: [
-        textBlock("Executive Summary", "선택 섹터의 공식 관측값과 핵심 판단 입력"),
-        tableBlock("전망·리스크 점검표", ["구분", "현재 판단", "확인 지표", "판정 기한"], [
-          ["기본 전망", "작성 필요", "작성 필요", "작성 필요"],
-          ["상방 리스크", "작성 필요", "작성 필요", "작성 필요"],
-          ["하방 리스크", "작성 필요", "작성 필요", "작성 필요"],
-        ]),
-        textBlock("Editor’s Outlook", "전망과 리스크 판단, 다음 확인 조건 입력"),
+        textBlock(
+          "Executive Summary",
+          "선택 섹터의 공식 관측값과 핵심 판단 입력",
+        ),
+        tableBlock(
+          "전망·리스크 점검표",
+          ["구분", "현재 판단", "확인 지표", "판정 기한"],
+          [
+            ["기본 전망", "작성 필요", "작성 필요", "작성 필요"],
+            ["상방 리스크", "작성 필요", "작성 필요", "작성 필요"],
+            ["하방 리스크", "작성 필요", "작성 필요", "작성 필요"],
+          ],
+        ),
+        textBlock(
+          "Editor’s Outlook",
+          "전망과 리스크 판단, 다음 확인 조건 입력",
+        ),
       ],
     },
     weekly: {
@@ -119,14 +203,27 @@ function createTemplates(): DraftMap {
         { label: "3/10년 커브", value: "—", unit: "bp" },
       ],
       blocks: [
-        textBlock("이번 주 핵심 판단", "중앙 전망과 가장 중요한 전략 판단 입력"),
-        textBlock("국내 매크로·정책 이벤트", "국내 지표와 정책 이벤트의 금리 영향 입력"),
-        textBlock("해외 매크로·중앙은행·수급", "해외 이벤트와 장기물 수급 위험 입력"),
-        tableBlock("시나리오·진입 레벨·리스크 관리", ["시나리오", "금리·커브", "진입 조건", "무효화 조건"], [
-          ["Base", "작성 필요", "작성 필요", "작성 필요"],
-          ["Upside", "작성 필요", "작성 필요", "작성 필요"],
-          ["Downside", "작성 필요", "작성 필요", "작성 필요"],
-        ]),
+        textBlock(
+          "이번 주 핵심 판단",
+          "중앙 전망과 가장 중요한 전략 판단 입력",
+        ),
+        textBlock(
+          "국내 매크로·정책 이벤트",
+          "국내 지표와 정책 이벤트의 금리 영향 입력",
+        ),
+        textBlock(
+          "해외 매크로·중앙은행·수급",
+          "해외 이벤트와 장기물 수급 위험 입력",
+        ),
+        tableBlock(
+          "시나리오·진입 레벨·리스크 관리",
+          ["시나리오", "금리·커브", "진입 조건", "무효화 조건"],
+          [
+            ["Base", "작성 필요", "작성 필요", "작성 필요"],
+            ["Upside", "작성 필요", "작성 필요", "작성 필요"],
+            ["Downside", "작성 필요", "작성 필요", "작성 필요"],
+          ],
+        ),
       ],
     },
     issue: {
@@ -138,13 +235,20 @@ function createTemplates(): DraftMap {
       blocks: [
         textBlock("한 문장 이슈 정의", "핵심 쟁점을 한 문장으로 입력"),
         textBlock("왜 지금 중요한가", "현재 시점의 중요성과 확인된 사실 입력"),
-        textBlock("메커니즘·전달 경로", "이슈가 금리·커브·수급으로 전달되는 경로 입력"),
+        textBlock(
+          "메커니즘·전달 경로",
+          "이슈가 금리·커브·수급으로 전달되는 경로 입력",
+        ),
         chartBlock(2),
-        tableBlock("시나리오와 시장 함의", ["구분", "전개 조건", "시장 영향", "전략 대응"], [
-          ["Base", "작성 필요", "작성 필요", "작성 필요"],
-          ["Upside", "작성 필요", "작성 필요", "작성 필요"],
-          ["Downside", "작성 필요", "작성 필요", "작성 필요"],
-        ]),
+        tableBlock(
+          "시나리오와 시장 함의",
+          ["구분", "전개 조건", "시장 영향", "전략 대응"],
+          [
+            ["Base", "작성 필요", "작성 필요", "작성 필요"],
+            ["Upside", "작성 필요", "작성 필요", "작성 필요"],
+            ["Downside", "작성 필요", "작성 필요", "작성 필요"],
+          ],
+        ),
         textBlock("전략 판단", "시장 함의, 진입 조건과 무효화 조건 입력"),
       ],
     },
@@ -161,30 +265,36 @@ function localDateStamp() {
 }
 
 function collectDocumentStyles() {
-  return [...document.styleSheets].map((sheet) => {
-    try {
-      return [...sheet.cssRules].map((rule) => rule.cssText).join("\n");
-    } catch {
-      return "";
-    }
-  }).join("\n");
+  return [...document.styleSheets]
+    .map((sheet) => {
+      try {
+        return [...sheet.cssRules].map((rule) => rule.cssText).join("\n");
+      } catch {
+        return "";
+      }
+    })
+    .join("\n");
 }
 
 function cleanExportClone(report: HTMLElement) {
   const clone = report.cloneNode(true) as HTMLElement;
-  clone.querySelectorAll<HTMLElement>(".report-authoring-insight-editor").forEach((editor) => {
-    const inputs = editor.querySelectorAll<HTMLInputElement>("input");
-    const textarea = editor.querySelector<HTMLTextAreaElement>("textarea");
-    const insight = document.createElement("div");
-    insight.className = "report-authoring-insight";
-    const strong = document.createElement("strong");
-    strong.textContent = `${inputs[0]?.value ?? "INSIGHT"}${inputs[1]?.value ? ` · ${inputs[1].value}` : ""}`;
-    const paragraph = document.createElement("p");
-    paragraph.textContent = textarea?.value ?? "";
-    insight.append(strong, paragraph);
-    editor.replaceWith(insight);
-  });
-  clone.querySelectorAll("[data-report-control]").forEach((node) => node.remove());
+  clone
+    .querySelectorAll<HTMLElement>(".report-authoring-insight-editor")
+    .forEach((editor) => {
+      const inputs = editor.querySelectorAll<HTMLInputElement>("input");
+      const textarea = editor.querySelector<HTMLTextAreaElement>("textarea");
+      const insight = document.createElement("div");
+      insight.className = "report-authoring-insight";
+      const strong = document.createElement("strong");
+      strong.textContent = `${inputs[0]?.value ?? "INSIGHT"}${inputs[1]?.value ? ` · ${inputs[1].value}` : ""}`;
+      const paragraph = document.createElement("p");
+      paragraph.textContent = textarea?.value ?? "";
+      insight.append(strong, paragraph);
+      editor.replaceWith(insight);
+    });
+  clone
+    .querySelectorAll("[data-report-control]")
+    .forEach((node) => node.remove());
   clone.querySelectorAll("input").forEach((node) => {
     const span = document.createElement("span");
     span.textContent = (node as HTMLInputElement).value;
@@ -200,11 +310,208 @@ function cleanExportClone(report: HTMLElement) {
   return clone;
 }
 
-function standaloneDocument(report: HTMLElement, title: string, drafts: DraftMap, reportKind: ReportKind) {
+function standaloneDocument(
+  report: HTMLElement,
+  title: string,
+  drafts: DraftMap,
+  reportKind: ReportKind,
+) {
   const clone = cleanExportClone(report);
   const safeTitle = title.replace(/[<>&"]/g, "");
-  const editableDraft = JSON.stringify({ version: 1, reportKind, drafts }).replace(/</g, "\\u003c");
+  const editableDraft = JSON.stringify({
+    version: 1,
+    reportKind,
+    drafts,
+  }).replace(/</g, "\\u003c");
   return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title><style>${collectDocumentStyles()}</style></head><body class="report-authoring-shell report-authoring-export">${clone.outerHTML}<script type="application/json" id="${IMPORT_SCRIPT_ID}">${editableDraft}</script></body></html>`;
+}
+
+function reconcileRenderedDraft(
+  doc: Document,
+  draft: ReportDraft,
+): ReportDraft {
+  const paper = doc.querySelector(".report-authoring-paper");
+  if (!paper) return draft;
+  const read = (root: ParentNode, selector: string, fallback: string) => {
+    const n = selector.includes("[data-report-source-value]") ? root.querySelector("[data-report-source-value]") ?? root.querySelector(selector) : root.querySelector(selector);
+    return n
+      ? n instanceof HTMLInputElement || n instanceof HTMLTextAreaElement
+        ? n.value
+        : (n.textContent ?? "")
+      : fallback;
+  };
+  const insight = (root: ParentNode, value: InsightFields) => {
+    const strong = root.querySelector(".report-authoring-insight strong");
+    const parts = strong?.textContent?.split("·").map((v) => v.trim());
+    return {
+      ...value,
+      insightLabel: parts?.[0] ?? value.insightLabel,
+      insightTitle: parts ? parts.slice(1).join(" · ") : value.insightTitle,
+      insightBody: read(root, ".report-authoring-insight p", value.insightBody),
+    };
+  };
+  const nodes = [...paper.querySelectorAll(".report-authoring-block")];
+  // Unrecognized shells must not silently erase structured data.
+  if (nodes.length !== draft.blocks.length)
+    throw new Error("HTML block structure differs from embedded draft");
+  const blocks = draft.blocks.map((block, i): ReportBlock => {
+    const n = nodes[i];
+    const title = read(
+      n,
+      ".report-authoring-title-input, .report-authoring-block-body > h2",
+      block.title,
+    );
+    if (block.type === "text") {
+      const list = n.querySelector(
+        ".report-authoring-bullets, .report-authoring-bullet-editor",
+      );
+      return {
+        ...block,
+        title,
+        body: list
+          ? [...list.querySelectorAll("li")]
+              .map((li) => li.textContent ?? "")
+              .join("\n")
+          : read(
+              n,
+              ".report-authoring-body-copy, .report-authoring-textarea",
+              block.body,
+            ),
+      };
+    }
+    if (block.type === "image")
+      return {
+        ...block,
+        ...insight(n, block),
+        title,
+        src: n.querySelector("img")?.getAttribute("src") ?? block.src,
+        caption: read(
+          n,
+          "figcaption > span, .report-authoring-image-meta > :first-child",
+          block.caption,
+        ),
+        source: read(
+          n,
+          "[data-report-source-value], figcaption > small, .report-authoring-image-meta > :last-child",
+          block.source,
+        ),
+      };
+    if (block.type === "table")
+      return {
+        ...block,
+        ...insight(n, block),
+        title,
+        columns: [...n.querySelectorAll("thead th")].map(
+          (v) => v.textContent ?? "",
+        ),
+        rows: [...n.querySelectorAll("tbody tr")].map((row) =>
+          [...row.querySelectorAll("td")].map((v) => v.textContent ?? ""),
+        ),
+      };
+    const cards = [...n.querySelectorAll(".report-authoring-chart-card")];
+    return {
+      ...block,
+      title,
+      charts: block.charts.map((chart, j) => {
+        const c = cards[j];
+        return c
+          ? {
+              ...chart,
+              ...insight(c, chart),
+              title: read(c, "h3, .report-authoring-chart-title", chart.title),
+              src: c.querySelector("img")?.getAttribute("src") ?? chart.src,
+              caption: read(
+                c,
+                "figcaption > span, .report-authoring-chart-meta > :first-child",
+                chart.caption,
+              ),
+              source: read(
+                c,
+                "[data-report-source-value], figcaption > small, .report-authoring-chart-meta > :last-child",
+                chart.source,
+              ),
+            }
+          : chart;
+      }),
+    };
+  });
+  const metaNodes = [
+    ...paper.querySelectorAll(".report-authoring-cover-meta-inputs > *"),
+  ];
+  const meta = metaNodes.length
+    ? metaNodes.map((n) => n.textContent ?? "")
+    : (
+        paper.querySelector(".report-authoring-cover-meta")?.textContent ?? ""
+      ).split(" · ");
+  const aside = paper.querySelector(".report-authoring-cover aside");
+  const rangesNode = paper.querySelector(".report-authoring-ranges");
+  const ranges = rangesNode
+    ? [...rangesNode.querySelectorAll("label")].map((range, index) => {
+        const base = draft.ranges?.[index];
+        const label = read(
+          range,
+          ".report-authoring-range-label-input, :scope > span:first-child",
+          base?.label ?? "",
+        );
+        const valueNode = range.querySelector("strong");
+        const combined = valueNode?.textContent ?? "";
+        const explicitValue = range.querySelector(
+          ".report-authoring-range-input > :first-child",
+        );
+        const explicitUnit = range.querySelector(
+          ".report-authoring-range-unit-input, .report-authoring-range-input > :last-child",
+        );
+        const match = combined.trim().match(/^(.*?)(?:\s+)?(%|bp)$/i);
+        return {
+          label,
+          value:
+            explicitValue?.textContent ??
+            (match ? match[1].trim() : combined.trim()),
+          unit: explicitUnit?.textContent ?? (match ? match[2] : ""),
+        };
+      })
+    : draft.ranges;
+  return {
+    ...draft,
+    title: read(
+      paper,
+      ".report-authoring-cover h1, .report-authoring-cover-title",
+      draft.title,
+    ),
+    subtitle: read(
+      paper,
+      ".report-authoring-subtitle, .report-authoring-cover-subtitle",
+      draft.subtitle,
+    ),
+    kicker: read(
+      paper,
+      ".report-authoring-kicker, .report-authoring-kicker-input",
+      draft.kicker,
+    ),
+    date: meta.length >= 2 ? meta[0] : draft.date,
+    desk: meta.length >= 2 ? meta[1] : draft.desk,
+    workspaceLabel:
+      meta.length >= 2 ? meta.slice(2).join(" · ") : draft.workspaceLabel,
+    templateLabel: aside
+      ? read(aside, ":scope > :first-child", draft.templateLabel)
+      : draft.templateLabel,
+    reportTypeLabel: aside
+      ? read(aside, ":scope > :nth-child(2)", draft.reportTypeLabel)
+      : draft.reportTypeLabel,
+    templateName: aside
+      ? read(aside, ":scope > :nth-child(3)", draft.templateName)
+      : draft.templateName,
+    showRanges: rangesNode ? true : draft.showRanges === undefined ? undefined : false,
+    rangeTitle: rangesNode
+      ? read(
+          rangesNode,
+          ".report-authoring-range-title, :scope > p",
+          draft.rangeTitle ?? "",
+        )
+      : draft.rangeTitle,
+    ranges,
+    blocks,
+  };
 }
 
 function nodeText(root: ParentNode, selector: string) {
@@ -212,49 +519,207 @@ function nodeText(root: ParentNode, selector: string) {
 }
 
 function parseLegacyExport(documentNode: Document, templates: DraftMap) {
-  const report = documentNode.querySelector<HTMLElement>(".report-authoring-paper");
+  const report = documentNode.querySelector<HTMLElement>(
+    ".report-authoring-paper",
+  );
   if (!report) return null;
-  const kicker = nodeText(report, ".report-authoring-kicker-input, .report-authoring-kicker");
+  const kicker = nodeText(
+    report,
+    ".report-authoring-kicker-input, .report-authoring-kicker",
+  );
   const reportType = nodeText(report, ".report-authoring-template-kind");
   const marker = `${kicker} ${reportType}`.toLowerCase();
-  const kind: ReportKind = marker.includes("weekly") || marker.includes("주간") ? "weekly" : marker.includes("issue") || marker.includes("이슈") ? "issue" : "outlook";
+  const kind: ReportKind =
+    marker.includes("weekly") || marker.includes("주간")
+      ? "weekly"
+      : marker.includes("issue") || marker.includes("이슈")
+        ? "issue"
+        : "outlook";
   const base = structuredClone(templates[kind]);
-  const meta = [...report.querySelectorAll<HTMLElement>(".report-authoring-cover-meta-inputs > *")].map((node) => node.textContent?.trim() ?? "");
-  const aside = [...report.querySelectorAll<HTMLElement>(".report-authoring-cover aside > *")].map((node) => node.textContent?.trim() ?? "");
-  const blocks = [...report.querySelectorAll<HTMLElement>(".report-authoring-block")].flatMap<ReportBlock>((block): ReportBlock[] => {
+  const meta = [
+    ...report.querySelectorAll<HTMLElement>(
+      ".report-authoring-cover-meta-inputs > *",
+    ),
+  ].map((node) => node.textContent?.trim() ?? "");
+  const aside = [
+    ...report.querySelectorAll<HTMLElement>(
+      ".report-authoring-cover aside > *",
+    ),
+  ].map((node) => node.textContent?.trim() ?? "");
+  const blocks = [
+    ...report.querySelectorAll<HTMLElement>(".report-authoring-block"),
+  ].flatMap<ReportBlock>((block): ReportBlock[] => {
     const title = nodeText(block, ".report-authoring-title-input");
     if (block.classList.contains("report-authoring-block-text")) {
-      const bullets = [...block.querySelectorAll<HTMLElement>(".report-authoring-bullet-editor li")].map((node) => node.textContent?.trim() ?? "").filter(Boolean);
-      const body = bullets.length ? bullets.join("\n") : nodeText(block, ".report-authoring-textarea");
-      const style: TextStyle = bullets.length ? "bullet" : block.querySelector(".report-authoring-text-editor-bar") ? "bar" : "plain";
-      return [{ id: blockId("text"), type: "text", title, body, style } satisfies TextBlock];
+      const bullets = [
+        ...block.querySelectorAll<HTMLElement>(
+          ".report-authoring-bullet-editor li",
+        ),
+      ]
+        .map((node) => node.textContent?.trim() ?? "")
+        .filter(Boolean);
+      const body = bullets.length
+        ? bullets.join("\n")
+        : nodeText(block, ".report-authoring-textarea");
+      const style: TextStyle = bullets.length
+        ? "bullet"
+        : block.querySelector(".report-authoring-text-editor-bar")
+          ? "bar"
+          : "plain";
+      return [
+        {
+          id: blockId("text"),
+          type: "text",
+          title,
+          body,
+          style,
+        } satisfies TextBlock,
+      ];
     }
     if (block.classList.contains("report-authoring-block-image")) {
-      const metaNodes = [...block.querySelectorAll<HTMLElement>(".report-authoring-image-meta > *")];
-      const insight = nodeText(block, ".report-authoring-insight strong").split("·").map((value) => value.trim());
-      return [{ ...imageBlock(title), title, src: block.querySelector<HTMLImageElement>("img")?.getAttribute("src") ?? "", caption: metaNodes[0]?.textContent?.trim() ?? "", source: metaNodes[1]?.textContent?.trim() ?? "", insightLabel: insight[0] || "INSIGHT", insightTitle: insight.slice(1).join(" · "), insightBody: nodeText(block, ".report-authoring-insight p") } satisfies ImageBlock];
+      const metaNodes = [
+        ...block.querySelectorAll<HTMLElement>(
+          ".report-authoring-image-meta > *",
+        ),
+      ];
+      const insight = nodeText(block, ".report-authoring-insight strong")
+        .split("·")
+        .map((value) => value.trim());
+      return [
+        {
+          ...imageBlock(title),
+          title,
+          src:
+            block.querySelector<HTMLImageElement>("img")?.getAttribute("src") ??
+            "",
+          caption: metaNodes[0]?.textContent?.trim() ?? "",
+          source: metaNodes[1]?.textContent?.trim() ?? "",
+          insightLabel: insight[0] || "INSIGHT",
+          insightTitle: insight.slice(1).join(" · "),
+          insightBody: nodeText(block, ".report-authoring-insight p"),
+        } satisfies ImageBlock,
+      ];
     }
     if (block.classList.contains("report-authoring-block-table")) {
-      const columns = [...block.querySelectorAll<HTMLElement>("table thead th")].map((node) => node.textContent?.trim() ?? "");
-      const rows = [...block.querySelectorAll<HTMLTableRowElement>("table tbody tr")].map((row) => [...row.cells].map((cell) => cell.textContent?.trim() ?? ""));
-      const insight = nodeText(block, ".report-authoring-insight strong").split("·").map((value) => value.trim());
-      return [{ ...tableBlock(title, columns, rows), insightLabel: insight[0] || "INSIGHT", insightTitle: insight.slice(1).join(" · "), insightBody: nodeText(block, ".report-authoring-insight p") } satisfies TableBlock];
+      const columns = [
+        ...block.querySelectorAll<HTMLElement>("table thead th"),
+      ].map((node) => node.textContent?.trim() ?? "");
+      const rows = [
+        ...block.querySelectorAll<HTMLTableRowElement>("table tbody tr"),
+      ].map((row) =>
+        [...row.cells].map((cell) => cell.textContent?.trim() ?? ""),
+      );
+      const insight = nodeText(block, ".report-authoring-insight strong")
+        .split("·")
+        .map((value) => value.trim());
+      return [
+        {
+          ...tableBlock(title, columns, rows),
+          insightLabel: insight[0] || "INSIGHT",
+          insightTitle: insight.slice(1).join(" · "),
+          insightBody: nodeText(block, ".report-authoring-insight p"),
+        } satisfies TableBlock,
+      ];
     }
     if (block.classList.contains("report-authoring-block-chart")) {
-      const grid = block.querySelector<HTMLElement>(".report-authoring-chart-grid");
-      const cards = [...(grid?.querySelectorAll<HTMLElement>(".report-authoring-chart-card") ?? [])];
-      const columns = Math.min(3, Math.max(1, Number(grid?.className.match(/columns-(\d)/)?.[1]) || cards.length || 1)) as 1 | 2 | 3;
+      const grid = block.querySelector<HTMLElement>(
+        ".report-authoring-chart-grid",
+      );
+      const cards = [
+        ...(grid?.querySelectorAll<HTMLElement>(
+          ".report-authoring-chart-card",
+        ) ?? []),
+      ];
+      const columns = Math.min(
+        3,
+        Math.max(
+          1,
+          Number(grid?.className.match(/columns-(\d)/)?.[1]) ||
+            cards.length ||
+            1,
+        ),
+      ) as 1 | 2 | 3;
       const charts = cards.map((card, index) => {
-        const metaNodes = [...card.querySelectorAll<HTMLElement>(".report-authoring-image-meta > *")];
-        const insight = nodeText(card, ".report-authoring-insight strong").split("·").map((value) => value.trim());
-        return { ...chartItem(index), title: nodeText(card, ".report-authoring-chart-title"), src: card.querySelector<HTMLImageElement>("img")?.getAttribute("src") ?? "", caption: metaNodes[0]?.textContent?.trim() ?? "", source: metaNodes[1]?.textContent?.trim() ?? "", insightLabel: insight[0] || "INSIGHT", insightTitle: insight.slice(1).join(" · "), insightBody: nodeText(card, ".report-authoring-insight p") };
+        const metaNodes = [
+          ...card.querySelectorAll<HTMLElement>(
+            ".report-authoring-image-meta > *",
+          ),
+        ];
+        const insight = nodeText(card, ".report-authoring-insight strong")
+          .split("·")
+          .map((value) => value.trim());
+        return {
+          ...chartItem(index),
+          title: nodeText(card, ".report-authoring-chart-title"),
+          src:
+            card.querySelector<HTMLImageElement>("img")?.getAttribute("src") ??
+            "",
+          caption: metaNodes[0]?.textContent?.trim() ?? "",
+          source: metaNodes[1]?.textContent?.trim() ?? "",
+          insightLabel: insight[0] || "INSIGHT",
+          insightTitle: insight.slice(1).join(" · "),
+          insightBody: nodeText(card, ".report-authoring-insight p"),
+        };
       });
-      return [{ id: blockId("chart"), type: "chart", title, columns, charts } satisfies ChartBlock];
+      return [
+        {
+          id: blockId("chart"),
+          type: "chart",
+          title,
+          columns,
+          charts,
+        } satisfies ChartBlock,
+      ];
     }
     return [];
   });
-  const ranges = [...report.querySelectorAll<HTMLElement>(".report-authoring-ranges label")].map((range) => ({ label: nodeText(range, ".report-authoring-range-label-input, span:first-child"), value: nodeText(range, ".report-authoring-range-input > span:first-child, strong"), unit: nodeText(range, ".report-authoring-range-unit-input, .report-authoring-range-input > span:last-child") }));
-  return { kind, draft: { ...base, kicker: kicker || base.kicker, title: nodeText(report, ".report-authoring-cover-title, .report-authoring-cover h1") || base.title, subtitle: nodeText(report, ".report-authoring-cover-subtitle, .report-authoring-subtitle") || base.subtitle, date: meta[0] || base.date, desk: meta[1] || base.desk, workspaceLabel: meta[2] ?? base.workspaceLabel, templateLabel: aside[0] ?? base.templateLabel, reportTypeLabel: reportType || base.reportTypeLabel, templateName: aside[2] ?? base.templateName, rangeTitle: nodeText(report, ".report-authoring-range-title, .report-authoring-ranges > p") || base.rangeTitle, ranges: ranges.length ? ranges : base.ranges, showRanges: ranges.length > 0, blocks: blocks.length ? blocks : base.blocks } satisfies ReportDraft };
+  const ranges = [
+    ...report.querySelectorAll<HTMLElement>(".report-authoring-ranges label"),
+  ].map((range) => ({
+    label: nodeText(
+      range,
+      ".report-authoring-range-label-input, span:first-child",
+    ),
+    value: nodeText(
+      range,
+      ".report-authoring-range-input > span:first-child, strong",
+    ),
+    unit: nodeText(
+      range,
+      ".report-authoring-range-unit-input, .report-authoring-range-input > span:last-child",
+    ),
+  }));
+  return {
+    kind,
+    draft: {
+      ...base,
+      kicker: kicker || base.kicker,
+      title:
+        nodeText(
+          report,
+          ".report-authoring-cover-title, .report-authoring-cover h1",
+        ) || base.title,
+      subtitle:
+        nodeText(
+          report,
+          ".report-authoring-cover-subtitle, .report-authoring-subtitle",
+        ) || base.subtitle,
+      date: meta[0] || base.date,
+      desk: meta[1] || base.desk,
+      workspaceLabel: meta[2] ?? base.workspaceLabel,
+      templateLabel: aside[0] ?? base.templateLabel,
+      reportTypeLabel: reportType || base.reportTypeLabel,
+      templateName: aside[2] ?? base.templateName,
+      rangeTitle:
+        nodeText(
+          report,
+          ".report-authoring-range-title, .report-authoring-ranges > p",
+        ) || base.rangeTitle,
+      ranges: ranges.length ? ranges : base.ranges,
+      showRanges: ranges.length > 0,
+      blocks: blocks.length ? blocks : base.blocks,
+    } satisfies ReportDraft,
+  };
 }
 
 function compactText(value: string | null | undefined) {
@@ -264,19 +729,27 @@ function compactText(value: string | null | undefined) {
 function elementText(node: Element | null | undefined) {
   if (!node) return "";
   const clone = node.cloneNode(true) as Element;
-  clone.querySelectorAll("br").forEach((lineBreak) => lineBreak.replaceWith(" "));
+  clone
+    .querySelectorAll("br")
+    .forEach((lineBreak) => lineBreak.replaceWith(" "));
   return compactText(clone.textContent);
 }
 
 function linesFrom(root: ParentNode, selector: string) {
-  return [...root.querySelectorAll<HTMLElement>(selector)].map((node) => compactText(node.textContent)).filter(Boolean);
+  return [...root.querySelectorAll<HTMLElement>(selector)]
+    .map((node) => compactText(node.textContent))
+    .filter(Boolean);
 }
 
 function structuredLinesFrom(root: ParentNode, selector: string) {
-  return [...root.querySelectorAll<HTMLElement>(selector)].map((node) => {
-    const parts = [...node.children].map((child) => elementText(child)).filter(Boolean);
-    return parts.length ? parts.join(" · ") : elementText(node);
-  }).filter(Boolean);
+  return [...root.querySelectorAll<HTMLElement>(selector)]
+    .map((node) => {
+      const parts = [...node.children]
+        .map((child) => elementText(child))
+        .filter(Boolean);
+      return parts.length ? parts.join(" · ") : elementText(node);
+    })
+    .filter(Boolean);
 }
 
 function svgDataUrl(svg: SVGElement | null) {
@@ -288,13 +761,30 @@ function svgDataUrl(svg: SVGElement | null) {
 function splitRange(value: string) {
   const normalized = compactText(value);
   const match = normalized.match(/^(.*?)(%|bp)$/i);
-  return { value: compactText(match?.[1] ?? normalized) || "—", unit: match?.[2] ?? "" };
+  return {
+    value: compactText(match?.[1] ?? normalized) || "—",
+    unit: match?.[2] ?? "",
+  };
 }
 
-function inferHouseReportKind(documentNode: Document, report: HTMLElement): ReportKind {
-  const marker = `${documentNode.title} ${compactText(report.querySelector(".eyebrow")?.textContent)} ${compactText(report.querySelector(".hero-meta")?.textContent)} ${compactText(report.querySelector(".toolbar-brand")?.textContent)}`.toLowerCase();
-  if (report.querySelector(".ranges, .weekly-range") || marker.includes("weekly") || marker.includes("주간채권")) return "weekly";
-  if (marker.includes("economic outlook") || marker.includes("경제전망") || marker.includes("경제 전망")) return "outlook";
+function inferHouseReportKind(
+  documentNode: Document,
+  report: HTMLElement,
+): ReportKind {
+  const marker =
+    `${documentNode.title} ${compactText(report.querySelector(".eyebrow")?.textContent)} ${compactText(report.querySelector(".hero-meta")?.textContent)} ${compactText(report.querySelector(".toolbar-brand")?.textContent)}`.toLowerCase();
+  if (
+    report.querySelector(".ranges, .weekly-range") ||
+    marker.includes("weekly") ||
+    marker.includes("주간채권")
+  )
+    return "weekly";
+  if (
+    marker.includes("economic outlook") ||
+    marker.includes("경제전망") ||
+    marker.includes("경제 전망")
+  )
+    return "outlook";
   return "issue";
 }
 
@@ -302,59 +792,117 @@ function chartInsight(card: HTMLElement) {
   const direct = card.querySelector<HTMLElement>(".insight");
   if (direct) {
     return {
-      insightLabel: compactText(direct.querySelector("strong")?.textContent) || "INSIGHT",
+      insightLabel:
+        compactText(direct.querySelector("strong")?.textContent) || "INSIGHT",
       insightTitle: "",
       insightBody: compactText(direct.querySelector("span, p")?.textContent),
     } satisfies InsightFields;
   }
   const notes = [...card.querySelectorAll<HTMLElement>(".chart-note")];
-  const insightNote = notes.find((note) => !/^(출처|source)$/i.test(compactText(note.querySelector("strong")?.textContent))) ?? notes[0];
+  const insightNote =
+    notes.find(
+      (note) =>
+        !/^(출처|source)$/i.test(
+          compactText(note.querySelector("strong")?.textContent),
+        ),
+    ) ?? notes[0];
   return {
-    insightLabel: compactText(insightNote?.querySelector("strong")?.textContent) || "INSIGHT",
+    insightLabel:
+      compactText(insightNote?.querySelector("strong")?.textContent) ||
+      "INSIGHT",
     insightTitle: "",
-    insightBody: compactText(insightNote?.querySelector("span, p")?.textContent),
+    insightBody: compactText(
+      insightNote?.querySelector("span, p")?.textContent,
+    ),
   } satisfies InsightFields;
 }
 
 function parseHouseStyleReport(documentNode: Document, templates: DraftMap) {
-  const report = documentNode.querySelector<HTMLElement>("main.report, #report.report, article.report");
-  if (!report || !report.querySelector(".hero") || !report.querySelector("[data-module], .module")) return null;
+  const report = documentNode.querySelector<HTMLElement>(
+    "main.report, #report.report, article.report",
+  );
+  if (
+    !report ||
+    !report.querySelector(".hero") ||
+    !report.querySelector("[data-module], .module")
+  )
+    return null;
   const kind = inferHouseReportKind(documentNode, report);
   const base = structuredClone(templates[kind]);
   const hero = report.querySelector<HTMLElement>(".hero") ?? report;
-  const dateMatch = compactText(hero.querySelector(".hero-meta")?.textContent).match(/20\d{2}[.\/-]\d{2}[.\/-]\d{2}/)?.[0];
-  const footerDesk = compactText(report.querySelector(".report-footer strong")?.textContent);
+  const dateMatch = compactText(
+    hero.querySelector(".hero-meta")?.textContent,
+  ).match(/20\d{2}[.\/-]\d{2}[.\/-]\d{2}/)?.[0];
+  const footerDesk = compactText(
+    report.querySelector(".report-footer strong")?.textContent,
+  );
   const blocks: ReportBlock[] = [];
   let missingCharts = 0;
 
   const summary = report.querySelector<HTMLElement>(".summary");
   if (summary) {
-    const summaryTitle = compactText(summary.querySelector("h2")?.textContent) || "핵심 판단";
+    const summaryTitle =
+      compactText(summary.querySelector("h2")?.textContent) || "핵심 판단";
     const summaryLines = linesFrom(summary, "li");
-    const readoutLines = structuredLinesFrom(report, ".readout > .readout-item");
-    const centralCall = elementText(summary.querySelector(".summary-call, .call"));
-    const body = [...summaryLines, ...readoutLines, centralCall].filter(Boolean).join("\n");
-    if (body) blocks.push({ ...textBlock(summaryTitle, body), style: "bullet" });
+    const readoutLines = structuredLinesFrom(
+      report,
+      ".readout > .readout-item",
+    );
+    const centralCall = elementText(
+      summary.querySelector(".summary-call, .call"),
+    );
+    const body = [...summaryLines, ...readoutLines, centralCall]
+      .filter(Boolean)
+      .join("\n");
+    if (body)
+      blocks.push({ ...textBlock(summaryTitle, body), style: "bullet" });
   }
 
-  const moduleNodes = [...report.querySelectorAll<HTMLElement>("[data-module], .module")].filter((module, index, modules) => modules.indexOf(module) === index);
+  const moduleNodes = [
+    ...report.querySelectorAll<HTMLElement>("[data-module], .module"),
+  ].filter((module, index, modules) => modules.indexOf(module) === index);
   moduleNodes.forEach((module) => {
-    const title = compactText(module.querySelector("h2")?.textContent) || compactText(module.querySelector(".section-kicker")?.textContent) || "분석";
+    const title =
+      compactText(module.querySelector("h2")?.textContent) ||
+      compactText(module.querySelector(".section-kicker")?.textContent) ||
+      "분석";
     const narrative = [
       compactText(module.querySelector(".section-lead")?.textContent),
-      ...linesFrom(module, ":scope > .bullet-list li, :scope > ul:not(.module-tools) > li"),
-      ...structuredLinesFrom(module, ":scope > .metrics .metric, :scope > .strategy-bar .strategy-cell, :scope > .action-grid .action, :scope > .outlook-body p, :scope > .callout"),
+      ...linesFrom(
+        module,
+        ":scope > .bullet-list li, :scope > ul:not(.module-tools) > li",
+      ),
+      ...structuredLinesFrom(
+        module,
+        ":scope > .metrics .metric, :scope > .strategy-bar .strategy-cell, :scope > .action-grid .action, :scope > .outlook-body p, :scope > .callout",
+      ),
     ].filter(Boolean);
-    if (narrative.length) blocks.push({ ...textBlock(title, narrative.join("\n")), style: narrative.length > 1 ? "bullet" : "plain" });
+    if (narrative.length)
+      blocks.push({
+        ...textBlock(title, narrative.join("\n")),
+        style: narrative.length > 1 ? "bullet" : "plain",
+      });
 
     const cards = [...module.querySelectorAll<HTMLElement>(".chart-card")];
     for (let offset = 0; offset < cards.length; offset += 3) {
       const group = cards.slice(offset, offset + 3);
       const charts = group.map((card, index) => {
-        const titleValue = compactText(card.querySelector(".chart-title")?.textContent) || `차트 ${index + 1}`;
-        const meta = compactText(card.querySelector(".chart-meta")?.textContent);
-        const sourceNote = [...card.querySelectorAll<HTMLElement>(".chart-note")].find((note) => /^(출처|source)$/i.test(compactText(note.querySelector("strong")?.textContent)));
-        const image = card.querySelector<HTMLImageElement>("img")?.getAttribute("src") ?? "";
+        const titleValue =
+          compactText(card.querySelector(".chart-title")?.textContent) ||
+          `차트 ${index + 1}`;
+        const meta = compactText(
+          card.querySelector(".chart-meta")?.textContent,
+        );
+        const sourceNote = [
+          ...card.querySelectorAll<HTMLElement>(".chart-note"),
+        ].find((note) =>
+          /^(출처|source)$/i.test(
+            compactText(note.querySelector("strong")?.textContent),
+          ),
+        );
+        const image =
+          card.querySelector<HTMLImageElement>("img")?.getAttribute("src") ??
+          "";
         const inlineSvg = svgDataUrl(card.querySelector<SVGElement>("svg"));
         const src = image || inlineSvg;
         if (!src) missingCharts += 1;
@@ -363,21 +911,40 @@ function parseHouseStyleReport(documentNode: Document, templates: DraftMap) {
           title: titleValue,
           src,
           caption: meta || "원본 HTML의 차트 설명",
-          source: compactText(sourceNote?.querySelector("span, p")?.textContent) || compactText(module.querySelector(".source-note")?.textContent) || "원본 HTML",
+          source:
+            compactText(sourceNote?.querySelector("span, p")?.textContent) ||
+            compactText(module.querySelector(".source-note")?.textContent) ||
+            "원본 HTML",
           ...chartInsight(card),
         } satisfies ChartItem;
       });
-      if (charts.length) blocks.push({ id: blockId("chart"), type: "chart", title, columns: Math.min(3, Math.max(1, charts.length)) as 1 | 2 | 3, charts });
+      if (charts.length)
+        blocks.push({
+          id: blockId("chart"),
+          type: "chart",
+          title,
+          columns: Math.min(3, Math.max(1, charts.length)) as 1 | 2 | 3,
+          charts,
+        });
     }
 
     [...module.querySelectorAll<HTMLTableElement>("table")].forEach((table) => {
-      const columns = [...table.querySelectorAll<HTMLElement>("thead th")].map((cell) => compactText(cell.textContent));
-      const rows = [...table.querySelectorAll<HTMLTableRowElement>("tbody tr")].map((row) => [...row.cells].map((cell) => compactText(cell.textContent)));
+      const columns = [...table.querySelectorAll<HTMLElement>("thead th")].map(
+        (cell) => compactText(cell.textContent),
+      );
+      const rows = [
+        ...table.querySelectorAll<HTMLTableRowElement>("tbody tr"),
+      ].map((row) =>
+        [...row.cells].map((cell) => compactText(cell.textContent)),
+      );
       if (columns.length && rows.length) {
         blocks.push({
           ...tableBlock(title, columns, rows),
           insightTitle: "원본 표의 핵심 판단",
-          insightBody: compactText(module.querySelector(".insight span, .insight p")?.textContent) || "표 수치와 전략 함의 점검 필요",
+          insightBody:
+            compactText(
+              module.querySelector(".insight span, .insight p")?.textContent,
+            ) || "표 수치와 전략 함의 점검 필요",
         });
       }
     });
@@ -388,13 +955,31 @@ function parseHouseStyleReport(documentNode: Document, templates: DraftMap) {
     }
   });
 
-  const ranges = [...report.querySelectorAll<HTMLElement>(".ranges .range, .hero-side .hero-side-row")].map((range) => {
-    const parsed = splitRange(compactText(range.querySelector("strong")?.textContent));
-    return { label: compactText(range.querySelector("span")?.textContent), value: parsed.value, unit: parsed.unit };
-  }).filter((range) => range.label || range.value);
-  const kicker = compactText(hero.querySelector(".eyebrow")?.textContent) || base.kicker;
-  const title = elementText(hero.querySelector("h1")) || documentNode.title.split("|")[0].trim() || base.title;
-  const subtitle = compactText(hero.querySelector(".hero-subtitle")?.textContent) || base.subtitle;
+  const ranges = [
+    ...report.querySelectorAll<HTMLElement>(
+      ".ranges .range, .hero-side .hero-side-row",
+    ),
+  ]
+    .map((range) => {
+      const parsed = splitRange(
+        compactText(range.querySelector("strong")?.textContent),
+      );
+      return {
+        label: compactText(range.querySelector("span")?.textContent),
+        value: parsed.value,
+        unit: parsed.unit,
+      };
+    })
+    .filter((range) => range.label || range.value);
+  const kicker =
+    compactText(hero.querySelector(".eyebrow")?.textContent) || base.kicker;
+  const title =
+    elementText(hero.querySelector("h1")) ||
+    documentNode.title.split("|")[0].trim() ||
+    base.title;
+  const subtitle =
+    compactText(hero.querySelector(".hero-subtitle")?.textContent) ||
+    base.subtitle;
   return {
     kind,
     missingCharts,
@@ -407,9 +992,13 @@ function parseHouseStyleReport(documentNode: Document, templates: DraftMap) {
       desk: footerDesk || base.desk,
       reportTypeLabel: REPORT_LABELS[kind],
       templateName: "가져온 기존 보고서 HTML",
-      rangeTitle: compactText(report.querySelector(".ranges-title, .hero-side-title")?.textContent) || base.rangeTitle,
+      rangeTitle:
+        compactText(
+          report.querySelector(".ranges-title, .hero-side-title")?.textContent,
+        ) || base.rangeTitle,
       ranges: ranges.length ? ranges : base.ranges,
-      showRanges: kind === "weekly" && (ranges.length > 0 || Boolean(base.showRanges)),
+      showRanges:
+        kind === "weekly" && (ranges.length > 0 || Boolean(base.showRanges)),
       blocks: blocks.length ? blocks : base.blocks,
     } satisfies ReportDraft,
   };
@@ -430,14 +1019,24 @@ function parseDelimited(value: string) {
   const lines = value.trim().split(/\r?\n/).filter(Boolean);
   if (!lines.length) return null;
   const delimiter = lines.some((line) => line.includes("\t")) ? "\t" : ",";
-  const cells = lines.map((line) => line.split(delimiter).map((cell) => cell.trim()));
+  const cells = lines.map((line) =>
+    line.split(delimiter).map((cell) => cell.trim()),
+  );
   const width = Math.max(...cells.map((row) => row.length));
-  return cells.map((row) => [...row, ...Array(Math.max(0, width - row.length)).fill("")]);
+  return cells.map((row) => [
+    ...row,
+    ...Array(Math.max(0, width - row.length)).fill(""),
+  ]);
 }
 
 function normalizeBlock(block: ReportBlock): ReportBlock {
   if (block.type === "text") {
-    return { ...block, style: (["plain", "bullet", "bar"] as TextStyle[]).includes(block.style) ? block.style : "plain" };
+    return {
+      ...block,
+      style: (["plain", "bullet", "bar"] as TextStyle[]).includes(block.style)
+        ? block.style
+        : "plain",
+    };
   }
   if (block.type === "image") {
     return { ...imageBlock(block.title), ...block };
@@ -445,28 +1044,44 @@ function normalizeBlock(block: ReportBlock): ReportBlock {
   if (block.type === "table") {
     return { ...tableBlock(block.title, block.columns, block.rows), ...block };
   }
-  const columns = ([1, 2, 3] as const).includes(block.columns) ? block.columns : 2;
-  const charts = [...(block.charts ?? [])].slice(0, columns).map((item, index) => ({ ...chartItem(index), ...item }));
+  const columns = ([1, 2, 3] as const).includes(block.columns)
+    ? block.columns
+    : 2;
+  const charts = [...(block.charts ?? [])]
+    .slice(0, columns)
+    .map((item, index) => ({ ...chartItem(index), ...item }));
   while (charts.length < columns) charts.push(chartItem(charts.length));
   return { ...block, columns, charts };
 }
 
-function normalizeDrafts(value: Partial<DraftMap>, templates: DraftMap): DraftMap {
+function normalizeDrafts(
+  value: Partial<DraftMap>,
+  templates: DraftMap,
+): DraftMap {
   return (Object.keys(REPORT_LABELS) as ReportKind[]).reduce((result, kind) => {
     const saved = value[kind];
     const base = templates[kind];
     result[kind] = {
       ...base,
       ...saved,
-      ranges: saved?.ranges?.map((range, index) => ({ ...base.ranges?.[index], ...range })) ?? base.ranges,
+      ranges:
+        saved?.ranges?.map((range, index) => ({
+          ...base.ranges?.[index],
+          ...range,
+        })) ?? base.ranges,
       showRanges: saved?.showRanges ?? base.showRanges,
-      blocks: saved?.blocks?.map((block) => normalizeBlock(block)) ?? base.blocks,
+      blocks:
+        saved?.blocks?.map((block) => normalizeBlock(block)) ?? base.blocks,
     };
     return result;
   }, {} as DraftMap);
 }
 
-function InsightEditor({ insight, preview, onChange }: {
+function InsightEditor({
+  insight,
+  preview,
+  onChange,
+}: {
   insight: InsightFields;
   preview: boolean;
   onChange: (patch: Partial<InsightFields>) => void;
@@ -474,21 +1089,41 @@ function InsightEditor({ insight, preview, onChange }: {
   if (preview) {
     return (
       <div className="report-authoring-insight">
-        <strong><span>{insight.insightLabel}</span>{insight.insightTitle ? ` · ${insight.insightTitle}` : ""}</strong>
+        <strong>
+          <span>{insight.insightLabel}</span>
+          {insight.insightTitle ? ` · ${insight.insightTitle}` : ""}
+        </strong>
         <p>{insight.insightBody}</p>
       </div>
     );
   }
   return (
     <div className="report-authoring-insight-editor">
-      <input value={insight.insightLabel} onChange={(event) => onChange({ insightLabel: event.target.value })} aria-label="인사이트 라벨" />
-      <input value={insight.insightTitle} onChange={(event) => onChange({ insightTitle: event.target.value })} aria-label="인사이트 제목" />
-      <textarea value={insight.insightBody} onChange={(event) => onChange({ insightBody: event.target.value })} aria-label="인사이트 설명" rows={3} />
+      <input
+        value={insight.insightLabel}
+        onChange={(event) => onChange({ insightLabel: event.target.value })}
+        aria-label="인사이트 라벨"
+      />
+      <input
+        value={insight.insightTitle}
+        onChange={(event) => onChange({ insightTitle: event.target.value })}
+        aria-label="인사이트 제목"
+      />
+      <textarea
+        value={insight.insightBody}
+        onChange={(event) => onChange({ insightBody: event.target.value })}
+        aria-label="인사이트 설명"
+        rows={3}
+      />
     </div>
   );
 }
 
-function TextBlockEditor({ block, preview, onChange }: {
+function TextBlockEditor({
+  block,
+  preview,
+  onChange,
+}: {
   block: TextBlock;
   preview: boolean;
   onChange: (patch: Partial<TextBlock>) => void;
@@ -500,7 +1135,8 @@ function TextBlockEditor({ block, preview, onChange }: {
     window.requestAnimationFrame(() => {
       const input = bulletEditorRef.current?.querySelectorAll("input")[index];
       input?.focus();
-      if (input && position !== undefined) input.setSelectionRange(position, position);
+      if (input && position !== undefined)
+        input.setSelectionRange(position, position);
     });
   }
 
@@ -511,39 +1147,93 @@ function TextBlockEditor({ block, preview, onChange }: {
           <h2>{block.title}</h2>
           {block.style === "bullet" ? (
             <ul className="report-authoring-body-copy report-authoring-bullets">
-              {block.body.split(/\r?\n/).filter(Boolean).map((line, index) => <li key={index}>{line}</li>)}
+              {block.body
+                .split(/\r?\n/)
+                .filter(Boolean)
+                .map((line, index) => (
+                  <li key={index}>{line}</li>
+                ))}
             </ul>
-          ) : <p className={`report-authoring-body-copy${block.style === "bar" ? " report-authoring-left-bar" : ""}`}>{block.body}</p>}
+          ) : (
+            <p
+              className={`report-authoring-body-copy${block.style === "bar" ? " report-authoring-left-bar" : ""}`}
+            >
+              {block.body}
+            </p>
+          )}
         </>
       ) : (
         <>
-          <input className="report-authoring-title-input" value={block.title} onChange={(event) => onChange({ title: event.target.value })} aria-label="텍스트 박스 제목" />
-          <div className="report-authoring-text-style" data-report-control aria-label="문장 스타일">
+          <input
+            className="report-authoring-title-input"
+            value={block.title}
+            onChange={(event) => onChange({ title: event.target.value })}
+            aria-label="텍스트 박스 제목"
+          />
+          <div
+            className="report-authoring-text-style"
+            data-report-control
+            aria-label="문장 스타일"
+          >
             {(["plain", "bullet", "bar"] as TextStyle[]).map((style) => (
-              <button type="button" key={style} aria-pressed={block.style === style} onClick={() => onChange({ style })}>
-                {style === "plain" ? "본문" : style === "bullet" ? "• 불릿" : "▌ 좌측 바"}
+              <button
+                type="button"
+                key={style}
+                aria-pressed={block.style === style}
+                onClick={() => onChange({ style })}
+              >
+                {style === "plain"
+                  ? "본문"
+                  : style === "bullet"
+                    ? "• 불릿"
+                    : "▌ 좌측 바"}
               </button>
             ))}
           </div>
           {block.style === "bullet" ? (
-            <ul ref={bulletEditorRef} className="report-authoring-bullet-editor" aria-label="불릿 본문 편집">
+            <ul
+              ref={bulletEditorRef}
+              className="report-authoring-bullet-editor"
+              aria-label="불릿 본문 편집"
+            >
               {bulletLines.map((line, index) => (
                 <li key={index}>
                   <input
                     value={line}
-                    onChange={(event) => onChange({ body: bulletLines.map((item, itemIndex) => itemIndex === index ? event.target.value : item).join("\n") })}
+                    onChange={(event) =>
+                      onChange({
+                        body: bulletLines
+                          .map((item, itemIndex) =>
+                            itemIndex === index ? event.target.value : item,
+                          )
+                          .join("\n"),
+                      })
+                    }
                     onKeyDown={(event) => {
                       if (event.key === "Enter") {
                         event.preventDefault();
-                        const cursor = event.currentTarget.selectionStart ?? line.length;
+                        const cursor =
+                          event.currentTarget.selectionStart ?? line.length;
                         const nextLines = [...bulletLines];
-                        nextLines.splice(index, 1, line.slice(0, cursor), line.slice(cursor));
+                        nextLines.splice(
+                          index,
+                          1,
+                          line.slice(0, cursor),
+                          line.slice(cursor),
+                        );
                         onChange({ body: nextLines.join("\n") });
                         focusBullet(index + 1, 0);
-                      } else if (event.key === "Backspace" && line === "" && bulletLines.length > 1) {
+                      } else if (
+                        event.key === "Backspace" &&
+                        line === "" &&
+                        bulletLines.length > 1
+                      ) {
                         event.preventDefault();
-                        const nextLines = bulletLines.filter((_, itemIndex) => itemIndex !== index);
-                        const previousLength = nextLines[Math.max(0, index - 1)]?.length ?? 0;
+                        const nextLines = bulletLines.filter(
+                          (_, itemIndex) => itemIndex !== index,
+                        );
+                        const previousLength =
+                          nextLines[Math.max(0, index - 1)]?.length ?? 0;
                         onChange({ body: nextLines.join("\n") });
                         focusBullet(Math.max(0, index - 1), previousLength);
                       }
@@ -554,8 +1244,16 @@ function TextBlockEditor({ block, preview, onChange }: {
               ))}
             </ul>
           ) : (
-            <div className={`report-authoring-text-editor report-authoring-text-editor-${block.style}`}>
-              <textarea className="report-authoring-textarea" value={block.body} onChange={(event) => onChange({ body: event.target.value })} aria-label="텍스트 박스 본문" rows={5} />
+            <div
+              className={`report-authoring-text-editor report-authoring-text-editor-${block.style}`}
+            >
+              <textarea
+                className="report-authoring-textarea"
+                value={block.body}
+                onChange={(event) => onChange({ body: event.target.value })}
+                aria-label="텍스트 박스 본문"
+                rows={5}
+              />
             </div>
           )}
         </>
@@ -564,13 +1262,257 @@ function TextBlockEditor({ block, preview, onChange }: {
   );
 }
 
-function ImageBlockEditor({ block, preview, onChange, onStatus }: {
+function AnnotatedImage({
+  src,
+  alt,
+  annotations = [],
+  imageFit = "uniform",
+  preview,
+  onChange,
+}: ImagePresentation & {
+  src: string;
+  alt: string;
+  preview: boolean;
+  onChange: (patch: ImagePresentation) => void;
+}) {
+  const [tool, setTool] = useState<Annotation["kind"] | "select">("select");
+  const [color, setColor] = useState("#c24136");
+  const [selected, setSelected] = useState<string | null>(null);
+  const [pending, setPending] = useState<Annotation | null>(null);
+  const pendingRef = useRef<Annotation | null>(null);
+  function point(event: React.PointerEvent<SVGSVGElement>) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    return {
+      x: Math.max(
+        0,
+        Math.min(1000, ((event.clientX - rect.left) / rect.width) * 1000),
+      ),
+      y: Math.max(
+        0,
+        Math.min(1000, ((event.clientY - rect.top) / rect.height) * 1000),
+      ),
+    };
+  }
+  return (
+    <div className="report-authoring-annotated-image">
+      {!preview && (
+        <div className="report-authoring-annotation-tools" data-report-control>
+          <span>이미지 강조</span>
+          {(["select", "line", "ellipse", "rect"] as const).map((kind) => (
+            <button
+              key={kind}
+              type="button"
+              aria-pressed={tool === kind}
+              onClick={() => setTool(kind)}
+            >
+              {
+                { select: "선택", line: "선", ellipse: "원", rect: "네모" }[
+                  kind
+                ]
+              }
+            </button>
+          ))}
+          <label>
+            색상{" "}
+            <input
+              type="color"
+              aria-label="도형 색상"
+              value={color}
+              onChange={(e) => {
+                setColor(e.target.value);
+                if (selected)
+                  onChange({
+                    annotations: annotations.map((a) =>
+                      a.id === selected ? { ...a, color: e.target.value } : a,
+                    ),
+                  });
+              }}
+            />
+          </label>
+          <button
+            type="button"
+            disabled={!selected}
+            onClick={() => {
+              onChange({
+                annotations: annotations.filter((a) => a.id !== selected),
+              });
+              setSelected(null);
+            }}
+          >
+            선택 도형 삭제
+          </button>
+          <label>
+            이미지 배치{" "}
+            <select
+              aria-label="이미지 배치"
+              value={imageFit}
+              onChange={(e) =>
+                onChange({ imageFit: e.target.value as "uniform" | "natural" })
+              }
+            >
+              <option value="uniform">박스 채우기(비율 변경)</option>
+              <option value="natural">원본 비율</option>
+            </select>
+          </label>
+          <small>도구 선택 후 드래그 · 선택한 도형은 방향키로 이동</small>
+        </div>
+      )}
+      <div className={"report-authoring-image-stage fit-" + imageFit}>
+        <div className="report-authoring-image-canvas">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={src}
+            alt={alt}
+            draggable={false}
+          />
+          <svg
+            viewBox="0 0 1000 1000"
+            preserveAspectRatio="none"
+            className="report-authoring-annotation-layer"
+            style={{
+              pointerEvents: preview ? "none" : "auto",
+              touchAction: "none",
+            }}
+            aria-label="이미지 도형 편집"
+            tabIndex={preview ? undefined : 0}
+            onKeyDown={(e) => {
+              if (!selected || preview) return;
+              const delta: Record<string, [number, number]> = {
+                ArrowLeft: [-5, 0],
+                ArrowRight: [5, 0],
+                ArrowUp: [0, -5],
+                ArrowDown: [0, 5],
+              };
+              if (e.key === "Delete" || e.key === "Backspace") {
+                e.preventDefault();
+                onChange({
+                  annotations: annotations.filter((a) => a.id !== selected),
+                });
+                setSelected(null);
+              } else if (delta[e.key]) {
+                e.preventDefault();
+                const [dx, dy] = delta[e.key];
+                onChange({
+                  annotations: annotations.map((a) =>
+                    a.id === selected
+                      ? {
+                          ...a,
+                          x1: a.x1 + dx,
+                          x2: a.x2 + dx,
+                          y1: a.y1 + dy,
+                          y2: a.y2 + dy,
+                        }
+                      : a,
+                  ),
+                });
+              }
+            }}
+            onPointerDown={(e) => {
+              if (preview || tool === "select") return;
+              e.currentTarget.setPointerCapture(e.pointerId);
+              const p = point(e);
+              const next = {
+                id: crypto.randomUUID(),
+                kind: tool,
+                x1: p.x,
+                y1: p.y,
+                x2: p.x,
+                y2: p.y,
+                color,
+              };
+              pendingRef.current = next;
+              setPending(next);
+            }}
+            onPointerMove={(e) => {
+              if (!pendingRef.current) return;
+              const p = point(e);
+              const next = { ...pendingRef.current, x2: p.x, y2: p.y };
+              pendingRef.current = next;
+              setPending(next);
+            }}
+            onPointerCancel={() => {
+              pendingRef.current = null;
+              setPending(null);
+            }}
+            onPointerUp={() => {
+              const a = pendingRef.current;
+              if (a && Math.hypot(a.x2 - a.x1, a.y2 - a.y1) > 4) {
+                onChange({ annotations: [...annotations, a] });
+                setSelected(a.id);
+              }
+              pendingRef.current = null;
+              setPending(null);
+            }}
+          >
+            {[...annotations, ...(pending ? [pending] : [])].map((a) => {
+              const props = {
+                stroke: a.color,
+                strokeWidth: 3,
+                vectorEffect: "non-scaling-stroke" as const,
+                fill: "none",
+                onPointerDown: (e: React.PointerEvent) => {
+                  if (tool !== "select" || preview) return;
+                  e.stopPropagation();
+                  setSelected(a.id);
+                  e.currentTarget.parentElement?.focus();
+                },
+                style: { cursor: preview ? "default" : "pointer" },
+                "data-annotation-id": a.id,
+              };
+              return (
+                <g
+                  key={a.id}
+                  opacity={!preview && selected === a.id ? 0.75 : 1}
+                >
+                  {a.kind === "line" ? (
+                    <line {...props} x1={a.x1} y1={a.y1} x2={a.x2} y2={a.y2} />
+                  ) : a.kind === "rect" ? (
+                    <rect
+                      {...props}
+                      x={Math.min(a.x1, a.x2)}
+                      y={Math.min(a.y1, a.y2)}
+                      width={Math.abs(a.x2 - a.x1)}
+                      height={Math.abs(a.y2 - a.y1)}
+                    />
+                  ) : (
+                    <ellipse
+                      {...props}
+                      cx={(a.x1 + a.x2) / 2}
+                      cy={(a.y1 + a.y2) / 2}
+                      rx={Math.abs(a.x2 - a.x1) / 2}
+                      ry={Math.abs(a.y2 - a.y1) / 2}
+                    />
+                  )}
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SourceText({ source }: { source: string }) {
+  return <small className="report-authoring-source"><span data-report-source-prefix>{/^\s*출처\s*[:：]/.test(source) ? "" : "출처 :"}</span><span data-report-source-value>{source}</span></small>;
+}
+
+function ImageBlockEditor({
+  block,
+  preview,
+  onChange,
+  onStatus,
+}: {
   block: ImageBlock;
   preview: boolean;
   onChange: (patch: Partial<ImageBlock>) => void;
   onStatus: (message: string) => void;
 }) {
+  const imageFileInput = useRef<HTMLInputElement>(null);
+  const imageLoadVersion = useRef(0);
+  useEffect(() => () => { imageLoadVersion.current += 1; }, []);
   function loadFile(file: File | undefined) {
+    const version = ++imageLoadVersion.current;
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       onStatus("이미지 파일만 추가할 수 있습니다.");
@@ -578,7 +1520,11 @@ function ImageBlockEditor({ block, preview, onChange, onStatus }: {
     }
     const reader = new FileReader();
     reader.onload = () => {
-      onChange({ src: String(reader.result), source: file.name });
+      if (version !== imageLoadVersion.current) return;
+      onChange({
+        src: String(reader.result),
+        annotations: [],
+      });
       onStatus("로컬 이미지를 보고서에 넣었습니다.");
     };
     reader.readAsDataURL(file);
@@ -586,32 +1532,66 @@ function ImageBlockEditor({ block, preview, onChange, onStatus }: {
 
   return (
     <div className="report-authoring-block-body">
-      {preview ? <h2>{block.title}</h2> : <input className="report-authoring-title-input" value={block.title} onChange={(event) => onChange({ title: event.target.value })} aria-label="이미지 박스 제목" />}
+      {preview ? (
+        <h2>{block.title}</h2>
+      ) : (
+        <input
+          className="report-authoring-title-input"
+          value={block.title}
+          onChange={(event) => onChange({ title: event.target.value })}
+          aria-label="이미지 박스 제목"
+        />
+      )}
       {block.src ? (
         // 사용자가 고른 data URL 또는 외부 원본 URL을 그대로 유지해야 하므로 next/image 최적화를 사용하지 않는다.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img className="report-authoring-image" src={block.src} alt={block.caption || block.title} />
+        <AnnotatedImage
+          src={block.src}
+          alt={block.caption || block.title}
+          annotations={block.annotations}
+          imageFit={block.imageFit}
+          preview={preview}
+          onChange={onChange}
+        />
       ) : (
-        <div className="report-authoring-image-empty">이미지 파일 또는 외부 이미지 URL 선택</div>
+        preview ? <div className="report-authoring-image-empty" /> : <button type="button" className="report-authoring-image-empty report-authoring-upload-placeholder" onClick={() => imageFileInput.current?.click()} aria-label="이미지 파일 선택">이미지 선택</button>
       )}
       {!preview ? (
         <div className="report-authoring-image-controls" data-report-control>
           <label>
             <span>로컬 이미지</span>
-            <input type="file" accept="image/*" onChange={(event) => loadFile(event.target.files?.[0])} />
+            <input
+              ref={imageFileInput}
+              type="file"
+              accept="image/*"
+              onChange={(event) => { loadFile(event.target.files?.[0]); event.target.value = ""; }}
+            />
           </label>
           <label>
             <span>외부 이미지 URL</span>
-            <input type="url" value={block.src.startsWith("data:") ? "" : block.src} placeholder="https://…" onChange={(event) => onChange({ src: event.target.value })} />
+            <input
+              type="url"
+              value={block.src.startsWith("data:") ? "" : block.src}
+              placeholder="https://…"
+              onChange={(event) =>
+                onChange({ src: event.target.value, annotations: [] })
+              }
+            />
           </label>
         </div>
       ) : null}
       {preview ? (
-        <figcaption><span>{block.caption}</span><small>{block.source}</small></figcaption>
+        <figcaption>
+          <span>{block.caption}</span>
+          <SourceText source={block.source} />
+        </figcaption>
       ) : (
         <div className="report-authoring-image-meta">
-          <input value={block.caption} onChange={(event) => onChange({ caption: event.target.value })} aria-label="이미지 설명" />
-          <input value={block.source} onChange={(event) => onChange({ source: event.target.value })} aria-label="이미지 출처" />
+          <input
+            value={block.caption}
+            onChange={(event) => onChange({ caption: event.target.value })}
+            aria-label="이미지 설명"
+          />
+          <label className="report-authoring-source-input"><span>{/^\s*출처\s*[:：]/.test(block.source) ? "" : "출처 :"}</span><input value={block.source} onChange={(event) => onChange({ source: event.target.value })} aria-label="이미지 출처" /></label>
         </div>
       )}
       <InsightEditor insight={block} preview={preview} onChange={onChange} />
@@ -619,7 +1599,12 @@ function ImageBlockEditor({ block, preview, onChange, onStatus }: {
   );
 }
 
-function TableBlockEditor({ block, preview, onChange, onStatus }: {
+function TableBlockEditor({
+  block,
+  preview,
+  onChange,
+  onStatus,
+}: {
   block: TableBlock;
   preview: boolean;
   onChange: (patch: Partial<TableBlock>) => void;
@@ -677,32 +1662,94 @@ function TableBlockEditor({ block, preview, onChange, onStatus }: {
     const parsed = parseDelimited(value);
     if (!parsed || parsed.length < 1) return;
     const [columns, ...rows] = parsed;
-    onChange({ columns, rows: rows.length ? rows : [Array(columns.length).fill("")] });
+    onChange({
+      columns,
+      rows: rows.length ? rows : [Array(columns.length).fill("")],
+    });
     onStatus("붙여넣은 표를 현재 박스에 적용했습니다.");
   }
 
   return (
     <div className="report-authoring-block-body">
-      {preview ? <h2>{block.title}</h2> : <input className="report-authoring-title-input" value={block.title} onChange={(event) => onChange({ title: event.target.value })} aria-label="표 박스 제목" />}
+      {preview ? (
+        <h2>{block.title}</h2>
+      ) : (
+        <input
+          className="report-authoring-title-input"
+          value={block.title}
+          onChange={(event) => onChange({ title: event.target.value })}
+          aria-label="표 박스 제목"
+        />
+      )}
       <div className="report-authoring-table-wrap">
         <table>
           <thead>
-            <tr>{block.columns.map((column, index) => <th key={index}>{preview ? column : <input value={column} onChange={(event) => updateColumn(index, event.target.value)} aria-label={`${index + 1}열 제목`} />}</th>)}</tr>
+            <tr>
+              {block.columns.map((column, index) => (
+                <th key={index}>
+                  {preview ? (
+                    column
+                  ) : (
+                    <input
+                      value={column}
+                      onChange={(event) =>
+                        updateColumn(index, event.target.value)
+                      }
+                      aria-label={`${index + 1}열 제목`}
+                    />
+                  )}
+                </th>
+              ))}
+            </tr>
           </thead>
           <tbody>
             {block.rows.map((row, rowIndex) => (
-              <tr key={rowIndex}>{block.columns.map((_, columnIndex) => <td key={columnIndex}>{preview ? row[columnIndex] : <input value={row[columnIndex] ?? ""} onChange={(event) => updateCell(rowIndex, columnIndex, event.target.value)} aria-label={`${rowIndex + 1}행 ${columnIndex + 1}열`} />}</td>)}</tr>
+              <tr key={rowIndex}>
+                {block.columns.map((_, columnIndex) => (
+                  <td key={columnIndex}>
+                    {preview ? (
+                      row[columnIndex]
+                    ) : (
+                      <input
+                        value={row[columnIndex] ?? ""}
+                        onChange={(event) =>
+                          updateCell(rowIndex, columnIndex, event.target.value)
+                        }
+                        aria-label={`${rowIndex + 1}행 ${columnIndex + 1}열`}
+                      />
+                    )}
+                  </td>
+                ))}
+              </tr>
             ))}
           </tbody>
         </table>
       </div>
       {!preview ? (
         <div className="report-authoring-table-actions" data-report-control>
-          <button type="button" onClick={addRow}>행 추가</button>
-          <button type="button" onClick={removeRow} disabled={block.rows.length <= 1}>마지막 행 삭제</button>
-          <button type="button" onClick={addColumn}>열 추가</button>
-          <button type="button" onClick={removeColumn} disabled={block.columns.length <= 1}>마지막 열 삭제</button>
-          <button type="button" onClick={pasteTable}>CSV·표 붙여넣기</button>
+          <button type="button" onClick={addRow}>
+            행 추가
+          </button>
+          <button
+            type="button"
+            onClick={removeRow}
+            disabled={block.rows.length <= 1}
+          >
+            마지막 행 삭제
+          </button>
+          <button type="button" onClick={addColumn}>
+            열 추가
+          </button>
+          <button
+            type="button"
+            onClick={removeColumn}
+            disabled={block.columns.length <= 1}
+          >
+            마지막 열 삭제
+          </button>
+          <button type="button" onClick={pasteTable}>
+            CSV·표 붙여넣기
+          </button>
         </div>
       ) : null}
       <InsightEditor insight={block} preview={preview} onChange={onChange} />
@@ -710,10 +1757,17 @@ function TableBlockEditor({ block, preview, onChange, onStatus }: {
   );
 }
 
-function ChartBlockEditor({ block, preview, onChange, onStatus }: {
+function ChartBlockEditor({
+  block,
+  preview,
+  onChange,
+  onStatus,
+}: {
   block: ChartBlock;
   preview: boolean;
-  onChange: (patch: Partial<ChartBlock>) => void;
+  onChange: (
+    patch: Partial<ChartBlock> | ((current: ChartBlock) => Partial<ChartBlock>),
+  ) => void;
   onStatus: (message: string) => void;
 }) {
   function setColumns(columns: 1 | 2 | 3) {
@@ -723,10 +1777,21 @@ function ChartBlockEditor({ block, preview, onChange, onStatus }: {
   }
 
   function updateChart(index: number, patch: Partial<ChartItem>) {
-    onChange({ charts: block.charts.map((chart, itemIndex) => itemIndex === index ? { ...chart, ...patch } : chart) });
+    const chartId = block.charts[index]?.id;
+    onChange((current) => ({
+      charts: current.charts.map((chart) =>
+        chart.id === chartId ? { ...chart, ...patch } : chart,
+      ),
+    }));
   }
 
+  const chartFileInputs = useRef<Record<string, HTMLInputElement | null>>({});
+  const chartLoadVersions = useRef<Record<string, number>>({});
+  useEffect(() => { const versions = chartLoadVersions.current; return () => { for (const id of Object.keys(versions)) versions[id] += 1; }; }, []);
   function loadFile(index: number, file: File | undefined) {
+    const id = block.charts[index].id;
+    const version = (chartLoadVersions.current[id] ?? 0) + 1;
+    chartLoadVersions.current[id] = version;
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       onStatus("이미지 파일만 차트로 추가할 수 있습니다.");
@@ -734,7 +1799,11 @@ function ChartBlockEditor({ block, preview, onChange, onStatus }: {
     }
     const reader = new FileReader();
     reader.onload = () => {
-      updateChart(index, { src: String(reader.result), source: file.name });
+      if (chartLoadVersions.current[id] !== version) return;
+      updateChart(index, {
+        src: String(reader.result),
+        annotations: [],
+      });
       onStatus(`차트 ${index + 1} 이미지를 넣었습니다.`);
     };
     reader.readAsDataURL(file);
@@ -742,36 +1811,111 @@ function ChartBlockEditor({ block, preview, onChange, onStatus }: {
 
   return (
     <div className="report-authoring-block-body">
-      {preview ? <h2>{block.title}</h2> : (
+      {preview ? (
+        <h2>{block.title}</h2>
+      ) : (
         <>
-          <input className="report-authoring-title-input" value={block.title} onChange={(event) => onChange({ title: event.target.value })} aria-label="차트 묶음 제목" />
+          <input
+            className="report-authoring-title-input"
+            value={block.title}
+            onChange={(event) => onChange({ title: event.target.value })}
+            aria-label="차트 묶음 제목"
+          />
           <div className="report-authoring-chart-layout" data-report-control>
             <span>한 줄 차트 수</span>
-            {([1, 2, 3] as const).map((columns) => <button type="button" key={columns} aria-pressed={block.columns === columns} onClick={() => setColumns(columns)}>{columns}개</button>)}
+            {([1, 2, 3] as const).map((columns) => (
+              <button
+                type="button"
+                key={columns}
+                aria-pressed={block.columns === columns}
+                onClick={() => setColumns(columns)}
+              >
+                {columns}개
+              </button>
+            ))}
           </div>
         </>
       )}
       <div className={`report-authoring-chart-grid columns-${block.columns}`}>
         {block.charts.map((chart, index) => (
           <figure className="report-authoring-chart-card" key={chart.id}>
-            {preview ? <h3>{chart.title}</h3> : <input className="report-authoring-chart-title" value={chart.title} onChange={(event) => updateChart(index, { title: event.target.value })} aria-label={`${index + 1}번 차트 제목`} />}
+            {preview ? (
+              <h3>{chart.title}</h3>
+            ) : (
+              <input
+                className="report-authoring-chart-title"
+                value={chart.title}
+                onChange={(event) =>
+                  updateChart(index, { title: event.target.value })
+                }
+                aria-label={`${index + 1}번 차트 제목`}
+              />
+            )}
             {chart.src ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={chart.src} alt={chart.caption || chart.title} />
-            ) : <div className="report-authoring-chart-empty">차트 {index + 1} 이미지 선택</div>}
+              <AnnotatedImage
+                src={chart.src}
+                alt={chart.caption || chart.title}
+                annotations={chart.annotations}
+                imageFit={chart.imageFit}
+                preview={preview}
+                onChange={(patch) => updateChart(index, patch)}
+              />
+            ) : (
+              preview ? <div className="report-authoring-chart-empty" /> : <button type="button" className="report-authoring-chart-empty report-authoring-upload-placeholder" onClick={() => chartFileInputs.current[chart.id]?.click()} aria-label={`${index + 1}번 차트 이미지 선택`}>차트 {index + 1} 이미지 선택</button>
+            )}
             {!preview ? (
               <>
-                <div className="report-authoring-chart-inputs" data-report-control>
-                  <label><span>로컬 차트</span><input type="file" accept="image/*" onChange={(event) => loadFile(index, event.target.files?.[0])} /></label>
-                  <label><span>외부 URL</span><input type="url" value={chart.src.startsWith("data:") ? "" : chart.src} placeholder="https://…" onChange={(event) => updateChart(index, { src: event.target.value })} /></label>
+                <div
+                  className="report-authoring-chart-inputs"
+                  data-report-control
+                >
+                  <label>
+                    <span>로컬 차트</span>
+                    <input
+                      ref={(node) => { chartFileInputs.current[chart.id] = node; }}
+                      type="file"
+                      accept="image/*"
+                      onChange={(event) => { loadFile(index, event.target.files?.[0]); event.target.value = ""; }}
+                    />
+                  </label>
+                  <label>
+                    <span>외부 URL</span>
+                    <input
+                      type="url"
+                      value={chart.src.startsWith("data:") ? "" : chart.src}
+                      placeholder="https://…"
+                      onChange={(event) =>
+                        updateChart(index, {
+                          src: event.target.value,
+                          annotations: [],
+                        })
+                      }
+                    />
+                  </label>
                 </div>
                 <div className="report-authoring-chart-meta">
-                  <input className="report-authoring-chart-meta-value" value={chart.caption} onChange={(event) => updateChart(index, { caption: event.target.value })} aria-label={`${index + 1}번 차트 설명`} />
-                  <input className="report-authoring-chart-meta-value" value={chart.source} onChange={(event) => updateChart(index, { source: event.target.value })} aria-label={`${index + 1}번 차트 출처`} />
+                  <input
+                    className="report-authoring-chart-meta-value"
+                    value={chart.caption}
+                    onChange={(event) =>
+                      updateChart(index, { caption: event.target.value })
+                    }
+                    aria-label={`${index + 1}번 차트 설명`}
+                  />
+                  <label className="report-authoring-source-input"><span>{/^\s*출처\s*[:：]/.test(chart.source) ? "" : "출처 :"}</span><input className="report-authoring-chart-meta-value" value={chart.source} onChange={(event) => updateChart(index, { source: event.target.value })} aria-label={`${index + 1}번 차트 출처`} /></label>
                 </div>
               </>
-            ) : <figcaption><span>{chart.caption}</span><small>{chart.source}</small></figcaption>}
-            <InsightEditor insight={chart} preview={preview} onChange={(patch) => updateChart(index, patch)} />
+            ) : (
+              <figcaption>
+                <span>{chart.caption}</span>
+                <SourceText source={chart.source} />
+              </figcaption>
+            )}
+            <InsightEditor
+              insight={chart}
+              preview={preview}
+              onChange={(patch) => updateChart(index, patch)}
+            />
           </figure>
         ))}
       </div>
@@ -796,14 +1940,22 @@ export default function ReportAuthoringWorkspace({
   const [status, setStatus] = useState("");
   const [deleted, setDeleted] = useState<DeletedBlock | null>(null);
   const reportRef = useRef<HTMLElement>(null);
+  const editRevision = useRef(0);
+  const [documentEpoch, setDocumentEpoch] = useState(0);
   const draft = drafts[reportKind];
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
-      const saved = window.localStorage.getItem(storageKey) ?? (legacyStorageKey ? window.localStorage.getItem(legacyStorageKey) : null);
+      const saved =
+        window.localStorage.getItem(storageKey) ??
+        (legacyStorageKey
+          ? window.localStorage.getItem(legacyStorageKey)
+          : null);
       if (saved) {
         try {
-          setDrafts(normalizeDrafts(JSON.parse(saved) as Partial<DraftMap>, templates));
+          setDrafts(
+            normalizeDrafts(JSON.parse(saved) as Partial<DraftMap>, templates),
+          );
         } catch {
           setStatus("저장본을 읽지 못해 기본 양식을 적용했습니다.");
         }
@@ -822,7 +1974,13 @@ export default function ReportAuthoringWorkspace({
     try {
       window.localStorage.setItem(storageKey, JSON.stringify(drafts));
     } catch {
-      window.setTimeout(() => setStatus("이미지 용량이 커 자동저장 한도를 넘었습니다. HTML 또는 Word로 먼저 저장하세요."), 0);
+      window.setTimeout(
+        () =>
+          setStatus(
+            "이미지 용량이 커 자동저장 한도를 넘었습니다. HTML 또는 Word로 먼저 저장하세요.",
+          ),
+        0,
+      );
     }
   }, [drafts, hydrated, storageKey]);
 
@@ -832,23 +1990,46 @@ export default function ReportAuthoringWorkspace({
   }, [hydrated, reportKind, reportKindStorageKey]);
 
   function updateDraft(patch: Partial<ReportDraft>) {
-    setDrafts((current) => ({ ...current, [reportKind]: { ...current[reportKind], ...patch } }));
+    editRevision.current += 1;
+    setDrafts((current) => ({
+      ...current,
+      [reportKind]: { ...current[reportKind], ...patch },
+    }));
   }
 
-  function updateBlock(id: string, patch: Partial<ReportBlock>) {
-    updateDraft({ blocks: draft.blocks.map((block) => block.id === id ? { ...block, ...patch } as ReportBlock : block) });
+  function updateBlock(
+    id: string,
+    patch: Partial<ReportBlock> | ((current: ReportBlock) => ReportBlock),
+  ) {
+    editRevision.current += 1;
+    setDrafts((current) => ({
+      ...current,
+      [reportKind]: {
+        ...current[reportKind],
+        blocks: current[reportKind].blocks.map((block) =>
+          block.id === id
+            ? typeof patch === "function"
+              ? patch(block)
+              : ({ ...block, ...patch } as ReportBlock)
+            : block,
+        ),
+      },
+    }));
   }
 
   function addBlock(type: ReportBlock["type"]) {
-    const block = type === "text"
-      ? textBlock("새 분석 제목", "분석 내용 입력")
-      : type === "image"
-        ? imageBlock()
-        : type === "table"
-          ? tableBlock("새 표", ["구분", "값", "판단"], [["", "", ""]])
-          : chartBlock(2);
+    const block =
+      type === "text"
+        ? textBlock("새 분석 제목", "분석 내용 입력")
+        : type === "image"
+          ? imageBlock()
+          : type === "table"
+            ? tableBlock("새 표", ["구분", "값", "판단"], [["", "", ""]])
+            : chartBlock(2);
     updateDraft({ blocks: [...draft.blocks, block] });
-    setStatus(`${type === "text" ? "텍스트" : type === "image" ? "이미지" : type === "table" ? "표" : "차트 묶음"} 박스를 추가했습니다.`);
+    setStatus(
+      `${type === "text" ? "텍스트" : type === "image" ? "이미지" : type === "table" ? "표" : "차트 묶음"} 박스를 추가했습니다.`,
+    );
   }
 
   function moveBlock(index: number, direction: -1 | 1) {
@@ -861,12 +2042,15 @@ export default function ReportAuthoringWorkspace({
 
   function removeBlock(index: number) {
     const block = draft.blocks[index];
-    updateDraft({ blocks: draft.blocks.filter((_, itemIndex) => itemIndex !== index) });
+    updateDraft({
+      blocks: draft.blocks.filter((_, itemIndex) => itemIndex !== index),
+    });
     setDeleted({ report: reportKind, block, index });
     setStatus("박스를 보고서에서 삭제했습니다.");
   }
 
   function undoDelete() {
+    editRevision.current += 1;
     if (!deleted) return;
     setDrafts((current) => {
       const report = current[deleted.report];
@@ -879,33 +2063,59 @@ export default function ReportAuthoringWorkspace({
   }
 
   function resetTemplate() {
-    if (!window.confirm("현재 작업본을 지우고 기본 보고서 양식을 다시 적용할까요?")) return;
-    setDrafts((current) => ({ ...current, [reportKind]: structuredClone(templates[reportKind]) }));
+    if (
+      !window.confirm(
+        "현재 작업본을 지우고 기본 보고서 양식을 다시 적용할까요?",
+      )
+    )
+      return;
+    setDrafts((current) => ({
+      ...current,
+      [reportKind]: structuredClone(templates[reportKind]),
+    }));
     setDeleted(null);
+    editRevision.current += 1;
+    setDocumentEpoch((value) => value + 1);
     setStatus("기본 보고서 양식을 다시 적용했습니다.");
   }
 
-  async function ensurePreviewRendered() {
-    if (!preview) setPreview(true);
-    await new Promise<void>((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve())));
+  function ensurePreviewRendered() {
+    // Export is one synchronous transaction: no render captured before an await.
+    flushSync(() => setPreview(true));
   }
 
   async function saveHtml() {
-    await ensurePreviewRendered();
+    ensurePreviewRendered();
     if (!reportRef.current) return;
-    downloadBlob(standaloneDocument(reportRef.current, draft.title, drafts, reportKind), "text/html;charset=utf-8", `report-${localDateStamp()}.html`);
+    downloadBlob(
+      standaloneDocument(reportRef.current, draft.title, drafts, reportKind),
+      "text/html;charset=utf-8",
+      `report-${localDateStamp()}.html`,
+    );
     setStatus("편집 데이터가 포함된 HTML 작업본을 저장했습니다.");
   }
 
   async function saveWord() {
-    await ensurePreviewRendered();
+    ensurePreviewRendered();
     if (!reportRef.current) return;
-    const html = standaloneDocument(reportRef.current, draft.title, drafts, reportKind);
-    downloadBlob(html, "application/msword;charset=utf-8", `report-${localDateStamp()}.doc`);
+    const html = standaloneDocument(
+      reportRef.current,
+      draft.title,
+      drafts,
+      reportKind,
+    );
+    downloadBlob(
+      html,
+      "application/msword;charset=utf-8",
+      `report-${localDateStamp()}.doc`,
+    );
     setStatus("현재 작업본을 Word 호환 문서로 저장했습니다.");
   }
 
+  const importVersion = useRef(0);
   async function importHtml(event: ChangeEvent<HTMLInputElement>) {
+    const version = ++importVersion.current;
+    const revision = editRevision.current;
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
@@ -914,25 +2124,67 @@ export default function ReportAuthoringWorkspace({
       return;
     }
     try {
-      const documentNode = new DOMParser().parseFromString(await file.text(), "text/html");
+      const contents = await file.text();
+      if (version !== importVersion.current) return;
+      if (revision !== editRevision.current) { setStatus("가져오는 동안 새 편집이 있어 불러오기를 취소했습니다. 현재 편집을 저장한 뒤 다시 가져오세요."); return; }
+      const documentNode = new DOMParser().parseFromString(
+        contents,
+        "text/html",
+      );
       const payloadNode = documentNode.getElementById(IMPORT_SCRIPT_ID);
       if (payloadNode?.textContent) {
-        const payload = JSON.parse(payloadNode.textContent) as { version?: number; reportKind?: ReportKind; drafts?: Partial<DraftMap> };
-        if (payload.version !== 1 || !payload.drafts) throw new Error("unsupported draft");
-        setDrafts(normalizeDrafts(payload.drafts, templates));
-        const renderedTitle = nodeText(documentNode, ".report-authoring-cover-title, .report-authoring-cover h1") || documentNode.title.trim();
-        const titleMatchedKind = (Object.keys(REPORT_LABELS) as ReportKind[]).find((kind) => payload.drafts?.[kind]?.title?.trim() === renderedTitle);
+        const payload = JSON.parse(payloadNode.textContent) as {
+          version?: number;
+          reportKind?: ReportKind;
+          drafts?: Partial<DraftMap>;
+        };
+        if (payload.version !== 1 || !payload.drafts)
+          throw new Error("unsupported draft");
+        const normalized = normalizeDrafts(payload.drafts, templates);
+        const renderedTitle =
+          nodeText(
+            documentNode,
+            ".report-authoring-cover-title, .report-authoring-cover h1",
+          ) || documentNode.title.trim();
+        const titleMatchedKind = (
+          Object.keys(REPORT_LABELS) as ReportKind[]
+        ).find(
+          (kind) => payload.drafts?.[kind]?.title?.trim() === renderedTitle,
+        );
         const inferredKind = parseLegacyExport(documentNode, templates)?.kind;
-        const importedKind = payload.reportKind && payload.reportKind in REPORT_LABELS ? payload.reportKind : titleMatchedKind ?? inferredKind;
-        if (importedKind) setReportKind(importedKind);
+        const importedKind =
+          payload.reportKind && payload.reportKind in REPORT_LABELS
+            ? payload.reportKind
+            : (titleMatchedKind ?? inferredKind);
+        if (importedKind) {
+          normalized[importedKind] = reconcileRenderedDraft(
+            documentNode,
+            normalized[importedKind],
+          );
+          setReportKind(importedKind);
+        }
+        setDrafts(normalized);
+        setDocumentEpoch((value) => value + 1);
       } else {
-        const imported = parseLegacyExport(documentNode, templates) ?? parseHouseStyleReport(documentNode, templates);
+        const imported =
+          parseLegacyExport(documentNode, templates) ??
+          parseHouseStyleReport(documentNode, templates);
         if (!imported) throw new Error("editable draft not found");
-        setDrafts((current) => ({ ...current, [imported.kind]: imported.draft }));
+        setDrafts((current) => ({
+          ...current,
+          [imported.kind]: imported.draft,
+        }));
         setReportKind(imported.kind);
-        const missingCharts = "missingCharts" in imported && typeof imported.missingCharts === "number" ? imported.missingCharts : 0;
+        setDocumentEpoch((value) => value + 1);
+        const missingCharts =
+          "missingCharts" in imported &&
+          typeof imported.missingCharts === "number"
+            ? imported.missingCharts
+            : 0;
         if (missingCharts > 0) {
-          setStatus(`${file.name}을 ${REPORT_LABELS[imported.kind]} 양식으로 변환했습니다. 원본에서 자바스크립트로 그린 차트 ${missingCharts}개는 이미지가 없어 빈 차트 박스로 가져왔습니다.`);
+          setStatus(
+            `${file.name}을 ${REPORT_LABELS[imported.kind]} 양식으로 변환했습니다. 원본에서 자바스크립트로 그린 차트 ${missingCharts}개는 이미지가 없어 빈 차트 박스로 가져왔습니다.`,
+          );
           setPreview(false);
           setDeleted(null);
           return;
@@ -940,16 +2192,22 @@ export default function ReportAuthoringWorkspace({
       }
       setPreview(false);
       setDeleted(null);
-      setStatus(`${file.name} 작업본을 불러왔습니다. 바로 이어서 편집할 수 있습니다.`);
+      setStatus(
+        `${file.name} 작업본을 불러왔습니다. 바로 이어서 편집할 수 있습니다.`,
+      );
     } catch {
-      setStatus("지원하는 보고서 HTML 작업본이 아니거나 파일이 손상되었습니다.");
+      setStatus(
+        "지원하지 않는 HTML이거나 본문 구조와 편집 데이터가 다릅니다. 기존 작업은 유지했습니다.",
+      );
     }
   }
 
   async function printPdf() {
-    await ensurePreviewRendered();
+    ensurePreviewRendered();
     if (!reportRef.current) return;
-    setStatus("인쇄 창에서 대상을 ‘PDF로 저장’으로 선택하세요. 브라우저 제목·주소는 제외되고 회사 로고만 표시됩니다.");
+    setStatus(
+      "인쇄 창에서 대상을 ‘PDF로 저장’으로 선택하세요. 브라우저 제목·주소는 제외되고 회사 로고만 표시됩니다.",
+    );
     const printDocument = document.createElement("div");
     printDocument.className = `report-authoring-print-document report-authoring-print-${reportKind}`;
     printDocument.append(reportRef.current.cloneNode(true));
@@ -962,7 +2220,11 @@ export default function ReportAuthoringWorkspace({
     document.body.classList.add("report-authoring-printing");
     window.print();
     window.setTimeout(() => {
-      if (document.body.contains(printDocument) && !window.matchMedia("print").matches) cleanup();
+      if (
+        document.body.contains(printDocument) &&
+        !window.matchMedia("print").matches
+      )
+        cleanup();
     }, 1_000);
   }
 
@@ -971,77 +2233,309 @@ export default function ReportAuthoringWorkspace({
       <div className="report-authoring-toolbar" data-report-control>
         <div className="report-authoring-usage-guide">
           <strong>사용 방법</strong>
-          <span>① 내용을 직접 편집하고 필요한 텍스트·이미지·표·차트 박스를 추가합니다.</span>
-          <span>② 작업을 넘길 때는 HTML 저장, 이어받을 때는 HTML 가져오기를 사용합니다.</span>
-          <span>③ 미리보기로 확인한 뒤 PDF 저장을 누르면 페이지별 로고가 포함됩니다.</span>
+          <span>
+            ① 내용을 직접 편집하고 필요한 텍스트·이미지·표·차트 박스를
+            추가합니다.
+          </span>
+          <span>
+            ② 작업을 넘길 때는 HTML 저장, 이어받을 때는 HTML 가져오기를
+            사용합니다.
+          </span>
+          <span>
+            ③ 미리보기로 확인한 뒤 PDF 저장을 누르면 페이지별 로고가 포함됩니다.
+          </span>
           {status ? <p aria-live="polite">{status}</p> : null}
         </div>
         <div className="report-authoring-toolbar-actions">
-          <button type="button" onClick={() => setPreview((value) => !value)}>{preview ? "편집으로" : "미리보기"}</button>
+          <button type="button" onClick={() => setPreview((value) => !value)}>
+            {preview ? "편집으로" : "미리보기"}
+          </button>
           <button
             type="button"
             aria-pressed={compactPrint}
             onClick={() => {
               setCompactPrint((value) => !value);
-              setStatus(compactPrint ? "PDF 균형 여백을 적용했습니다." : "PDF 압축 인쇄를 적용했습니다.");
+              setStatus(
+                compactPrint
+                  ? "PDF 균형 여백을 적용했습니다."
+                  : "PDF 압축 인쇄를 적용했습니다.",
+              );
             }}
           >
             압축 인쇄 {compactPrint ? "ON" : "OFF"}
           </button>
-          <button type="button" onClick={resetTemplate}>양식 초기화</button>
+          <button type="button" onClick={resetTemplate}>
+            양식 초기화
+          </button>
           <label className="report-authoring-import-label">
             <span>HTML 가져오기</span>
-            <input type="file" accept=".html,.htm,text/html" onChange={importHtml} aria-label="HTML 가져오기" />
+            <input
+              type="file"
+              accept=".html,.htm,text/html"
+              onChange={importHtml}
+              aria-label="HTML 가져오기"
+            />
           </label>
-          <button type="button" onClick={saveHtml}>HTML 저장</button>
-          <button type="button" onClick={saveWord}>Word 저장</button>
-          <button type="button" className="report-authoring-primary" onClick={printPdf}>PDF 저장</button>
+          <button type="button" onClick={saveHtml}>
+            HTML 저장
+          </button>
+          <button type="button" onClick={saveWord}>
+            Word 저장
+          </button>
+          <button
+            type="button"
+            className="report-authoring-primary"
+            onClick={printPdf}
+          >
+            PDF 저장
+          </button>
         </div>
       </div>
 
-      <div className={`report-authoring-workspace${preview ? " is-preview" : ""}`}>
+      <div
+        className={`report-authoring-workspace${preview ? " is-preview" : ""}`}
+      >
         {!preview ? (
           <aside className="report-authoring-palette" data-report-control>
             <p>CONTENT BOX</p>
             <h2>박스 추가</h2>
-            <button type="button" aria-pressed={Boolean(draft.showRanges)} onClick={() => { updateDraft({ showRanges: !draft.showRanges }); setStatus(draft.showRanges ? "주간채권전략 금리 박스를 삭제했습니다." : "제목과 발행일 아래에 주간채권전략 금리 박스를 추가했습니다."); }}><strong>주간채권전략 금리 박스</strong><span>{draft.showRanges ? "현재 표시 중 · 누르면 삭제" : "국고 3년·10년·커브"}</span></button>
-            <button type="button" onClick={() => addBlock("text")}><strong>텍스트</strong><span>제목·본문·전망 메모</span></button>
-            <button type="button" onClick={() => addBlock("image")}><strong>이미지</strong><span>로컬 파일·외부 URL</span></button>
-            <button type="button" onClick={() => addBlock("table")}><strong>표</strong><span>직접 편집·CSV 붙여넣기</span></button>
-            <button type="button" onClick={() => addBlock("chart")}><strong>차트 묶음</strong><span>한 줄에 1·2·3개 배치</span></button>
+            <button
+              type="button"
+              aria-pressed={Boolean(draft.showRanges)}
+              onClick={() => {
+                updateDraft({ showRanges: !draft.showRanges });
+                setStatus(
+                  draft.showRanges
+                    ? "주간채권전략 금리 박스를 삭제했습니다."
+                    : "제목과 발행일 아래에 주간채권전략 금리 박스를 추가했습니다.",
+                );
+              }}
+            >
+              <strong>주간채권전략 금리 박스</strong>
+              <span>
+                {draft.showRanges
+                  ? "현재 표시 중 · 누르면 삭제"
+                  : "국고 3년·10년·커브"}
+              </span>
+            </button>
+            <button type="button" onClick={() => addBlock("text")}>
+              <strong>텍스트</strong>
+              <span>제목·본문·전망 메모</span>
+            </button>
+            <button type="button" onClick={() => addBlock("image")}>
+              <strong>이미지</strong>
+              <span>로컬 파일·외부 URL</span>
+            </button>
+            <button type="button" onClick={() => addBlock("table")}>
+              <strong>표</strong>
+              <span>직접 편집·CSV 붙여넣기</span>
+            </button>
+            <button type="button" onClick={() => addBlock("chart")}>
+              <strong>차트 묶음</strong>
+              <span>한 줄에 1·2·3개 배치</span>
+            </button>
           </aside>
         ) : null}
 
-        <article ref={reportRef} className={`report-authoring-paper report-authoring-paper-${reportKind}${compactPrint ? " report-authoring-print-compact" : ""}`} aria-label="보고서 편집 문서">
+        <article
+          ref={reportRef}
+          className={`report-authoring-paper report-authoring-paper-${reportKind}${compactPrint ? " report-authoring-print-compact" : ""}`}
+          aria-label="보고서 편집 문서"
+        >
           <header className="report-authoring-cover">
             <div>
-              {preview ? <p className="report-authoring-kicker">{draft.kicker}</p> : <input className="report-authoring-kicker-input" value={draft.kicker} onChange={(event) => updateDraft({ kicker: event.target.value })} aria-label="보고서 영문 머리말" />}
-              {preview ? <h1>{draft.title}</h1> : <input className="report-authoring-cover-title" value={draft.title} onChange={(event) => updateDraft({ title: event.target.value })} aria-label="보고서 제목" />}
-              {preview ? <p className="report-authoring-subtitle">{draft.subtitle}</p> : <textarea className="report-authoring-cover-subtitle" value={draft.subtitle} onChange={(event) => updateDraft({ subtitle: event.target.value })} aria-label="보고서 부제" rows={2} />}
-              {preview ? <p className="report-authoring-cover-meta">{draft.date} · {draft.desk} · {draft.workspaceLabel}</p> : (
+              {preview ? (
+                <p className="report-authoring-kicker">{draft.kicker}</p>
+              ) : (
+                <input
+                  className="report-authoring-kicker-input"
+                  value={draft.kicker}
+                  onChange={(event) =>
+                    updateDraft({ kicker: event.target.value })
+                  }
+                  aria-label="보고서 영문 머리말"
+                />
+              )}
+              {preview ? (
+                <h1>{draft.title}</h1>
+              ) : (
+                <input
+                  className="report-authoring-cover-title"
+                  value={draft.title}
+                  onChange={(event) =>
+                    updateDraft({ title: event.target.value })
+                  }
+                  aria-label="보고서 제목"
+                />
+              )}
+              {preview ? (
+                <p className="report-authoring-subtitle">{draft.subtitle}</p>
+              ) : (
+                <textarea
+                  className="report-authoring-cover-subtitle"
+                  value={draft.subtitle}
+                  onChange={(event) =>
+                    updateDraft({ subtitle: event.target.value })
+                  }
+                  aria-label="보고서 부제"
+                  rows={2}
+                />
+              )}
+              {preview ? (
+                <p className="report-authoring-cover-meta">
+                  {[draft.date, draft.desk, draft.workspaceLabel].filter(Boolean).join(" · ")}
+                </p>
+              ) : (
                 <div className="report-authoring-cover-meta-inputs">
-                  <input value={draft.date} onChange={(event) => updateDraft({ date: event.target.value })} aria-label="보고서 날짜" />
-                  <input value={draft.desk} onChange={(event) => updateDraft({ desk: event.target.value })} aria-label="작성 부서" />
-                  <input value={draft.workspaceLabel} onChange={(event) => updateDraft({ workspaceLabel: event.target.value })} aria-label="작업공간 표기" />
+                  <input
+                    value={draft.date}
+                    onChange={(event) =>
+                      updateDraft({ date: event.target.value })
+                    }
+                    aria-label="보고서 날짜"
+                  />
+                  <input
+                    value={draft.desk}
+                    onChange={(event) =>
+                      updateDraft({ desk: event.target.value })
+                    }
+                    aria-label="작성 부서"
+                  />
+                  <input
+                    value={draft.workspaceLabel}
+                    onChange={(event) =>
+                      updateDraft({ workspaceLabel: event.target.value })
+                    }
+                    aria-label="작업공간 표기"
+                  />
                 </div>
               )}
             </div>
             <aside>
-              {preview ? <span>{draft.templateLabel}</span> : <input value={draft.templateLabel} onChange={(event) => updateDraft({ templateLabel: event.target.value })} aria-label="양식 라벨" />}
-              {preview ? <strong>{draft.reportTypeLabel}</strong> : <input className="report-authoring-template-kind" value={draft.reportTypeLabel} onChange={(event) => updateDraft({ reportTypeLabel: event.target.value })} aria-label="보고서 유형" />}
-              {preview ? <small>{draft.templateName}</small> : <input value={draft.templateName} onChange={(event) => updateDraft({ templateName: event.target.value })} aria-label="양식 출처" />}
+              {preview ? (
+                <span>{draft.templateLabel}</span>
+              ) : (
+                <input
+                  value={draft.templateLabel}
+                  onChange={(event) =>
+                    updateDraft({ templateLabel: event.target.value })
+                  }
+                  aria-label="양식 라벨"
+                />
+              )}
+              {preview ? (
+                <strong>{draft.reportTypeLabel}</strong>
+              ) : (
+                <input
+                  className="report-authoring-template-kind"
+                  value={draft.reportTypeLabel}
+                  onChange={(event) =>
+                    updateDraft({ reportTypeLabel: event.target.value })
+                  }
+                  aria-label="보고서 유형"
+                />
+              )}
+              {preview ? (
+                <small>{draft.templateName}</small>
+              ) : (
+                <input
+                  value={draft.templateName}
+                  onChange={(event) =>
+                    updateDraft({ templateName: event.target.value })
+                  }
+                  aria-label="양식 출처"
+                />
+              )}
             </aside>
           </header>
 
           {draft.showRanges && draft.ranges ? (
             <section className="report-authoring-ranges">
-              {!preview ? <div className="report-authoring-range-tools" data-report-control><span>주간채권전략 금리 박스</span><button type="button" onClick={() => { updateDraft({ showRanges: false }); setStatus("주간채권전략 금리 박스를 삭제했습니다."); }}>삭제</button></div> : null}
-              {preview ? <p>{draft.rangeTitle}</p> : <input className="report-authoring-range-title" value={draft.rangeTitle ?? ""} onChange={(event) => updateDraft({ rangeTitle: event.target.value })} aria-label="범위 제목" />}
+              {!preview ? (
+                <div
+                  className="report-authoring-range-tools"
+                  data-report-control
+                >
+                  <span>주간채권전략 금리 박스</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateDraft({ showRanges: false });
+                      setStatus("주간채권전략 금리 박스를 삭제했습니다.");
+                    }}
+                  >
+                    삭제
+                  </button>
+                </div>
+              ) : null}
+              {preview ? (
+                <p>{draft.rangeTitle}</p>
+              ) : (
+                <input
+                  className="report-authoring-range-title"
+                  value={draft.rangeTitle ?? ""}
+                  onChange={(event) =>
+                    updateDraft({ rangeTitle: event.target.value })
+                  }
+                  aria-label="범위 제목"
+                />
+              )}
               <div>
                 {draft.ranges.map((range, index) => (
                   <label key={index}>
-                    {preview ? <span>{range.label}</span> : <input className="report-authoring-range-label-input" value={range.label} onChange={(event) => updateDraft({ ranges: draft.ranges!.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item) })} aria-label={`${index + 1}번 범위 이름`} />}
-                    {preview ? <strong>{range.value} {range.unit}</strong> : <span className="report-authoring-range-input"><input value={range.value} onChange={(event) => updateDraft({ ranges: draft.ranges!.map((item, itemIndex) => itemIndex === index ? { ...item, value: event.target.value } : item) })} aria-label={`${range.label} 범위`} /><input className="report-authoring-range-unit-input" value={range.unit} onChange={(event) => updateDraft({ ranges: draft.ranges!.map((item, itemIndex) => itemIndex === index ? { ...item, unit: event.target.value } : item) })} aria-label={`${range.label} 단위`} /></span>}
+                    {preview ? (
+                      <span>{range.label}</span>
+                    ) : (
+                      <input
+                        className="report-authoring-range-label-input"
+                        value={range.label}
+                        onChange={(event) =>
+                          updateDraft({
+                            ranges: draft.ranges!.map((item, itemIndex) =>
+                              itemIndex === index
+                                ? { ...item, label: event.target.value }
+                                : item,
+                            ),
+                          })
+                        }
+                        aria-label={`${index + 1}번 범위 이름`}
+                      />
+                    )}
+                    {preview ? (
+                      <strong>
+                        {range.value} {range.unit}
+                      </strong>
+                    ) : (
+                      <span className="report-authoring-range-input">
+                        <input
+                          value={range.value}
+                          onChange={(event) =>
+                            updateDraft({
+                              ranges: draft.ranges!.map((item, itemIndex) =>
+                                itemIndex === index
+                                  ? { ...item, value: event.target.value }
+                                  : item,
+                              ),
+                            })
+                          }
+                          aria-label={`${range.label} 범위`}
+                        />
+                        <input
+                          className="report-authoring-range-unit-input"
+                          value={range.unit}
+                          onChange={(event) =>
+                            updateDraft({
+                              ranges: draft.ranges!.map((item, itemIndex) =>
+                                itemIndex === index
+                                  ? { ...item, unit: event.target.value }
+                                  : item,
+                              ),
+                            })
+                          }
+                          aria-label={`${range.label} 단위`}
+                        />
+                      </span>
+                    )}
                   </label>
                 ))}
               </div>
@@ -1050,31 +2544,106 @@ export default function ReportAuthoringWorkspace({
 
           <div className="report-authoring-blocks">
             {draft.blocks.map((block, index) => (
-              <section className={`report-authoring-block report-authoring-block-${block.type}`} key={block.id}>
+              <section
+                className={`report-authoring-block report-authoring-block-${block.type}`}
+                key={`${documentEpoch}:${block.id}`}
+              >
                 {!preview ? (
-                  <div className="report-authoring-block-tools" data-report-control>
-                    <span>{block.type === "text" ? "텍스트" : block.type === "image" ? "이미지" : block.type === "table" ? "표" : "차트"}</span>
-                    <button type="button" onClick={() => moveBlock(index, -1)} aria-label="위로 이동">↑</button>
-                    <button type="button" onClick={() => moveBlock(index, 1)} aria-label="아래로 이동">↓</button>
-                    <button type="button" onClick={() => removeBlock(index)}>삭제</button>
+                  <div
+                    className="report-authoring-block-tools"
+                    data-report-control
+                  >
+                    <span>
+                      {block.type === "text"
+                        ? "텍스트"
+                        : block.type === "image"
+                          ? "이미지"
+                          : block.type === "table"
+                            ? "표"
+                            : "차트"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => moveBlock(index, -1)}
+                      aria-label="위로 이동"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveBlock(index, 1)}
+                      aria-label="아래로 이동"
+                    >
+                      ↓
+                    </button>
+                    <button type="button" onClick={() => removeBlock(index)}>
+                      삭제
+                    </button>
                   </div>
                 ) : null}
-                {block.type === "text" ? <TextBlockEditor block={block} preview={preview} onChange={(patch) => updateBlock(block.id, patch)} /> : null}
-                {block.type === "image" ? <ImageBlockEditor block={block} preview={preview} onChange={(patch) => updateBlock(block.id, patch)} onStatus={setStatus} /> : null}
-                {block.type === "table" ? <TableBlockEditor block={block} preview={preview} onChange={(patch) => updateBlock(block.id, patch)} onStatus={setStatus} /> : null}
-                {block.type === "chart" ? <ChartBlockEditor block={block} preview={preview} onChange={(patch) => updateBlock(block.id, patch)} onStatus={setStatus} /> : null}
+                {block.type === "text" ? (
+                  <TextBlockEditor
+                    block={block}
+                    preview={preview}
+                    onChange={(patch) => updateBlock(block.id, patch)}
+                  />
+                ) : null}
+                {block.type === "image" ? (
+                  <ImageBlockEditor
+                    block={block}
+                    preview={preview}
+                    onChange={(patch) => updateBlock(block.id, patch)}
+                    onStatus={setStatus}
+                  />
+                ) : null}
+                {block.type === "table" ? (
+                  <TableBlockEditor
+                    block={block}
+                    preview={preview}
+                    onChange={(patch) => updateBlock(block.id, patch)}
+                    onStatus={setStatus}
+                  />
+                ) : null}
+                {block.type === "chart" ? (
+                  <ChartBlockEditor
+                    block={block}
+                    preview={preview}
+                    onChange={(patch) =>
+                      updateBlock(
+                        block.id,
+                        typeof patch === "function"
+                          ? (current) =>
+                              current.type === "chart"
+                                ? { ...current, ...patch(current) }
+                                : current
+                          : patch,
+                      )
+                    }
+                    onStatus={setStatus}
+                  />
+                ) : null}
               </section>
             ))}
           </div>
           <footer className="report-authoring-footer-logo report-authoring-footer-logo-screen">
             {/* 로고 원본 비율을 유지하기 위해 next/image 최적화 대신 정적 이미지를 그대로 사용한다. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/daishin-asset-management.png" alt="Daishin Asset Management" />
+            <img
+              src="/daishin-asset-management.png"
+              alt="Daishin Asset Management"
+            />
           </footer>
         </article>
       </div>
 
-      {deleted ? <div className="report-authoring-undo" data-report-control><span>박스 삭제됨</span><button type="button" onClick={undoDelete}>되돌리기</button></div> : null}
+      {deleted ? (
+        <div className="report-authoring-undo" data-report-control>
+          <span>박스 삭제됨</span>
+          <button type="button" onClick={undoDelete}>
+            되돌리기
+          </button>
+        </div>
+      ) : null}
     </>
   );
 }

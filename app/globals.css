@@ -1592,3 +1592,32 @@ body.report-authoring-printing { display: block !important; background: #fff !im
   .report-authoring-print-compact .report-authoring-block-body > h2,
   .report-authoring-print-compact .report-authoring-chart-card h3 { break-after: avoid; page-break-after: avoid; }
 }
+
+/* Continuous report rhythm: section titles replace horizontal dividers. */
+.report-authoring-block { border-top: 0; }
+.report-authoring-block-body > h2, .report-authoring-title-input { color: var(--author-blue); font-weight: 700; }
+.report-authoring-image-stage { position: relative; width: 100%; background: white; }
+.report-authoring-image-stage.fit-uniform { aspect-ratio: 62 / 43; }
+.report-authoring-annotation-layer { position: absolute; inset: 0; width: 100%; height: 100%; }
+.report-authoring-annotation-tools { display: flex; flex-wrap: wrap; align-items:center; gap: 6px; padding: 8px 0; font-size: 11px; }
+.report-authoring-annotation-tools button, .report-authoring-annotation-tools select { border:1px solid #cbd5e1; border-radius:4px; padding:4px 7px; background:white; color:#174c80; }
+.report-authoring-annotation-tools button[aria-pressed="true"] { background:#174c80; color:white; }
+.report-authoring-annotation-tools input[type=color] { width:28px; height:25px; vertical-align:middle; }
+.report-authoring-annotation-tools small { flex-basis:100%; color:#64748b; }
+@media print { .report-authoring-annotation-tools { display:none!important; } .report-authoring-image-stage { break-inside:avoid; } }
+
+/* Intentional stretch: the image and SVG share the same box coordinates.
+   Natural aspect ratio remains an explicit opt-in, never the default. */
+.report-authoring-image-canvas { position: relative; width: 100%; }
+.report-authoring-image-canvas > img { display: block; width: 100%; height: auto; max-height: none; }
+.report-authoring-image-stage.fit-uniform > .report-authoring-image-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.report-authoring-image-stage.fit-uniform > .report-authoring-image-canvas > img { width: 100%; height: 100%; object-fit: fill; }
+
+.report-authoring-upload-placeholder { width:100%; cursor:pointer; font:inherit; text-align:center; }
+.report-authoring-upload-placeholder:hover { background:#e8eef7; }
+.report-authoring-upload-placeholder:focus-visible { outline:3px solid var(--author-blue); outline-offset:3px; }
+.report-authoring-source-input { display:flex; align-items:center; gap:5px; min-width:0; font-size:11px; color:var(--author-muted); }
+.report-authoring-source-input > span { white-space:nowrap; }
+.report-authoring-source-input > input { flex:1; min-width:0; }
+.report-authoring-source { display:flex; gap:4px; justify-content:flex-end; }
+.report-authoring-cover aside > span:empty, .report-authoring-cover aside > strong:empty, .report-authoring-cover aside > small:empty { display:none; }

@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:report-editor": "node tests/report-editor-regression.cjs",
+    "test:report-harness": "node tests/build-report-harness.cjs"
   },
   "dependencies": {
     "next": "16.2.11",
@@ -20,8 +22,10 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "esbuild-wasm": "^0.28.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.11",
+    "jsdom": "^30.1.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

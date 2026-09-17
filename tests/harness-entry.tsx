@@ -1,0 +1,1 @@
+import React from "react"; import {createRoot} from "react-dom/client"; import Workspace from "../app/reports/report-authoring-workspace"; createRoot(document.getElementById("root")!).render(<main className="report-authoring-shell"><Workspace storageKey="studio-regression-test" legacyStorageKey={null}/></main>);
