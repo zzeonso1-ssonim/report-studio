@@ -46,4 +46,7 @@ const svg=(slot)=>'data:image/svg+xml;base64,'+Buffer.from('<svg viewBox="0 0 62
 assert.equal(svgDesignedSlot(svg(293)),293);assert.equal(svgDesignedSlot('data:image/png;base64,QQ=='),undefined);
 const fitted=chartReadability(620,293,svgDesignedSlot(svg(293)));assert.equal(fitted.ok,true);assert.ok(Math.abs(fitted.pt-9)<0.01);
 const misplaced=chartReadability(760,293,svgDesignedSlot(svg(620)));assert.equal(misplaced.ok,false);assert.match(chartReadabilityMessage(misplaced,2),/slot:'half'/);
-console.log('PASS 11 chart readability assertions: capture shrink, max capture width, generated slot match/mismatch');}
+const big=chartReadability(620,620,svgDesignedSlot(svg(293)));assert.equal(big.ok,true);assert.equal(big.oversized,true);assert.match(chartReadabilityMessage(big,1),/글씨가 커요.*slot:'full'/);
+const three=chartReadability(620,190,svgDesignedSlot(svg(293)));assert.equal(three.ok,false);assert.match(chartReadabilityMessage(three,3),/2개 이하/);assert.doesNotMatch(chartReadabilityMessage(three,3),/slot:'half'/);
+assert.equal(chartReadability(620,293,svgDesignedSlot(svg(293))).oversized,false);
+console.log('PASS 19 chart readability assertions: capture shrink, max capture width, generated slot match/mismatch, oversized, 3-column guidance');}

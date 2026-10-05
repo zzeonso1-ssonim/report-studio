@@ -1762,8 +1762,9 @@ function TableBlockEditor({
 const MIN_CHART_PRINT_PT = 9;
 const TYPICAL_CHART_TEXT_PX = 12;
 // Content width of the A4 print paper in CSS px. Calibrated on live Studio output (2026-10-02):
-// 1-column slot 620px and 2-column slot 293px in print vs 823px / 396px on a 941px editor paper.
-const PRINT_PAPER_PX = 700;
+// 1-column slot 620px and 2-column slot 293px in print vs 823px / 396px on a 941px editor paper
+// (705 keeps both within ~1%; compact print is ~5% wider, so the hint errs on the cautious side).
+const PRINT_PAPER_PX = 705;
 function chartReadability(naturalWidth: number, slotWidth: number, designedSlotPx?: number) {
   const ratio = slotWidth / naturalWidth;
   const generated = Boolean(designedSlotPx);
@@ -1772,7 +1773,10 @@ function chartReadability(naturalWidth: number, slotWidth: number, designedSlotP
   const needPx = Math.ceil(MIN_CHART_PRINT_PT / 0.75 / ratio);
   // Widest capture whose 12px text still prints at 9pt in this slot.
   const maxCaptureWidth = Math.floor(slotWidth * (TYPICAL_CHART_TEXT_PX * 0.75) / MIN_CHART_PRINT_PT);
-  return { ratio, pt, needPx, maxCaptureWidth, generated, ok: pt >= MIN_CHART_PRINT_PT - 0.3 };
+  const ok = pt >= MIN_CHART_PRINT_PT - 0.3;
+  // A generated chart far above 9pt was built for a narrower slot: readable, but its plot is cramped.
+  const oversized = generated && pt > MIN_CHART_PRINT_PT * 1.4;
+  return { ratio, pt, needPx, maxCaptureWidth, generated, ok, oversized };
 }
 function svgDesignedSlot(src: string): number | undefined {
   if (!src.startsWith("data:image/svg+xml")) return undefined;
@@ -1789,8 +1793,10 @@ function svgDesignedSlot(src: string): number | undefined {
 function chartReadabilityMessage(state: ReturnType<typeof chartReadability>, columns: number) {
   const pct = Math.round(state.ratio * 100);
   if (state.generated) {
-    return state.ok
-      ? `가독성 OK · 차트 글씨 약 ${state.pt.toFixed(1)}pt로 인쇄`
+    if (state.oversized) return `글씨가 커요 · 더 좁은 칸용으로 생성된 차트라 약 ${state.pt.toFixed(1)}pt로 인쇄됩니다. slot:'${columns > 1 ? "half" : "full"}'로 다시 만들면 그래프 영역이 넓어집니다.`;
+    if (state.ok) return `가독성 OK · 차트 글씨 약 ${state.pt.toFixed(1)}pt로 인쇄`;
+    return columns > 2
+      ? `글씨가 작아요 · 한 줄 3개 배치에서는 약 ${state.pt.toFixed(1)}pt로 인쇄됩니다. 3개 배치용 규격은 없으니 한 줄 차트 수를 2개 이하로 줄이세요.`
       : `글씨가 작아요 · 다른 칸 크기용으로 생성된 차트라 약 ${state.pt.toFixed(1)}pt로 인쇄됩니다. 이 칸용(slot:'${columns > 1 ? "half" : "full"}')으로 다시 생성하세요.`;
   }
   return state.ok
@@ -1821,7 +1827,7 @@ function ChartReadabilityHint({ src, columns }: { src: string; columns: number }
   }, [src, columns]);
   if (!src) return null;
   return (
-    <p ref={ref} className={`report-authoring-chart-readability${state && !state.ok ? " is-warning" : ""}`} role={state && !state.ok ? "status" : undefined}>
+    <p ref={ref} className={`report-authoring-chart-readability${state && !state.ok ? " is-warning" : state?.oversized ? " is-info" : ""}`} role={state && !state.ok ? "status" : undefined}>
       {state ? chartReadabilityMessage(state, columns) : ""}
     </p>
   );

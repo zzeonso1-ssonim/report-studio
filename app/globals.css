@@ -1438,6 +1438,7 @@ body.report-authoring-printing { display: block !important; background: #fff !im
 .report-authoring-chart-readability { grid-column: 1 / -1; margin: 0; padding: 5px 7px; border-left: 3px solid #24a148; background: #f2fbf4; color: #0e6027; font-size: 11px; line-height: 1.45; }
 .report-authoring-chart-readability:empty { display: none; }
 .report-authoring-chart-readability.is-warning { border-left-color: #f1c21b; background: #fff8e1; color: #6b4e00; font-weight: 600; }
+.report-authoring-chart-readability.is-info { border-left-color: #0f62fe; background: #edf5ff; color: #0043ce; }
 .report-authoring-chart-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
 .report-authoring-chart-meta input,
 .report-authoring-chart-meta-value { min-width: 0; width: 100%; border: 1px solid var(--author-line); padding: 6px; background: #fff; color: var(--author-ink); font: inherit; font-size: 10px; }
