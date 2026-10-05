@@ -1757,6 +1757,71 @@ function TableBlockEditor({
   );
 }
 
+
+/** Printed size of chart text: images are scaled to the slot, so text shrinks by slotWidth / naturalWidth. */
+const MIN_CHART_PRINT_PT = 9;
+const TYPICAL_CHART_TEXT_PX = 12;
+function chartReadability(naturalWidth: number, slotWidth: number, designedSlotPx?: number) {
+  const ratio = slotWidth / naturalWidth;
+  const generated = Boolean(designedSlotPx);
+  // Generated charts print their smallest text at 9pt in the slot they were built for.
+  const pt = designedSlotPx ? MIN_CHART_PRINT_PT * (slotWidth / designedSlotPx) : TYPICAL_CHART_TEXT_PX * ratio * 0.75;
+  const needPx = Math.ceil(MIN_CHART_PRINT_PT / 0.75 / ratio);
+  // Widest capture whose 12px text still prints at 9pt in this slot.
+  const maxCaptureWidth = Math.floor(slotWidth * (TYPICAL_CHART_TEXT_PX * 0.75) / MIN_CHART_PRINT_PT);
+  return { ratio, pt, needPx, maxCaptureWidth, generated, ok: pt >= MIN_CHART_PRINT_PT - 0.3 };
+}
+function svgDesignedSlot(src: string): number | undefined {
+  if (!src.startsWith("data:image/svg+xml")) return undefined;
+  try {
+    const comma = src.indexOf(",");
+    const body = src.slice(comma + 1);
+    const text = src.slice(0, comma).endsWith(";base64") ? new TextDecoder().decode(Uint8Array.from(atob(body), (c) => c.charCodeAt(0))) : decodeURIComponent(body);
+    const match = text.match(/data-slot-px="([\d.]+)"/);
+    return match ? Number(match[1]) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+function chartReadabilityMessage(state: ReturnType<typeof chartReadability>, columns: number) {
+  const pct = Math.round(state.ratio * 100);
+  if (state.generated) {
+    return state.ok
+      ? `가독성 OK · 차트 글씨 약 ${state.pt.toFixed(1)}pt로 인쇄`
+      : `글씨가 작아요 · 다른 칸 크기용으로 생성된 차트라 약 ${state.pt.toFixed(1)}pt로 인쇄됩니다. 이 칸용(slot:'${columns > 1 ? "half" : "full"}')으로 다시 생성하세요.`;
+  }
+  return state.ok
+    ? `가독성 OK · 원본의 ${pct}% 크기로 인쇄`
+    : `글씨가 작아요 · 원본이 ${pct}%로 줄어 12px 글씨가 약 ${state.pt.toFixed(1)}pt로 인쇄됩니다. 9pt 이상이 되려면 원본 글씨를 ${state.needPx}px 이상으로 키우거나, 캡처 폭을 ${state.maxCaptureWidth}px 이하로 줄이세요.${columns > 1 ? " 한 줄 차트 수를 줄이는 것도 방법입니다." : ""}`;
+}
+function ChartReadabilityHint({ src, columns }: { src: string; columns: number }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const [state, setState] = useState<ReturnType<typeof chartReadability> | null>(null);
+  useEffect(() => {
+    setState(null);
+    if (!src) return;
+    let cancelled = false;
+    const image = new Image();
+    const card = ref.current?.closest(".report-authoring-chart-card");
+    const measure = () => {
+      const shown = card?.querySelector<HTMLImageElement>("img");
+      const slot = shown?.getBoundingClientRect().width || card?.getBoundingClientRect().width || 0;
+      if (!cancelled && image.naturalWidth && slot) setState(chartReadability(image.naturalWidth, slot, svgDesignedSlot(src)));
+    };
+    image.onload = measure;
+    image.src = src;
+    const observer = typeof ResizeObserver !== "undefined" && card ? new ResizeObserver(measure) : null;
+    if (observer && card) observer.observe(card);
+    return () => { cancelled = true; observer?.disconnect(); };
+  }, [src, columns]);
+  if (!src) return null;
+  return (
+    <p ref={ref} className={`report-authoring-chart-readability${state && !state.ok ? " is-warning" : ""}`} role={state && !state.ok ? "status" : undefined}>
+      {state ? chartReadabilityMessage(state, columns) : ""}
+    </p>
+  );
+}
+
 function ChartBlockEditor({
   block,
   preview,
@@ -1869,6 +1934,7 @@ function ChartBlockEditor({
                   className="report-authoring-chart-inputs"
                   data-report-control
                 >
+                  <ChartReadabilityHint src={chart.src} columns={block.columns} />
                   <label>
                     <span>로컬 차트</span>
                     <input

@@ -2,7 +2,7 @@ const fs=require('node:fs');const vm=require('node:vm');const assert=require('no
 const source=fs.readFileSync('app/reports/report-authoring-workspace.tsx','utf8');
 const dom=new JSDOM('<!doctype html><html><head></head><body></body></html>');
 const context={exports:{},require,structuredClone,console,crypto:require('node:crypto').webcrypto,document:dom.window.document,HTMLInputElement:dom.window.HTMLInputElement,HTMLTextAreaElement:dom.window.HTMLTextAreaElement};vm.createContext(context);
-vm.runInContext(ts.transpile(source+'\nexport {reconcileRenderedDraft,createTemplates,normalizeDrafts,standaloneDocument,AnnotatedImage,imageBlock,chartItem,tableBlock,SourceText};',{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}),context);
+vm.runInContext(ts.transpile(source+'\nexport {reconcileRenderedDraft,createTemplates,normalizeDrafts,standaloneDocument,AnnotatedImage,imageBlock,chartItem,tableBlock,SourceText,chartReadability,svgDesignedSlot,chartReadabilityMessage};',{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}),context);
 const {reconcileRenderedDraft,createTemplates,normalizeDrafts,standaloneDocument}=context.exports;
 const templates=createTemplates(); const drafts=createTemplates();drafts.issue.blocks=[{id:'t1',type:'text',title:'이전 제목',body:'이전 본문',style:'plain'},{id:'c1',type:'chart',title:'차트',columns:1,charts:[{id:'ci1',title:'비교',src:'data:image/svg+xml,x',caption:'설명',source:'출처',insightLabel:'판단',insightTitle:'제목',insightBody:'본문',annotations:[{id:'a1',kind:'rect',x1:10,y1:20,x2:50,y2:80,color:'#cc0000'}]}]}];
 dom.window.document.body.innerHTML='<article class="report-authoring-paper"><header class="report-authoring-cover"><h1>새 보고서</h1></header><section class="report-authoring-block"><div class="report-authoring-block-body"><h2>새 제목</h2><p class="report-authoring-body-copy">새 본문</p></div></section><section class="report-authoring-block"><div class="report-authoring-block-body"><h2>차트</h2><figure class="report-authoring-chart-card"><h3>비교</h3><img src="data:image/svg+xml,x"><figcaption><span>설명</span><small>출처</small></figcaption></figure></div></section></article>';
@@ -36,3 +36,14 @@ const authored=structuredClone(cleanTemplates);authored.issue.workspaceLabel='LI
 for(const rawSource of ['', '한국은행', '출처 : 한국은행']) { const markup=renderToStaticMarkup(React.createElement(context.exports.SourceText,{source:rawSource}));const sourceDoc=new JSDOM(markup).window.document;assert.equal(sourceDoc.querySelector('[data-report-source-value]').textContent,rawSource);assert.equal((sourceDoc.querySelector('small').textContent.match(/출처\s*:/g)||[]).length,1);const sourceRoundtripDoc=new JSDOM(html).window.document;sourceRoundtripDoc.querySelector('.report-authoring-chart-card figcaption small').outerHTML=markup;const sourceFixed=reconcileRenderedDraft(sourceRoundtripDoc,fixed);assert.equal(sourceFixed.blocks[1].charts[0].source,rawSource);}
 console.log('PASS clean defaults across all 3 report kinds, blank insight/source factories, authored-content preservation, source-prefix raw-value roundtrip');
 if(process.env.REPORT_DEFAULT_FIXTURE)fs.writeFileSync(process.env.REPORT_DEFAULT_FIXTURE,'<!doctype html><html><body><script type="application/json" id="econ-cockpit-report-draft">'+JSON.stringify({version:1,reportKind:'issue',drafts:cleanTemplates}).replace(/</g,'\\u003c')+'</script></body></html>');
+
+// Chart readability hint: printed text = 12px x slot/natural x 0.75 (pt); generated SVGs carry data-slot-px.
+{const {chartReadability,svgDesignedSlot,chartReadabilityMessage}=context.exports;context.atob=atob;context.TextDecoder=TextDecoder;
+const wide=chartReadability(1200,330);assert.equal(wide.ok,false);assert.ok(Math.abs(wide.pt-2.475)<0.01);assert.equal(wide.maxCaptureWidth,330);assert.equal(wide.needPx,44);
+assert.match(chartReadabilityMessage(wide,2),/캡처 폭을 330px 이하/);
+assert.equal(chartReadability(330,330).ok,true);
+const svg=(slot)=>'data:image/svg+xml;base64,'+Buffer.from('<svg viewBox="0 0 620 520" data-slot-px="'+slot+'"><text>한글</text></svg>').toString('base64');
+assert.equal(svgDesignedSlot(svg(330)),330);assert.equal(svgDesignedSlot('data:image/png;base64,QQ=='),undefined);
+const fitted=chartReadability(620,330,svgDesignedSlot(svg(330)));assert.equal(fitted.ok,true);assert.ok(Math.abs(fitted.pt-9)<0.01);
+const misplaced=chartReadability(760,330,svgDesignedSlot(svg(676)));assert.equal(misplaced.ok,false);assert.match(chartReadabilityMessage(misplaced,2),/slot:'half'/);
+console.log('PASS 11 chart readability assertions: capture shrink, max capture width, generated slot match/mismatch');}
