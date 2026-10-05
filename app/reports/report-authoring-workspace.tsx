@@ -1761,6 +1761,9 @@ function TableBlockEditor({
 /** Printed size of chart text: images are scaled to the slot, so text shrinks by slotWidth / naturalWidth. */
 const MIN_CHART_PRINT_PT = 9;
 const TYPICAL_CHART_TEXT_PX = 12;
+// Content width of the A4 print paper in CSS px. Calibrated on live Studio output (2026-10-02):
+// 1-column slot 620px and 2-column slot 293px in print vs 823px / 396px on a 941px editor paper.
+const PRINT_PAPER_PX = 700;
 function chartReadability(naturalWidth: number, slotWidth: number, designedSlotPx?: number) {
   const ratio = slotWidth / naturalWidth;
   const generated = Boolean(designedSlotPx);
@@ -1791,7 +1794,7 @@ function chartReadabilityMessage(state: ReturnType<typeof chartReadability>, col
       : `글씨가 작아요 · 다른 칸 크기용으로 생성된 차트라 약 ${state.pt.toFixed(1)}pt로 인쇄됩니다. 이 칸용(slot:'${columns > 1 ? "half" : "full"}')으로 다시 생성하세요.`;
   }
   return state.ok
-    ? `가독성 OK · 원본의 ${pct}% 크기로 인쇄`
+    ? `가독성 OK · 인쇄 시 원본의 ${pct}% 크기`
     : `글씨가 작아요 · 원본이 ${pct}%로 줄어 12px 글씨가 약 ${state.pt.toFixed(1)}pt로 인쇄됩니다. 9pt 이상이 되려면 원본 글씨를 ${state.needPx}px 이상으로 키우거나, 캡처 폭을 ${state.maxCaptureWidth}px 이하로 줄이세요.${columns > 1 ? " 한 줄 차트 수를 줄이는 것도 방법입니다." : ""}`;
 }
 function ChartReadabilityHint({ src, columns }: { src: string; columns: number }) {
@@ -1805,7 +1808,9 @@ function ChartReadabilityHint({ src, columns }: { src: string; columns: number }
     const card = ref.current?.closest(".report-authoring-chart-card");
     const measure = () => {
       const shown = card?.querySelector<HTMLImageElement>("img");
-      const slot = shown?.getBoundingClientRect().width || card?.getBoundingClientRect().width || 0;
+      const screenSlot = shown?.getBoundingClientRect().width || card?.getBoundingClientRect().width || 0;
+      const paper = card?.closest(".report-authoring-paper")?.getBoundingClientRect().width || 0;
+      const slot = paper ? screenSlot * Math.min(1, PRINT_PAPER_PX / paper) : screenSlot; // judge at printed size
       if (!cancelled && image.naturalWidth && slot) setState(chartReadability(image.naturalWidth, slot, svgDesignedSlot(src)));
     };
     image.onload = measure;

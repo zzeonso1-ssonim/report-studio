@@ -39,11 +39,11 @@ if(process.env.REPORT_DEFAULT_FIXTURE)fs.writeFileSync(process.env.REPORT_DEFAUL
 
 // Chart readability hint: printed text = 12px x slot/natural x 0.75 (pt); generated SVGs carry data-slot-px.
 {const {chartReadability,svgDesignedSlot,chartReadabilityMessage}=context.exports;context.atob=atob;context.TextDecoder=TextDecoder;
-const wide=chartReadability(1200,330);assert.equal(wide.ok,false);assert.ok(Math.abs(wide.pt-2.475)<0.01);assert.equal(wide.maxCaptureWidth,330);assert.equal(wide.needPx,44);
-assert.match(chartReadabilityMessage(wide,2),/캡처 폭을 330px 이하/);
-assert.equal(chartReadability(330,330).ok,true);
+const wide=chartReadability(1200,293);assert.equal(wide.ok,false);assert.ok(Math.abs(wide.pt-2.1975)<0.01);assert.equal(wide.maxCaptureWidth,293);assert.equal(wide.needPx,50);
+assert.match(chartReadabilityMessage(wide,2),/캡처 폭을 293px 이하/);
+assert.equal(chartReadability(293,293).ok,true);
 const svg=(slot)=>'data:image/svg+xml;base64,'+Buffer.from('<svg viewBox="0 0 620 520" data-slot-px="'+slot+'"><text>한글</text></svg>').toString('base64');
-assert.equal(svgDesignedSlot(svg(330)),330);assert.equal(svgDesignedSlot('data:image/png;base64,QQ=='),undefined);
-const fitted=chartReadability(620,330,svgDesignedSlot(svg(330)));assert.equal(fitted.ok,true);assert.ok(Math.abs(fitted.pt-9)<0.01);
-const misplaced=chartReadability(760,330,svgDesignedSlot(svg(676)));assert.equal(misplaced.ok,false);assert.match(chartReadabilityMessage(misplaced,2),/slot:'half'/);
+assert.equal(svgDesignedSlot(svg(293)),293);assert.equal(svgDesignedSlot('data:image/png;base64,QQ=='),undefined);
+const fitted=chartReadability(620,293,svgDesignedSlot(svg(293)));assert.equal(fitted.ok,true);assert.ok(Math.abs(fitted.pt-9)<0.01);
+const misplaced=chartReadability(760,293,svgDesignedSlot(svg(620)));assert.equal(misplaced.ok,false);assert.match(chartReadabilityMessage(misplaced,2),/slot:'half'/);
 console.log('PASS 11 chart readability assertions: capture shrink, max capture width, generated slot match/mismatch');}
