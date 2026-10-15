@@ -2380,7 +2380,19 @@ export default function ReportAuthoringWorkspace({
               type="button"
               aria-pressed={Boolean(draft.showRanges)}
               onClick={() => {
-                updateDraft({ showRanges: !draft.showRanges });
+                // 경제전망·이슈리포트 양식엔 금리 행이 없다 — 켤 때 주간채권전략 기본값을 채워야 박스가 그려진다
+                updateDraft(
+                  draft.showRanges
+                    ? { showRanges: false }
+                    : {
+                        showRanges: true,
+                        ranges: draft.ranges?.length
+                          ? draft.ranges
+                          : structuredClone(templates.weekly.ranges),
+                        rangeTitle:
+                          draft.rangeTitle ?? templates.weekly.rangeTitle,
+                      },
+                );
                 setStatus(
                   draft.showRanges
                     ? "주간채권전략 금리 박스를 삭제했습니다."
