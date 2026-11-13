@@ -212,7 +212,7 @@ function createTemplates(): DraftMap {
     weekly: {
       ...reportMeta(),
       reportTypeLabel: "주간채권전략",
-      kicker: "WEEKLY STRATEGY · PRINT EDITION",
+      kicker: "WEEKLY STRATEGY",
       title: "주간채권전략",
       subtitle: "금리·커브·수급·이벤트를 연결한 주간 전략 판단",
       rangeTitle: "WEEKLY RANGE",
@@ -1086,6 +1086,8 @@ function normalizeDrafts(
     result[kind] = {
       ...base,
       ...saved,
+      kicker: kind === "weekly" && saved?.kicker === "WEEKLY STRATEGY · PRINT EDITION"
+        ? "WEEKLY STRATEGY" : saved?.kicker ?? base.kicker,
       ranges:
         saved?.ranges?.map((range, index) => ({
           ...base.ranges?.[index],
