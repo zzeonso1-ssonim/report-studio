@@ -156,7 +156,7 @@ function chartBlock(columns: 1 | 2 | 3 = 2): ChartBlock {
 function reportMeta() {
   return {
     date: localDateStamp(),
-    desk: "채권전략팀",
+    desk: "채권운용본부",
     workspaceLabel: "",
     templateLabel: "",
     templateName: "",
@@ -456,7 +456,7 @@ function reconcileRenderedDraft(
     };
   });
   const metaNodes = [
-    ...paper.querySelectorAll(".report-authoring-cover-meta-inputs > *"),
+    ...paper.querySelectorAll(".report-authoring-cover-meta-inputs > :not([data-report-company]), .report-authoring-cover-meta [data-report-meta]"),
   ];
   const meta = metaNodes.length
     ? metaNodes.map((n) => n.textContent ?? "")
@@ -560,7 +560,7 @@ function parseLegacyExport(documentNode: Document, templates: DraftMap) {
   const base = structuredClone(templates[kind]);
   const meta = [
     ...report.querySelectorAll<HTMLElement>(
-      ".report-authoring-cover-meta-inputs > *",
+      ".report-authoring-cover-meta-inputs > :not([data-report-company]), .report-authoring-cover-meta [data-report-meta]",
     ),
   ].map((node) => node.textContent?.trim() ?? "");
   const aside = [
@@ -1088,6 +1088,7 @@ function normalizeDrafts(
       ...saved,
       kicker: kind === "weekly" && saved?.kicker === "WEEKLY STRATEGY · PRINT EDITION"
         ? "WEEKLY STRATEGY" : saved?.kicker ?? base.kicker,
+      desk: saved?.desk === "채권전략팀" ? "채권운용본부" : saved?.desk ?? base.desk,
       ranges:
         saved?.ranges?.map((range, index) => ({
           ...base.ranges?.[index],
@@ -2565,7 +2566,10 @@ export default function ReportAuthoringWorkspace({
               )}
               {preview ? (
                 <p className="report-authoring-cover-meta">
-                  {[draft.date, draft.desk, draft.workspaceLabel].filter(Boolean).join(" · ")}
+                  <span data-report-meta>{draft.date}</span>{" · "}
+                  <span data-report-company>대신자산운용</span>{" · "}
+                  <span data-report-meta>{draft.desk}</span>
+                  {draft.workspaceLabel && <> · <span data-report-meta>{draft.workspaceLabel}</span></>}
                 </p>
               ) : (
                 <div className="report-authoring-cover-meta-inputs">
@@ -2576,6 +2580,7 @@ export default function ReportAuthoringWorkspace({
                     }
                     aria-label="보고서 날짜"
                   />
+                  <span data-report-company>대신자산운용</span>
                   <input
                     value={draft.desk}
                     onChange={(event) =>
