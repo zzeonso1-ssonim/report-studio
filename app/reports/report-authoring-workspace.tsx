@@ -1087,6 +1087,7 @@ function InsightEditor({
   onChange: (patch: Partial<InsightFields>) => void;
 }) {
   if (preview) {
+    if (!insight.insightTitle.trim() && !insight.insightBody.trim()) return null;
     return (
       <div className="report-authoring-insight">
         <strong>
@@ -1098,6 +1099,8 @@ function InsightEditor({
     );
   }
   return (
+    <details className="studio-insight-options" open={Boolean(insight.insightTitle || insight.insightBody) || undefined}>
+      <summary>시사점 작성</summary>
     <div className="report-authoring-insight-editor">
       <input
         value={insight.insightLabel}
@@ -1116,6 +1119,7 @@ function InsightEditor({
         rows={3}
       />
     </div>
+    </details>
   );
 }
 
@@ -2013,6 +2017,9 @@ export default function ReportAuthoringWorkspace({
   const [drafts, setDrafts] = useState<DraftMap>(templates);
   const [hydrated, setHydrated] = useState(false);
   const [preview, setPreview] = useState(false);
+  const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait");
+  const [landscapeOpened, setLandscapeOpened] = useState(false);
+  const [activeBlock, setActiveBlock] = useState<string | null>(null);
   const [compactPrint, setCompactPrint] = useState(false);
   const [status, setStatus] = useState("");
   const [deleted, setDeleted] = useState<DeletedBlock | null>(null);
@@ -2103,7 +2110,15 @@ export default function ReportAuthoringWorkspace({
           : type === "table"
             ? tableBlock("새 표", ["구분", "값", "판단"], [["", "", ""]])
             : chartBlock(2);
+    if (block.type === "image") block.imageFit = "natural";
+    if (block.type === "chart") block.charts.forEach((chart) => { chart.imageFit = "natural"; });
     updateDraft({ blocks: [...draft.blocks, block] });
+    setActiveBlock(block.id);
+    window.requestAnimationFrame(() => {
+      const section = document.getElementById(`report-block-${block.id}`);
+      section?.scrollIntoView({ behavior: "smooth", block: "center" });
+      section?.querySelector<HTMLInputElement>("input")?.focus({ preventScroll: true });
+    });
     setStatus(
       `${type === "text" ? "텍스트" : type === "image" ? "이미지" : type === "table" ? "표" : "차트 묶음"} 박스를 추가했습니다.`,
     );
@@ -2307,26 +2322,31 @@ export default function ReportAuthoringWorkspace({
 
   return (
     <>
+      <nav className="studio-orientation" aria-label="보고서 편집기" data-report-control>
+        <div role="group" aria-label="용지 방향">
+          <button type="button" aria-pressed={orientation === "portrait"} onClick={() => setOrientation("portrait")}>세로형 편집기</button>
+          <button type="button" aria-pressed={orientation === "landscape"} onClick={() => { setLandscapeOpened(true); setOrientation("landscape"); }}>가로형 편집기</button>
+        </div>
+        <span>{orientation === "portrait" ? "A4 세로 · 문서에서 바로 작성" : "A4 가로 · 채권보고서 편집기"}</span>
+      </nav>
+      {landscapeOpened && <div className="studio-landscape" hidden={orientation !== "landscape"}>
+        <iframe src="/bond-landscape-editor.html" title="채권보고서 가로형 편집기" />
+      </div>}
+      <div className="studio-portrait" hidden={orientation !== "portrait"}>
       <div className="report-authoring-toolbar" data-report-control>
-        <div className="report-authoring-usage-guide">
-          <strong>사용 방법</strong>
-          <span>
-            ① 내용을 직접 편집하고 필요한 텍스트·이미지·표·차트 박스를
-            추가합니다.
-          </span>
-          <span>
-            ② 작업을 넘길 때는 HTML 저장, 이어받을 때는 HTML 가져오기를
-            사용합니다.
-          </span>
-          <span>
-            ③ 미리보기로 확인한 뒤 PDF 저장을 누르면 페이지별 로고가 포함됩니다.
-          </span>
-          {status ? <p aria-live="polite">{status}</p> : null}
+        <div className="studio-document-tools">
+          <select aria-label="보고서 양식" value={reportKind} onChange={(event) => { setReportKind(event.target.value as ReportKind); setActiveBlock(null); }}>
+            {Object.entries(REPORT_LABELS).map(([kind, label]) => <option key={kind} value={kind}>{label}</option>)}
+          </select>
+          <span role="status" aria-live="polite">{status || "내용을 클릭해 작성하세요"}</span>
         </div>
         <div className="report-authoring-toolbar-actions">
           <button type="button" onClick={() => setPreview((value) => !value)}>
             {preview ? "편집으로" : "미리보기"}
           </button>
+          <details className="studio-more">
+            <summary>더 보기</summary>
+            <div>
           <button
             type="button"
             aria-pressed={compactPrint}
@@ -2344,6 +2364,9 @@ export default function ReportAuthoringWorkspace({
           <button type="button" onClick={resetTemplate}>
             양식 초기화
           </button>
+          <button type="button" onClick={saveWord}>Word 저장</button>
+            </div>
+          </details>
           <label className="report-authoring-import-label">
             <span>HTML 가져오기</span>
             <input
@@ -2355,9 +2378,6 @@ export default function ReportAuthoringWorkspace({
           </label>
           <button type="button" onClick={saveHtml}>
             HTML 저장
-          </button>
-          <button type="button" onClick={saveWord}>
-            Word 저장
           </button>
           <button
             type="button"
@@ -2374,8 +2394,7 @@ export default function ReportAuthoringWorkspace({
       >
         {!preview ? (
           <aside className="report-authoring-palette" data-report-control>
-            <p>CONTENT BOX</p>
-            <h2>박스 추가</h2>
+            <h2>내용 추가</h2>
             <button
               type="button"
               aria-pressed={Boolean(draft.showRanges)}
@@ -2423,6 +2442,13 @@ export default function ReportAuthoringWorkspace({
               <strong>차트 묶음</strong>
               <span>한 줄에 1·2·3개 배치</span>
             </button>
+            <nav className="studio-outline" aria-label="문서 목차">
+              <h2>문서 목차</h2>
+              {draft.blocks.map((block, index) => <button key={block.id} type="button" aria-current={activeBlock === block.id ? "true" : undefined} onClick={() => {
+                setActiveBlock(block.id);
+                document.getElementById(`report-block-${block.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+              }}>{index + 1}. {block.title || "제목 없음"}</button>)}
+            </nav>
           </aside>
         ) : null}
 
@@ -2634,7 +2660,10 @@ export default function ReportAuthoringWorkspace({
           <div className="report-authoring-blocks">
             {draft.blocks.map((block, index) => (
               <section
-                className={`report-authoring-block report-authoring-block-${block.type}`}
+                id={`report-block-${block.id}`}
+                className={`report-authoring-block report-authoring-block-${block.type}${activeBlock === block.id ? " is-active" : ""}`}
+                onClick={() => setActiveBlock(block.id)}
+                onFocus={() => setActiveBlock(block.id)}
                 key={`${documentEpoch}:${block.id}`}
               >
                 {!preview ? (
@@ -2733,6 +2762,7 @@ export default function ReportAuthoringWorkspace({
           </button>
         </div>
       ) : null}
+      </div>
     </>
   );
 }
