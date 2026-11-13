@@ -3,7 +3,7 @@
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 
-type ReportKind = "outlook" | "weekly" | "issue";
+type ReportKind = "basic" | "morning" | "outlook" | "weekly" | "issue";
 type TextStyle = "plain" | "bullet" | "bar";
 type InsightFields = {
   insightLabel: string;
@@ -84,7 +84,9 @@ const STORAGE_KEY = "econ-cockpit:report-authoring-drafts:v2";
 const LEGACY_STORAGE_KEY = "econ-cockpit:report-authoring-drafts:v1";
 const IMPORT_SCRIPT_ID = "econ-cockpit-report-draft";
 const REPORT_LABELS: Record<ReportKind, string> = {
-  outlook: "경제전망",
+  basic: "기본 보고서",
+  morning: "모닝미팅브리프",
+  outlook: "기존 보고서",
   weekly: "주간채권전략",
   issue: "이슈리포트",
 };
@@ -163,6 +165,24 @@ function reportMeta() {
 
 function createTemplates(): DraftMap {
   return {
+    basic: {
+      ...reportMeta(), reportTypeLabel: "기본 보고서", kicker: "REPORT",
+      title: "보고서 제목", subtitle: "보고서의 핵심 내용을 한 문장으로 작성하세요",
+      blocks: [
+        textBlock("핵심 요약", "보고서의 주요 내용을 작성하세요."),
+        textBlock("본문", "주제에 맞는 분석과 설명을 작성하세요."),
+        tableBlock("주요 내용 정리", ["구분", "내용", "비고"], [["", "", ""], ["", "", ""]]),
+      ],
+    },
+    morning: {
+      ...reportMeta(), reportTypeLabel: "모닝미팅브리프", kicker: "DAILY BRIEF",
+      title: "Morning Meeting Brief", subtitle: "Bond Market Comment",
+      blocks: [
+        { ...textBlock("전일 해외 시장 동향 및 이슈", "주요국 금리 변동과 배경\n경제지표·중앙은행 발언 및 주요 이슈\n주식·외환·원자재 시장 동향"), style: "bullet" },
+        { ...textBlock("국내 시장 동향 및 금일 전망", "전일 국고채 금리·커브 및 선물 수급\n환율·외국인 매매와 주요 수급 요인\n금일 시장 전망과 운용 대응"), style: "bullet" },
+        tableBlock("금일 주요 일정", ["시간", "일정", "확인 사항"], [["", "경제지표·주요 발언", ""], ["", "입찰·발행", ""]]),
+      ],
+    },
     outlook: {
       ...reportMeta(),
       reportTypeLabel: "경제전망",
@@ -528,13 +548,15 @@ function parseLegacyExport(documentNode: Document, templates: DraftMap) {
     ".report-authoring-kicker-input, .report-authoring-kicker",
   );
   const reportType = nodeText(report, ".report-authoring-template-kind");
-  const marker = `${kicker} ${reportType}`.toLowerCase();
+  const marker = `${kicker} ${reportType} ${nodeText(report, '.report-authoring-cover h1, .report-authoring-cover-title')}`.toLowerCase();
   const kind: ReportKind =
-    marker.includes("weekly") || marker.includes("주간")
+    marker.includes("morning") || marker.includes("daily brief") || marker.includes("모닝")
+      ? "morning"
+      : marker.includes("weekly") || marker.includes("주간")
       ? "weekly"
       : marker.includes("issue") || marker.includes("이슈")
         ? "issue"
-        : "outlook";
+        : marker.includes("outlook") || marker.includes("경제전망") ? "outlook" : "basic";
   const base = structuredClone(templates[kind]);
   const meta = [
     ...report.querySelectorAll<HTMLElement>(
@@ -2013,8 +2035,10 @@ export default function ReportAuthoringWorkspace({
 } = {}) {
   const templates = useMemo(() => cloneTemplates(), []);
   const reportKindStorageKey = `${storageKey}:active-report-kind`;
-  const [reportKind, setReportKind] = useState<ReportKind>("weekly");
-  const [drafts, setDrafts] = useState<DraftMap>(templates);
+  const [reportKind, setReportKind] = useState<ReportKind>("basic");
+  const [drafts, applyDrafts] = useState<DraftMap>(templates);
+  const draftsRef = useRef(templates);
+  const history = useRef<{ past: { drafts: DraftMap; kind: ReportKind }[]; future: { drafts: DraftMap; kind: ReportKind }[] }>({ past: [], future: [] });
   const [hydrated, setHydrated] = useState(false);
   const [preview, setPreview] = useState(false);
   const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait");
@@ -2028,6 +2052,37 @@ export default function ReportAuthoringWorkspace({
   const [documentEpoch, setDocumentEpoch] = useState(0);
   const draft = drafts[reportKind];
 
+  function setDrafts(update: DraftMap | ((current: DraftMap) => DraftMap), record = true) {
+    const current = draftsRef.current;
+    const next = typeof update === "function" ? update(current) : update;
+    if (record && next !== current) {
+      history.current.past = [...history.current.past.slice(-79), { drafts: current, kind: reportKind }];
+      history.current.future = [];
+      editRevision.current += 1;
+    }
+    draftsRef.current = next;
+    applyDrafts(next);
+  }
+
+  function travelHistory(direction: "past" | "future") {
+    const target = history.current[direction].pop();
+    if (!target) return;
+    const focused = document.activeElement;
+    const fieldLabel = focused?.getAttribute("aria-label");
+    const blockId = focused?.closest(".report-authoring-block")?.id;
+    history.current[direction === "past" ? "future" : "past"].push({ drafts: draftsRef.current, kind: reportKind });
+    setDrafts(target.drafts, false);
+    setReportKind(target.kind);
+    setDeleted(null);
+    setDocumentEpoch((value) => value + 1);
+    if (fieldLabel) window.requestAnimationFrame(() => {
+      const scope = blockId ? document.getElementById(blockId) : reportRef.current;
+      scope?.querySelector<HTMLElement>(`[aria-label="${CSS.escape(fieldLabel)}"]`)?.focus({ preventScroll: true });
+    });
+    editRevision.current += 1;
+    setStatus(direction === "past" ? "이전 작업으로 되돌렸습니다." : "작업을 다시 실행했습니다.");
+  }
+
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       const saved =
@@ -2039,6 +2094,7 @@ export default function ReportAuthoringWorkspace({
         try {
           setDrafts(
             normalizeDrafts(JSON.parse(saved) as Partial<DraftMap>, templates),
+            false,
           );
         } catch {
           setStatus("저장본을 읽지 못해 기본 양식을 적용했습니다.");
@@ -2332,15 +2388,24 @@ export default function ReportAuthoringWorkspace({
       {landscapeOpened && <div className="studio-landscape" hidden={orientation !== "landscape"}>
         <iframe src="/bond-landscape-editor.html" title="채권보고서 가로형 편집기" />
       </div>}
-      <div className="studio-portrait" hidden={orientation !== "portrait"}>
+      <div className="studio-portrait" hidden={orientation !== "portrait"} onKeyDown={(event) => {
+        if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+        const key = event.key.toLowerCase();
+        if (key === "z" || key === "y") {
+          event.preventDefault();
+          travelHistory(key === "y" || event.shiftKey ? "future" : "past");
+        }
+      }}>
       <div className="report-authoring-toolbar" data-report-control>
         <div className="studio-document-tools">
           <select aria-label="보고서 양식" value={reportKind} onChange={(event) => { setReportKind(event.target.value as ReportKind); setActiveBlock(null); }}>
-            {Object.entries(REPORT_LABELS).map(([kind, label]) => <option key={kind} value={kind}>{label}</option>)}
+            {Object.entries(REPORT_LABELS).filter(([kind]) => kind !== "outlook" || reportKind === "outlook").map(([kind, label]) => <option key={kind} value={kind}>{label}</option>)}
           </select>
           <span role="status" aria-live="polite">{status || "내용을 클릭해 작성하세요"}</span>
         </div>
         <div className="report-authoring-toolbar-actions">
+          <button type="button" disabled={!history.current.past.length} onClick={() => travelHistory("past")} title="Ctrl/Cmd+Z">되돌리기</button>
+          <button type="button" disabled={!history.current.future.length} onClick={() => travelHistory("future")} title="Ctrl/Cmd+Shift+Z 또는 Ctrl+Y">다시 실행</button>
           <button type="button" onClick={() => setPreview((value) => !value)}>
             {preview ? "편집으로" : "미리보기"}
           </button>
@@ -2522,46 +2587,12 @@ export default function ReportAuthoringWorkspace({
                       updateDraft({ workspaceLabel: event.target.value })
                     }
                     aria-label="작업공간 표기"
+                    placeholder="추가 표기 (선택)"
                   />
                 </div>
               )}
             </div>
-            <aside>
-              {preview ? (
-                <span>{draft.templateLabel}</span>
-              ) : (
-                <input
-                  value={draft.templateLabel}
-                  onChange={(event) =>
-                    updateDraft({ templateLabel: event.target.value })
-                  }
-                  aria-label="양식 라벨"
-                />
-              )}
-              {preview ? (
-                <strong>{draft.reportTypeLabel}</strong>
-              ) : (
-                <input
-                  className="report-authoring-template-kind"
-                  value={draft.reportTypeLabel}
-                  onChange={(event) =>
-                    updateDraft({ reportTypeLabel: event.target.value })
-                  }
-                  aria-label="보고서 유형"
-                />
-              )}
-              {preview ? (
-                <small>{draft.templateName}</small>
-              ) : (
-                <input
-                  value={draft.templateName}
-                  onChange={(event) =>
-                    updateDraft({ templateName: event.target.value })
-                  }
-                  aria-label="양식 출처"
-                />
-              )}
-            </aside>
+
           </header>
 
           {draft.showRanges && draft.ranges ? (

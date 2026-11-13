@@ -50,3 +50,20 @@ const big=chartReadability(620,620,svgDesignedSlot(svg(293)));assert.equal(big.o
 const three=chartReadability(620,190,svgDesignedSlot(svg(293)));assert.equal(three.ok,false);assert.match(chartReadabilityMessage(three,3),/2개 이하/);assert.doesNotMatch(chartReadabilityMessage(three,3),/slot:'half'/);
 assert.equal(chartReadability(620,293,svgDesignedSlot(svg(293))).oversized,false);
 console.log('PASS 19 chart readability assertions: capture shrink, max capture width, generated slot match/mismatch, oversized, 3-column guidance');}
+
+// Adding report kinds must preserve existing drafts and initialize only missing kinds.
+const oldDrafts={outlook:cleanTemplates.outlook,weekly:cleanTemplates.weekly,issue:authored.issue};
+const migrated=normalizeDrafts(oldDrafts,cleanTemplates);
+assert.equal(migrated.issue.blocks[0].body,'유지할 사용자 본문');
+assert.equal(migrated.basic.title,'보고서 제목');
+assert.equal(migrated.morning.title,'Morning Meeting Brief');
+for(const kind of ['basic','morning']) {
+  const saved=JSON.parse(new JSDOM(standaloneDocument(dom.window.document.querySelector('article'),migrated[kind].title,migrated,kind)).window.document.querySelector('#econ-cockpit-report-draft').textContent);
+  assert.equal(saved.reportKind,kind);
+  assert.deepEqual(JSON.parse(JSON.stringify(normalizeDrafts(saved.drafts,cleanTemplates)[kind])),JSON.parse(JSON.stringify(migrated[kind])));
+}
+const initialEditor=new JSDOM(renderToStaticMarkup(React.createElement(context.exports.default))).window.document;
+assert.equal(initialEditor.querySelector('.report-authoring-cover aside'),null);
+assert.equal(initialEditor.querySelectorAll('[aria-label="보고서 제목"]').length,1);
+assert.deepEqual([...initialEditor.querySelectorAll('select[aria-label="보고서 양식"] option')].map(n=>n.textContent),['기본 보고서','모닝미팅브리프','주간채권전략','이슈리포트']);
+console.log('PASS new template migration, HTML roundtrip, single cover title and template menu');
