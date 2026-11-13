@@ -1269,7 +1269,7 @@ body {
 .report-authoring-print-page-footer img { display: block; width: 30mm; height: auto; object-fit: contain; }
 body.report-authoring-printing { display: block !important; background: #fff !important; }
 .report-authoring-paginated-print .report-authoring-paper { position: relative; width: 100%; min-height: 0; margin: 0; overflow: visible; box-shadow: none; }
-.report-authoring-paginated-print .report-authoring-cover { grid-template-columns: minmax(0, 1fr) 46mm; min-height: 78mm; padding: 9mm 10mm 8mm; border-top-width: 2.5mm; }
+.report-authoring-paginated-print .report-authoring-cover { grid-template-columns: minmax(0, 1fr) 46mm; min-height: 0; padding: 6mm 8mm 4mm; border-top-width: 2.5mm; }
 .report-authoring-paginated-print .report-authoring-cover h1 { font-size: 28pt; }
 .report-authoring-paginated-print .report-authoring-subtitle { font-size: 10pt; }
 .report-authoring-paginated-print .report-authoring-ranges { grid-template-columns: 30mm minmax(0, 1fr); gap: 5mm; padding: 5mm 10mm; }
@@ -1537,7 +1537,7 @@ body.report-authoring-printing { display: block !important; background: #fff !im
   .report-authoring-print-page .report-authoring-paper { width: 100%; }
   .report-authoring-paper,
   .report-authoring-workspace.is-preview .report-authoring-paper { position: relative; width: 100%; min-height: 0; margin: 0; overflow: visible; box-shadow: none; }
-  .report-authoring-cover { grid-template-columns: minmax(0, 1fr) 46mm; min-height: 78mm; padding: 9mm 10mm 8mm; border-top-width: 2.5mm; }
+  .report-authoring-cover { grid-template-columns: minmax(0, 1fr) 46mm; min-height: 0; padding: 6mm 8mm 4mm; border-top-width: 2.5mm; }
   .report-authoring-cover h1 { font-size: 28pt; }
   .report-authoring-subtitle { font-size: 10pt; }
   .report-authoring-ranges { grid-template-columns: 30mm minmax(0, 1fr); gap: 5mm; padding: 5mm 10mm; break-inside: avoid; }
@@ -1573,7 +1573,7 @@ body.report-authoring-printing { display: block !important; background: #fff !im
 
   /* 압축 인쇄는 사용자가 선택한 경우에만 적용한다. 본문 가독성과
      인사이트의 10pt 하한은 유지하면서 세로 간격만 절약한다. */
-  .report-authoring-print-compact .report-authoring-cover { min-height: 68mm; padding: 6mm 8mm 5mm; }
+  .report-authoring-print-compact .report-authoring-cover { min-height: 0; padding: 6mm 8mm 4mm; }
   .report-authoring-print-compact .report-authoring-ranges { gap: 4mm; padding: 4mm 8mm; }
   .report-authoring-print-compact .report-authoring-blocks { padding: 2mm 8mm 0; }
   .report-authoring-print-compact .report-authoring-block { padding: 5mm 0 3mm; }
@@ -1775,7 +1775,7 @@ body.report-authoring-printing { display: block !important; background: #fff !im
   .report-authoring-cover .report-authoring-cover-meta-inputs input:last-child { grid-column:1 / -1; }
 }
 @media print {
-  .report-authoring-cover { padding:6mm 8mm; min-height:0; }
+  .report-authoring-cover { padding:6mm 8mm 4mm; min-height:0; }
   .report-authoring-cover h1 { font-size:21pt; }
   .report-authoring-cover .report-authoring-subtitle { font-size:10.5pt; }
   .report-authoring-cover .report-authoring-cover-meta { font-size:9pt; }
