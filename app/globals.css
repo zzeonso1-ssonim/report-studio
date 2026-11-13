@@ -1452,7 +1452,7 @@ body.report-authoring-printing { display: block !important; background: #fff !im
 .report-authoring-table-wrap input { min-width: 100px; width: 100%; border: 1px dashed var(--author-blue); padding: 6px; background: #f3f7ff; color: var(--author-ink); font: inherit; }
 .report-authoring-table-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
 
-.report-authoring-footer-logo { display: flex; justify-content: flex-end; align-items: center; min-height: 82px; margin: 0 48px; border-top: 1px solid var(--author-line); padding: 18px 0 24px; }
+.report-authoring-footer-logo { display: flex; justify-content: flex-end; align-items: center; min-height: 82px; margin: 0 48px; border-top: 0; padding: 18px 0 24px; }
 .report-authoring-footer-logo img { display: block; width: 132px; height: auto; object-fit: contain; }
 
 .report-authoring-undo { position: fixed; z-index: 40; right: 24px; bottom: 24px; display: flex; align-items: center; gap: 16px; padding: 12px 16px; background: var(--author-ink); color: #fff; box-shadow: 0 12px 30px rgb(16 24 40 / 24%); }
@@ -1665,8 +1665,8 @@ body.report-authoring-printing { display: block !important; background: #fff !im
   .report-authoring-palette > button span { display:none; }
   .report-authoring-palette > button strong { font-weight:500; font-size:12px; }
   .report-authoring-blocks { padding:12px 36px 36px; }
-  .report-authoring-block { border-top:1px solid var(--author-line); scroll-margin-top:120px; }
-  .report-authoring-block.is-active { border-top-color:var(--author-blue); }
+  .report-authoring-block { border-top:0; scroll-margin-top:120px; }
+  .report-authoring-block.is-active { border-top:0; }
   .report-authoring-paper input:not([type=file]), .report-authoring-paper textarea,
   .report-authoring-bullet-editor { background:transparent; border:1px solid transparent; border-radius:3px; font-family:inherit; }
   .report-authoring-paper input:not([type=file]):hover, .report-authoring-paper textarea:hover { background:#f5f8fa; border-color:#e2e8ed; }
