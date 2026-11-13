@@ -2,7 +2,7 @@ import ReportAuthoringWorkspace from "./reports/report-authoring-workspace";
 
 export const metadata = {
   title: "보고서작성 — Report Studio",
-  description: "경제전망·주간채권전략·이슈리포트 편집과 PDF·Word 저장",
+  description: "기본 보고서·모닝미팅브리프·주간채권전략·이슈리포트와 가로형 보고서 편집",
 };
 
 export default function ReportStudioPage() {

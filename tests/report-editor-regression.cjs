@@ -2,7 +2,7 @@ const fs=require('node:fs');const vm=require('node:vm');const assert=require('no
 const source=fs.readFileSync('app/reports/report-authoring-workspace.tsx','utf8');
 const dom=new JSDOM('<!doctype html><html><head></head><body></body></html>');
 const context={exports:{},require,structuredClone,console,crypto:require('node:crypto').webcrypto,document:dom.window.document,HTMLInputElement:dom.window.HTMLInputElement,HTMLTextAreaElement:dom.window.HTMLTextAreaElement};vm.createContext(context);
-vm.runInContext(ts.transpile(source+'\nexport {reconcileRenderedDraft,createTemplates,normalizeDrafts,standaloneDocument,AnnotatedImage,imageBlock,chartItem,tableBlock,SourceText,chartReadability,svgDesignedSlot,chartReadabilityMessage};',{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}),context);
+vm.runInContext(ts.transpile(source+'\nexport {reconcileRenderedDraft,createTemplates,normalizeDrafts,standaloneDocument,AnnotatedImage,imageBlock,chartItem,tableBlock,SourceText,chartReadability,svgDesignedSlot,chartReadabilityMessage,parseLegacyExport,embedExportLogo};',{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}),context);
 const {reconcileRenderedDraft,createTemplates,normalizeDrafts,standaloneDocument}=context.exports;
 const templates=createTemplates(); const drafts=createTemplates();drafts.issue.blocks=[{id:'t1',type:'text',title:'이전 제목',body:'이전 본문',style:'plain'},{id:'c1',type:'chart',title:'차트',columns:1,charts:[{id:'ci1',title:'비교',src:'data:image/svg+xml,x',caption:'설명',source:'출처',insightLabel:'판단',insightTitle:'제목',insightBody:'본문',annotations:[{id:'a1',kind:'rect',x1:10,y1:20,x2:50,y2:80,color:'#cc0000'}]}]}];
 dom.window.document.body.innerHTML='<article class="report-authoring-paper"><header class="report-authoring-cover"><h1>새 보고서</h1></header><section class="report-authoring-block"><div class="report-authoring-block-body"><h2>새 제목</h2><p class="report-authoring-body-copy">새 본문</p></div></section><section class="report-authoring-block"><div class="report-authoring-block-body"><h2>차트</h2><figure class="report-authoring-chart-card"><h3>비교</h3><img src="data:image/svg+xml,x"><figcaption><span>설명</span><small>출처</small></figcaption></figure></div></section></article>';
@@ -67,3 +67,25 @@ assert.equal(initialEditor.querySelector('.report-authoring-cover aside'),null);
 assert.equal(initialEditor.querySelectorAll('[aria-label="보고서 제목"]').length,1);
 assert.deepEqual([...initialEditor.querySelectorAll('select[aria-label="보고서 양식"] option')].map(n=>n.textContent),['기본 보고서','모닝미팅브리프','주간채권전략','이슈리포트']);
 console.log('PASS new template migration, HTML roundtrip, single cover title and template menu');
+
+// Sharing one report must not disclose drafts in other templates.
+assert.deepEqual(Object.keys(payload.drafts),['issue']);
+const incoming=JSON.parse(JSON.stringify(payload.drafts));
+const unrelated=structuredClone(cleanTemplates);unrelated.weekly.title='다른 업무의 비공개 초안';
+const merged=normalizeDrafts({...unrelated,...incoming},cleanTemplates);
+assert.equal(merged.weekly.title,'다른 업무의 비공개 초안');
+assert.equal(merged.issue.title,'새 보고서');
+
+// A static HTML without its JSON must retain rendered titles/body/table/metadata.
+const legacyDoc=new JSDOM('<article class="report-authoring-paper"><header class="report-authoring-cover"><p class="report-authoring-kicker">DAILY BRIEF</p><h1>Morning Meeting Brief</h1><p class="report-authoring-cover-meta"><span data-report-meta>2026-11-13</span> · <span data-report-company>대신자산운용</span> · <span data-report-meta>채권운용본부</span></p></header><section class="report-authoring-block report-authoring-block-text"><div class="report-authoring-block-body"><h2>실제 제목</h2><p class="report-authoring-body-copy">반드시 복원할 본문</p></div></section><section class="report-authoring-block report-authoring-block-table"><div class="report-authoring-block-body"><h2>검증 표</h2><table><thead><tr><th>구분</th><th>값</th></tr></thead><tbody><tr><td>국고채</td><td>검증값</td></tr></tbody></table></div></section></article>').window.document;
+const legacy=context.exports.parseLegacyExport(legacyDoc,cleanTemplates);
+assert.equal(legacy.kind,'morning');assert.equal(legacy.draft.blocks[0].title,'실제 제목');assert.equal(legacy.draft.blocks[0].body,'반드시 복원할 본문');assert.equal(legacy.draft.blocks[1].title,'검증 표');assert.equal(legacy.draft.blocks[1].rows.length,1);assert.equal(legacy.draft.blocks[1].rows[0][1],'검증값');assert.equal(legacy.draft.desk,'채권운용본부');assert.equal(legacy.draft.date,'2026-11-13');
+console.log('PASS active-report-only export, unrelated draft preservation, static HTML import');
+
+// Exported logo URLs must work after moving the file off the site.
+context.fetch=async()=>({ok:true,arrayBuffer:async()=>Uint8Array.from([137,80,78,71]).buffer});
+context.btoa=btoa;context.URL=URL;context.window={location:{href:'https://studio.example/'}};
+context.exports.embedExportLogo('<style>@page{@bottom-right{content:url("/daishin-asset-management.png")}}</style><img src="https://studio.example/daishin-asset-management.png">').then(result=>{
+  assert.equal((result.match(/data:image\/png;base64,/g)||[]).length,2);assert.ok(!result.includes('/daishin-asset-management.png'));
+  console.log('PASS portable logo in body and print footer');
+}).catch(error=>{console.error(error);process.exitCode=1;});

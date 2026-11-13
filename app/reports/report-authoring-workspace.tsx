@@ -341,9 +341,19 @@ function standaloneDocument(
   const editableDraft = JSON.stringify({
     version: 1,
     reportKind,
-    drafts,
+    drafts: { [reportKind]: drafts[reportKind] },
   }).replace(/</g, "\\u003c");
   return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title><style>${collectDocumentStyles()}</style></head><body class="report-authoring-shell report-authoring-export">${clone.outerHTML}<script type="application/json" id="${IMPORT_SCRIPT_ID}">${editableDraft}</script></body></html>`;
+}
+
+async function embedExportLogo(html: string, inlineLogo?: string) {
+  const logoPath = "/daishin-asset-management.png";
+  if (inlineLogo) return html.replaceAll(logoPath, inlineLogo);
+  const response = await fetch(logoPath);
+  if (!response.ok) throw new Error("Report logo is unavailable");
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  const dataUrl = `data:image/png;base64,${btoa(Array.from(bytes, (byte) => String.fromCharCode(byte)).join(""))}`;
+  return html.replaceAll(new URL(logoPath, window.location.href).href, dataUrl).replaceAll(logoPath, dataUrl);
 }
 
 function reconcileRenderedDraft(
@@ -711,9 +721,7 @@ function parseLegacyExport(documentNode: Document, templates: DraftMap) {
       ".report-authoring-range-unit-input, .report-authoring-range-input > span:last-child",
     ),
   }));
-  return {
-    kind,
-    draft: {
+  const parsedDraft: ReportDraft = {
       ...base,
       kicker: kicker || base.kicker,
       title:
@@ -740,8 +748,8 @@ function parseLegacyExport(documentNode: Document, templates: DraftMap) {
       ranges: ranges.length ? ranges : base.ranges,
       showRanges: ranges.length > 0,
       blocks: blocks.length ? blocks : base.blocks,
-    } satisfies ReportDraft,
-  };
+    };
+  return { kind, draft: reconcileRenderedDraft(documentNode, parsedDraft) };
 }
 
 function compactText(value: string | null | undefined) {
@@ -1834,9 +1842,9 @@ function chartReadabilityMessage(state: ReturnType<typeof chartReadability>, col
 }
 function ChartReadabilityHint({ src, columns }: { src: string; columns: number }) {
   const ref = useRef<HTMLParagraphElement>(null);
-  const [state, setState] = useState<ReturnType<typeof chartReadability> | null>(null);
+  const [measurement, setMeasurement] = useState<{ src: string; columns: number; result: ReturnType<typeof chartReadability> } | null>(null);
+  const state = measurement?.src === src && measurement.columns === columns ? measurement.result : null;
   useEffect(() => {
-    setState(null);
     if (!src) return;
     let cancelled = false;
     const image = new Image();
@@ -1846,7 +1854,7 @@ function ChartReadabilityHint({ src, columns }: { src: string; columns: number }
       const screenSlot = shown?.getBoundingClientRect().width || card?.getBoundingClientRect().width || 0;
       const paper = card?.closest(".report-authoring-paper")?.getBoundingClientRect().width || 0;
       const slot = paper ? screenSlot * Math.min(1, PRINT_PAPER_PX / paper) : screenSlot; // judge at printed size
-      if (!cancelled && image.naturalWidth && slot) setState(chartReadability(image.naturalWidth, slot, svgDesignedSlot(src)));
+      if (!cancelled && image.naturalWidth && slot) setMeasurement({ src, columns, result: chartReadability(image.naturalWidth, slot, svgDesignedSlot(src)) });
     };
     image.onload = measure;
     image.src = src;
@@ -2032,16 +2040,26 @@ function ChartBlockEditor({
 export default function ReportAuthoringWorkspace({
   storageKey = STORAGE_KEY,
   legacyStorageKey = LEGACY_STORAGE_KEY,
+  initialDocument,
+  landscapeDocument,
+  logoDataUrl,
+  createEditableDocument,
 }: {
   storageKey?: string;
   legacyStorageKey?: string | null;
+  initialDocument?: { reportKind: ReportKind; drafts: Partial<DraftMap> };
+  landscapeDocument?: string;
+  logoDataUrl?: string;
+  createEditableDocument?: (html: string) => string;
 } = {}) {
   const templates = useMemo(() => cloneTemplates(), []);
+  const initialDrafts = useMemo(() => initialDocument ? normalizeDrafts(initialDocument.drafts, templates) : templates, [initialDocument, templates]);
   const reportKindStorageKey = `${storageKey}:active-report-kind`;
-  const [reportKind, setReportKind] = useState<ReportKind>("basic");
-  const [drafts, applyDrafts] = useState<DraftMap>(templates);
-  const draftsRef = useRef(templates);
+  const [reportKind, setReportKind] = useState<ReportKind>(initialDocument?.reportKind ?? "basic");
+  const [drafts, applyDrafts] = useState<DraftMap>(initialDrafts);
+  const draftsRef = useRef(initialDrafts);
   const history = useRef<{ past: { drafts: DraftMap; kind: ReportKind }[]; future: { drafts: DraftMap; kind: ReportKind }[] }>({ past: [], future: [] });
+  const [historySize, setHistorySize] = useState({ past: 0, future: 0 });
   const [hydrated, setHydrated] = useState(false);
   const [preview, setPreview] = useState(false);
   const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait");
@@ -2065,6 +2083,7 @@ export default function ReportAuthoringWorkspace({
     }
     draftsRef.current = next;
     applyDrafts(next);
+    setHistorySize({ past: history.current.past.length, future: history.current.future.length });
   }
 
   function travelHistory(direction: "past" | "future") {
@@ -2088,6 +2107,7 @@ export default function ReportAuthoringWorkspace({
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
+      try {
       const saved =
         window.localStorage.getItem(storageKey) ??
         (legacyStorageKey
@@ -2095,10 +2115,9 @@ export default function ReportAuthoringWorkspace({
           : null);
       if (saved) {
         try {
-          setDrafts(
-            normalizeDrafts(JSON.parse(saved) as Partial<DraftMap>, templates),
-            false,
-          );
+          const restored = normalizeDrafts(JSON.parse(saved) as Partial<DraftMap>, templates);
+          draftsRef.current = restored;
+          applyDrafts(restored);
         } catch {
           setStatus("저장본을 읽지 못해 기본 양식을 적용했습니다.");
         }
@@ -2106,6 +2125,9 @@ export default function ReportAuthoringWorkspace({
       const savedReportKind = window.localStorage.getItem(reportKindStorageKey);
       if (savedReportKind && savedReportKind in REPORT_LABELS) {
         setReportKind(savedReportKind as ReportKind);
+      }
+      } catch {
+        setStatus("자동저장을 사용할 수 없습니다. 작업 후 HTML 저장으로 보관하세요.");
       }
       setHydrated(true);
     });
@@ -2129,8 +2151,16 @@ export default function ReportAuthoringWorkspace({
 
   useEffect(() => {
     if (!hydrated) return;
-    window.localStorage.setItem(reportKindStorageKey, reportKind);
+    try { window.localStorage.setItem(reportKindStorageKey, reportKind); } catch { /* Draft-save status already explains manual saving. */ }
   }, [hydrated, reportKind, reportKindStorageKey]);
+
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === storageKey && event.newValue) setStatus("다른 탭에서 작업본이 저장됐습니다. 이 탭의 작업은 HTML로 저장한 뒤 계속하세요.");
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [storageKey]);
 
   function updateDraft(patch: Partial<ReportDraft>) {
     editRevision.current += 1;
@@ -2238,12 +2268,18 @@ export default function ReportAuthoringWorkspace({
   async function saveHtml() {
     ensurePreviewRendered();
     if (!reportRef.current) return;
+    try {
+    const html = standaloneDocument(reportRef.current, draft.title, drafts, reportKind);
+    const portable = await embedExportLogo(html, logoDataUrl);
     downloadBlob(
-      standaloneDocument(reportRef.current, draft.title, drafts, reportKind),
+      createEditableDocument ? createEditableDocument(portable) : portable,
       "text/html;charset=utf-8",
       `report-${localDateStamp()}.html`,
     );
-    setStatus("편집 데이터가 포함된 HTML 작업본을 저장했습니다.");
+    setStatus("현재 보고서의 편집 데이터와 로고를 포함한 HTML 작업본을 저장했습니다.");
+    } catch {
+      setStatus("HTML 저장에 실패했습니다. 네트워크 연결과 로고 파일을 확인한 뒤 다시 저장하세요. 작업 내용은 유지됩니다.");
+    }
   }
 
   async function saveWord() {
@@ -2255,12 +2291,16 @@ export default function ReportAuthoringWorkspace({
       drafts,
       reportKind,
     );
+    try {
     downloadBlob(
-      html,
+      await embedExportLogo(html, logoDataUrl),
       "application/msword;charset=utf-8",
       `report-${localDateStamp()}.doc`,
     );
     setStatus("현재 작업본을 Word 호환 문서로 저장했습니다.");
+    } catch {
+      setStatus("Word 저장에 실패했습니다. 네트워크 연결과 로고 파일을 확인한 뒤 다시 저장하세요. 작업 내용은 유지됩니다.");
+    }
   }
 
   const importVersion = useRef(0);
@@ -2291,7 +2331,7 @@ export default function ReportAuthoringWorkspace({
         };
         if (payload.version !== 1 || !payload.drafts)
           throw new Error("unsupported draft");
-        const normalized = normalizeDrafts(payload.drafts, templates);
+        const normalized = normalizeDrafts({ ...draftsRef.current, ...payload.drafts }, templates);
         const renderedTitle =
           nodeText(
             documentNode,
@@ -2389,10 +2429,10 @@ export default function ReportAuthoringWorkspace({
         <span>{orientation === "portrait" ? "A4 세로 · 문서에서 바로 작성" : "A4 가로 · 채권보고서 편집기"}</span>
       </nav>
       {landscapeOpened && <div className="studio-landscape" hidden={orientation !== "landscape"}>
-        <iframe src="/bond-landscape-editor.html" title="채권보고서 가로형 편집기" />
+        <iframe src={landscapeDocument ? undefined : "/bond-landscape-editor.html"} srcDoc={landscapeDocument} title="채권보고서 가로형 편집기" />
       </div>}
       <div className="studio-portrait" hidden={orientation !== "portrait"} onKeyDown={(event) => {
-        if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+        if (!(event.ctrlKey || event.metaKey) || event.altKey || event.nativeEvent.isComposing) return;
         const key = event.key.toLowerCase();
         if (key === "z" || key === "y") {
           event.preventDefault();
@@ -2404,11 +2444,11 @@ export default function ReportAuthoringWorkspace({
           <select aria-label="보고서 양식" value={reportKind} onChange={(event) => { setReportKind(event.target.value as ReportKind); setActiveBlock(null); }}>
             {Object.entries(REPORT_LABELS).filter(([kind]) => kind !== "outlook" || reportKind === "outlook").map(([kind, label]) => <option key={kind} value={kind}>{label}</option>)}
           </select>
-          <span role="status" aria-live="polite">{status || "내용을 클릭해 작성하세요"}</span>
+          <span role="status" aria-live="polite">{status || "이 브라우저에 자동 저장 · 공유는 HTML 저장"}</span>
         </div>
         <div className="report-authoring-toolbar-actions">
-          <button type="button" disabled={!history.current.past.length} onClick={() => travelHistory("past")} title="Ctrl/Cmd+Z">되돌리기</button>
-          <button type="button" disabled={!history.current.future.length} onClick={() => travelHistory("future")} title="Ctrl/Cmd+Shift+Z 또는 Ctrl+Y">다시 실행</button>
+          <button type="button" disabled={!historySize.past} onClick={() => travelHistory("past")} title="Ctrl/Cmd+Z">되돌리기</button>
+          <button type="button" disabled={!historySize.future} onClick={() => travelHistory("future")} title="Ctrl/Cmd+Shift+Z 또는 Ctrl+Y">다시 실행</button>
           <button type="button" onClick={() => setPreview((value) => !value)}>
             {preview ? "편집으로" : "미리보기"}
           </button>
@@ -2785,7 +2825,7 @@ export default function ReportAuthoringWorkspace({
             {/* 로고 원본 비율을 유지하기 위해 next/image 최적화 대신 정적 이미지를 그대로 사용한다. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/daishin-asset-management.png"
+              src={logoDataUrl ?? "/daishin-asset-management.png"}
               alt="Daishin Asset Management"
             />
           </footer>
