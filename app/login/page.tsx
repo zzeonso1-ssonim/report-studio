@@ -2,6 +2,7 @@ import { connection } from "next/server";
 import { DEFAULT_REDIRECT_PATH, FROM_PARAM, gateMode, safeInternalPath } from "@/lib/auth";
 import { ROSTER_ENV_NAME, publicRoster } from "@/lib/roster";
 import LoginForm from "./login-form";
+import { usesOsAuth, osRoster } from "@/lib/os-auth";
 
 export const metadata = { title: "로그인 — Report Studio" };
 
@@ -26,7 +27,10 @@ export default async function LoginPage({
   const rawFrom = params[FROM_PARAM];
   const from = safeInternalPath(typeof rawFrom === "string" ? rawFrom : DEFAULT_REDIRECT_PATH);
   const mode = gateMode();
-  const roster = mode === "enforced" ? publicRoster() : [];
+  let unavailable = false;
+  let roster: ReturnType<typeof publicRoster> = [];
+  try { roster = usesOsAuth() ? await osRoster() : mode === "enforced" ? publicRoster() : []; }
+  catch { unavailable = true; }
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-6 py-16">
@@ -66,7 +70,8 @@ export default async function LoginPage({
             <p className="mt-2 text-sm" style={{ color: "var(--muted)" }}>
               본부 공용 도구입니다. 이름을 고르고 전화번호 뒤 4자리를 입력하세요.
             </p>
-            <LoginForm from={from} roster={roster} />
+            {usesOsAuth() && <p className="mt-2 text-sm" style={{ color: "var(--muted)" }}>OS에 등록된 계정으로 로그인합니다. 직원 등록·전화번호·권한 변경은 OS에서 자동 반영됩니다.</p>}
+            {unavailable ? <p role="alert" className="mt-5 text-sm">OS 명단을 불러오지 못했습니다. 잠시 후 새로고침해 주세요.</p> : <LoginForm from={from} roster={roster} />}
           </>
         )}
       </section>

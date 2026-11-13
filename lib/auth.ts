@@ -15,6 +15,7 @@
  *      아래 verifySessionToken이 명단 재조회로 걸러낸다(탈퇴자 즉시 차단).
  */
 import crypto from "node:crypto";
+import { usesOsAuth, osSession } from "./os-auth";
 import {
   AUTH_COOKIE_NAME,
   SESSION_MAX_AGE_SECONDS,
@@ -48,6 +49,7 @@ export function isProductionLike(): boolean {
  * - 없음 + 로컬 → "open" (개발 편의)
  */
 export function gateMode(): GateMode {
+  if (usesOsAuth()) return "enforced";
   if (loadRoster().length > 0) return "enforced";
   return isProductionLike() ? "unconfigured" : "open";
 }
@@ -154,7 +156,11 @@ export function verifySessionToken(
 export async function currentUser(): Promise<SessionUser | null> {
   const { cookies } = await import("next/headers");
   const store = await cookies();
-  return verifySessionToken(store.get(AUTH_COOKIE_NAME)?.value);
+  return resolveSessionToken(store.get(AUTH_COOKIE_NAME)?.value);
+}
+
+export async function resolveSessionToken(token: string | null | undefined): Promise<SessionUser | null> {
+  return usesOsAuth() ? osSession(token) : verifySessionToken(token);
 }
 
 /** ADMIN 여부 — 라우트 핸들러가 403을 내릴 때 쓴다 */

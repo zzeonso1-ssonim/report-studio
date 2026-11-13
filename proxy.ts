@@ -29,7 +29,7 @@ import {
   isAdminPath,
   isPublicAsset,
   safeInternalPath,
-  verifySessionToken,
+  resolveSessionToken,
 } from "@/lib/auth";
 
 /** 로그인 화면으로 보내는 리다이렉트 — 원래 가려던 경로를 ?from=에 실어준다 */
@@ -42,7 +42,7 @@ function redirectToLogin(request: NextRequest, withFrom: boolean): NextResponse 
   return NextResponse.redirect(url);
 }
 
-export function proxy(request: NextRequest): NextResponse {
+export async function proxy(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
 
   // 1) Next 정적 자산·파비콘 등은 인증 없이 통과
@@ -65,7 +65,7 @@ export function proxy(request: NextRequest): NextResponse {
   }
 
   // 4) 정상 게이트 — 쿠키 서명·만료 검증 + 명단 재확인
-  const user = verifySessionToken(request.cookies.get(AUTH_COOKIE_NAME)?.value);
+  const user = await resolveSessionToken(request.cookies.get(AUTH_COOKIE_NAME)?.value);
 
   if (pathname === LOGIN_PATH) {
     if (!user) return NextResponse.next();

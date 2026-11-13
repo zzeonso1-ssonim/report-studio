@@ -3,6 +3,8 @@ import Link from "next/link";
 import { currentUser } from "@/lib/auth";
 import { ROSTER_ENV_NAME, hasCredential, loadRoster } from "@/lib/roster";
 import RosterManager from "./roster-manager";
+import { redirect } from "next/navigation";
+import { usesOsAuth, OS_ORIGIN } from "@/lib/os-auth";
 
 export const metadata = { title: "명단 관리 — Report Studio" };
 
@@ -16,6 +18,10 @@ export default async function AdminRosterPage() {
   await connection();
 
   const me = await currentUser();
+  if (usesOsAuth()) {
+    if (!me || me.role !== "ADMIN") redirect("/login");
+    redirect(`${OS_ORIGIN}/admin/users`);
+  }
   // 로컬 개발(게이트 open)에서는 로그인 없이 들어올 수 있다 — 최초 명단을 만들 때 쓰는 경로다.
   if (me && me.role !== "ADMIN") {
     return (

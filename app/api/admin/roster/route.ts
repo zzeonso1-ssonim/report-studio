@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { FORBIDDEN_MESSAGE, isAdminRequest } from "@/lib/auth";
+import { usesOsAuth } from "@/lib/os-auth";
 import {
   ROSTER_ENV_NAME,
   formatRoster,
@@ -44,6 +45,7 @@ export async function POST(request: Request) {
   if (!(await isAdminRequest())) {
     return NextResponse.json({ error: FORBIDDEN_MESSAGE }, { status: 403 });
   }
+  if (usesOsAuth()) return NextResponse.json({ error: "계정 등록과 변경은 OS 계정 관리에서 진행하세요." }, { status: 409 });
 
   let action = "";
   let name = "";

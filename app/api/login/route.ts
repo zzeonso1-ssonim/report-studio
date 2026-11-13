@@ -8,6 +8,7 @@ import {
   gateMode,
 } from "@/lib/auth";
 import { verifyCredential } from "@/lib/roster";
+import { usesOsAuth, osLogin } from "@/lib/os-auth";
 
 /**
  * 로그인 실패 메시지 — 이름이 틀렸는지 4자리가 틀렸는지 구분해 알려주지 않는다.
@@ -45,6 +46,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, note: "로컬 개발 모드 — 인증이 비활성 상태입니다" });
   }
 
+  if (usesOsAuth()) {
+    if (!userId || userId.length > 100 || !/^\d{4}$/.test(last4)) {
+      return NextResponse.json({ error: INVALID_MESSAGE }, { status: 401 });
+    }
+    try {
+      const result = await osLogin(userId, last4);
+      if (!result) return NextResponse.json({ error: INVALID_MESSAGE }, { status: 401 });
+      const response = NextResponse.json({ ok: true, name: result.user.name, role: result.user.role });
+      response.cookies.set({ ...SESSION_COOKIE_OPTIONS, value: result.token, maxAge: SESSION_MAX_AGE_SECONDS });
+      return response;
+    } catch {
+      return NextResponse.json({ error: "OS 인증 연결이 지연되고 있습니다. 잠시 후 다시 시도하세요." }, { status: 503 });
+    }
+  }
   const result = await verifyCredential(userId, last4);
   if (!result.ok) {
     // 번호 미등록만 사유를 구분해 알려준다 — 로그인 화면이 이미 hasPhone으로 표시하는 사실이라
