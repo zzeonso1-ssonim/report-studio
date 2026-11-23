@@ -1781,3 +1781,7 @@ body.report-authoring-printing { display: block !important; background: #fff !im
   .report-authoring-cover .report-authoring-cover-meta { font-size:9pt; }
   .report-authoring-block { padding:5mm 0; }
 }
+/* Keep heading and chart spacing; tighten consecutive prose blocks only. */
+.report-authoring-block-text:has(+ .report-authoring-block-text .report-authoring-block-body > h2:empty) { padding-bottom:0; }
+.report-authoring-block-text + .report-authoring-block-text:has(.report-authoring-block-body > h2:empty) { padding-top:.65em; }
+.report-authoring-block-text .report-authoring-block-body > h2:empty { display:none; }
