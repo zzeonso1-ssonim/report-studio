@@ -83,9 +83,29 @@ assert.equal(legacy.kind,'morning');assert.equal(legacy.draft.blocks[0].title,'�
 console.log('PASS active-report-only export, unrelated draft preservation, static HTML import');
 
 // Exported logo URLs must work after moving the file off the site.
-context.fetch=async()=>({ok:true,arrayBuffer:async()=>Uint8Array.from([137,80,78,71]).buffer});
+context.fetch=async()=>({ok:true,headers:{get:()=> 'image/png'},arrayBuffer:async()=>Uint8Array.from([137,80,78,71]).buffer});
 context.btoa=btoa;context.URL=URL;context.window={location:{href:'https://studio.example/'}};
 context.exports.embedExportLogo('<style>@page{@bottom-right{content:url("/daishin-asset-management.png")}}</style><img src="https://studio.example/daishin-asset-management.png">').then(result=>{
   assert.equal((result.match(/data:image\/png;base64,/g)||[]).length,2);assert.ok(!result.includes('/daishin-asset-management.png'));
   console.log('PASS portable logo in body and print footer');
 }).catch(error=>{console.error(error);process.exitCode=1;});
+
+// Exercise the actual exported article/CSS and optionally render it in a browser.
+(async()=>{
+  const logo='data:image/png;base64,'+fs.readFileSync('public/daishin-asset-management.png').toString('base64');
+  const absolute='<img src="https://studio.example/daishin-asset-management.png">';
+  assert.equal(await context.exports.embedExportLogo(absolute,logo),'<img src="'+logo+'">');
+  const style=dom.window.document.createElement('style');
+  const css=fs.readFileSync('app/globals.css','utf8');
+  style.textContent=css.slice(css.indexOf('@page {'));
+  dom.window.document.head.append(style);
+  const paper=initialEditor.querySelector('.report-authoring-paper');
+  paper.querySelector('.report-authoring-blocks').innerHTML=Array.from({length:3},(_,i)=>'<section style="'+(i?'break-before:page;':'')+'"><h2>로고 출력 검증 '+(i+1)+'</h2><p>각 페이지 우측 하단에 대신자산운용 로고가 표시되어야 합니다.</p></section>').join('');
+  const exported=await context.exports.embedExportLogo(standaloneDocument(paper,'로고 출력 검증',cleanTemplates,'basic'),logo);
+  assert.equal(new JSDOM(exported).window.document.querySelector('.report-authoring-footer-logo img').getAttribute('src'),logo);
+  // jsdom drops nested page-margin rules; the browser regression checks those.
+  if(process.env.REPORT_LOGO_FIXTURE)fs.writeFileSync(process.env.REPORT_LOGO_FIXTURE,exported);
+  context.fetch=async()=>({ok:true,headers:{get:()=> 'text/html'}});
+  await assert.rejects(context.exports.embedExportLogo(absolute),/unavailable/);
+  console.log('PASS exported footer image, absolute inline URL and invalid image response');
+})().catch(error=>{console.error(error);process.exitCode=1;});

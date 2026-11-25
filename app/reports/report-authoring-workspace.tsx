@@ -348,11 +348,15 @@ function standaloneDocument(
 
 async function embedExportLogo(html: string, inlineLogo?: string) {
   const logoPath = "/daishin-asset-management.png";
-  if (inlineLogo) return html.replaceAll(logoPath, inlineLogo);
-  const response = await fetch(logoPath);
-  if (!response.ok) throw new Error("Report logo is unavailable");
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  const dataUrl = `data:image/png;base64,${btoa(Array.from(bytes, (byte) => String.fromCharCode(byte)).join(""))}`;
+  let dataUrl = inlineLogo;
+  if (!dataUrl) {
+    const response = await fetch(logoPath);
+    if (!response.ok || !response.headers.get("content-type")?.startsWith("image/png")) {
+      throw new Error("Report logo is unavailable");
+    }
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    dataUrl = `data:image/png;base64,${btoa(Array.from(bytes, (byte) => String.fromCharCode(byte)).join(""))}`;
+  }
   return html.replaceAll(new URL(logoPath, window.location.href).href, dataUrl).replaceAll(logoPath, dataUrl);
 }
 
@@ -2409,6 +2413,15 @@ export default function ReportAuthoringWorkspace({
     };
     window.addEventListener("afterprint", cleanup, { once: true });
     document.body.classList.add("report-authoring-printing");
+    try {
+      await Promise.all(Array.from(printDocument.querySelectorAll("img"), (img) =>
+        typeof img.decode === "function" ? img.decode() : Promise.resolve(),
+      ));
+    } catch {
+      cleanup();
+      setStatus("이미지를 불러오지 못했습니다. 이미지와 로고를 확인한 뒤 PDF 저장을 다시 시도하세요.");
+      return;
+    }
     window.print();
     window.setTimeout(() => {
       if (

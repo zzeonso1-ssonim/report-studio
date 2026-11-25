@@ -979,7 +979,11 @@ body {
   @bottom-center { content: ""; }
 
   @bottom-right {
-    content: image-set(url("/daishin-asset-management.png") 10x);
+    content: "";
+    width: 30mm;
+    background: url("/daishin-asset-management.png") right center / 30mm auto no-repeat;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
     vertical-align: middle;
     text-align: right;
   }
